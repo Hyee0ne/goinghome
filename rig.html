@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>기준점 편집</title>
+  </head>
+  <body>
+    <header class="bar">
+      <strong>기준점 편집</strong>
+      <select id="pet"></select>
+      <label><input id="show-rig" type="checkbox" checked /> 계산된 부위 보기</label>
+      <span class="spacer"></span>
+      <button id="save" type="button">저장</button>
+      <button id="rebuild" type="button" class="primary">앱에 반영</button>
+    </header>
+    <p id="status" class="status">점을 드래그해 사진에 맞춰 주세요. 원은 눈 크기, 코 옆 네모는 코 크기예요.</p>
+    <main class="wrap"><canvas id="canvas"></canvas></main>
+    <pre id="log" class="log" hidden></pre>
+    <script type="module" src="/src/rigEditor.ts"></script>
+  </body>
+</html>

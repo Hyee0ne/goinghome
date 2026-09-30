@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4e6" />
+    <title>손끝 교감</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
+      </header>
+
+      <main class="stage-wrap">
+        <canvas id="pet-gl" aria-hidden="true"></canvas>
+        <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
+        <pre id="debug-hud" class="debug-hud" hidden></pre>
+
+        <!-- 카메라 영상은 손 인식에만 쓰고 화면에는 보이지 않는다 (display:none이면 일부 브라우저가 프레임을 멈춰서 투명하게 숨긴다) -->
+        <div id="camera-box" class="camera-box camera-hidden">
+          <video id="video" playsinline muted></video>
+          <canvas id="video-overlay"></canvas>
+          <span id="cam-status" class="cam-status"></span>
+        </div>
+
+        <section id="intro" class="overlay">
+          <div class="card">
+            <div class="card-emoji">🐶🐱</div>
+            <h1>손끝으로 전하는 온기</h1>
+            <p>
+              전면 카메라에 손바닥을 보여주고, 화면 속 아이를 <b>살살</b> 쓰다듬어 주세요.
+              너무 세게 움직이면 깜짝 놀라요.
+            </p>
+            <p class="muted">카메라 영상은 기기 안에서만 처리되고, 어디로도 전송되지 않아요.</p>
+            <div class="actions">
+              <button id="start-camera" class="btn primary" type="button">카메라로 시작하기</button>
+            </div>
+            <p id="intro-error" class="error" hidden></p>
+          </div>
+        </section>
+
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

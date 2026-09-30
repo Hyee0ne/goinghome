@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["species", "frontal", "left_eye", "right_eye", "eye_radius", "nose", "nose_width", "nose_height", "mouth", "chin_bottom", "head_top", "left_ear_base", "left_ear_tip", "left_ear_outer", "right_ear_base", "right_ear_tip", "right_ear_outer"],
+  "properties": {
+    "species": { "type": "string", "enum": ["dog", "cat"] },
+    "frontal": { "type": "boolean", "description": "true if the face looks straight at the camera" },
+    "left_eye": { "$ref": "#/$defs/p" },
+    "right_eye": { "$ref": "#/$defs/p" },
+    "eye_radius": { "type": "integer" },
+    "nose": { "$ref": "#/$defs/p" },
+    "nose_width": { "type": "integer" },
+    "nose_height": { "type": "integer" },
+    "mouth": { "$ref": "#/$defs/p" },
+    "chin_bottom": { "$ref": "#/$defs/p" },
+    "head_top": { "$ref": "#/$defs/p" },
+    "left_ear_base": { "$ref": "#/$defs/p" },
+    "left_ear_tip": { "$ref": "#/$defs/p" },
+    "left_ear_outer": { "$ref": "#/$defs/p" },
+    "right_ear_base": { "$ref": "#/$defs/p" },
+    "right_ear_tip": { "$ref": "#/$defs/p" },
+    "right_ear_outer": { "$ref": "#/$defs/p" }
+  },
+  "$defs": {
+    "p": { "type": "object", "additionalProperties": false, "required": ["x", "y"], "properties": { "x": { "type": "integer" }, "y": { "type": "integer" } } }
+  }
+}

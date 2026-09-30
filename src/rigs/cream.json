@@ -1,0 +1,222 @@
+{
+  "profile": {
+    "id": "cream",
+    "name": "삼식",
+    "species": "cat",
+    "breed": "페르시안 믹스",
+    "age": "",
+    "sex": "",
+    "story": "",
+    "tip": "턱 밑을 살살 긁어 주세요.",
+    "favorite": "chin",
+    "shy": false,
+    "fur": "#9a6a44",
+    "furDark": "#6e4a2e",
+    "belly": "#f1dcc3",
+    "eye": "#2b1d14",
+    "pattern": "none"
+  },
+  "rig": {
+    "src": "pets/cream/face.webp",
+    "flow": "pets/cream/face-flow.png",
+    "catchlight": "pets/cream/face-catch.png",
+    "width": 1060,
+    "height": 1435,
+    "centerX": 536,
+    "footY": 1410,
+    "scale": 0.4547,
+    "head": {
+      "x": 536,
+      "y": 459,
+      "rx": 392,
+      "ry": 306
+    },
+    "neck": {
+      "x": 536,
+      "y": 859
+    },
+    "nose": {
+      "x": 536,
+      "y": 630,
+      "rx": 42,
+      "ry": 43
+    },
+    "nostrils": [
+      {
+        "x": 518,
+        "y": 633,
+        "r": 11
+      },
+      {
+        "x": 554,
+        "y": 633,
+        "r": 11
+      }
+    ],
+    "chinY": 682,
+    "eyes": [
+      {
+        "x": 374,
+        "y": 485,
+        "r": 37
+      },
+      {
+        "x": 697,
+        "y": 485,
+        "r": 37
+      }
+    ],
+    "ears": [
+      {
+        "px": 269,
+        "py": 172,
+        "x": 203,
+        "y": 137,
+        "rx": 82,
+        "ry": 114
+      },
+      {
+        "px": 797,
+        "py": 172,
+        "x": 866,
+        "y": 139,
+        "rx": 85,
+        "ry": 113
+      }
+    ],
+    "chest": {
+      "x": 536,
+      "y": 1153,
+      "rx": 388,
+      "ry": 310
+    },
+    "body": {
+      "x": 536,
+      "y": 1120,
+      "rx": 581,
+      "ry": 339
+    },
+    "brows": [
+      {
+        "x": 374,
+        "y": 378,
+        "rx": 97,
+        "ry": 71
+      },
+      {
+        "x": 697,
+        "y": 378,
+        "rx": 97,
+        "ry": 71
+      }
+    ],
+    "chin": {
+      "x": 536,
+      "y": 732,
+      "rx": 107,
+      "ry": 54
+    },
+    "skull": {
+      "x": 536,
+      "y": 469,
+      "rx": 307,
+      "ry": 306
+    },
+    "muzzle": {
+      "x": 536,
+      "y": 664,
+      "rx": 136,
+      "ry": 81
+    },
+    "floorShadow": false,
+    "fadeBottom": 265,
+    "expressions": {
+      "eyesClosed": {
+        "src": "pets/cream/eyes.webp",
+        "x": 261,
+        "y": 369,
+        "width": 549,
+        "height": 219,
+        "frames": 2,
+        "mask": [
+          {
+            "x": 374,
+            "y": 479,
+            "rx": 103,
+            "ry": 97
+          },
+          {
+            "x": 697,
+            "y": 479,
+            "rx": 103,
+            "ry": 97
+          }
+        ]
+      },
+      "earsBack": {
+        "src": "pets/cream/ears.webp",
+        "x": 0,
+        "y": 0,
+        "width": 1060,
+        "height": 775,
+        "frames": 2,
+        "fill": [
+          0.812,
+          0.741,
+          0.703
+        ],
+        "mask": [
+          {
+            "x": 203,
+            "y": 153,
+            "rx": 189,
+            "ry": 239
+          },
+          {
+            "x": 866,
+            "y": 155,
+            "rx": 195,
+            "ry": 237
+          }
+        ]
+      },
+      "morph": {
+        "src": "pets/cream/morph.png",
+        "range": 128,
+        "sdfRange": 48,
+        "rects": {
+          "eyes0": [
+            0,
+            0,
+            0.51752,
+            0.07963
+          ],
+          "eyes1": [
+            0,
+            0.07963,
+            0.51752,
+            0.07963
+          ],
+          "ears0": [
+            0,
+            0.15926,
+            1,
+            0.28025
+          ],
+          "ears1": [
+            0,
+            0.4395,
+            1,
+            0.28025
+          ],
+          "earsSdf": [
+            0,
+            0.71975,
+            0.5,
+            0.28025
+          ]
+        }
+      }
+    }
+  }
+}
