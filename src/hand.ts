@@ -54,6 +54,20 @@ export class HandTracker {
     await this.video.play()
   }
 
+  /** 일시정지: 카메라 영상 디코딩을 멈춘다 (update를 부르지 않으면 워커 추론도 멈춘다). 카메라 권한·스트림은 유지 */
+  pause() {
+    this.video.pause()
+    this.seen.clear()
+    this.latest = []
+  }
+
+  /** 일시정지 해제. 멈추기 전 손 위치는 버린다 (안 버리면 손이 순간이동한 것처럼 계산된다) */
+  resume() {
+    this.seen.clear()
+    this.latest = []
+    if (this.stream) void this.video.play()
+  }
+
   stop() {
     this.stream?.getTracks().forEach((t) => t.stop())
     this.stream = null
