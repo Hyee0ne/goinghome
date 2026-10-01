@@ -1060,6 +1060,8 @@ export class FurRenderer {
       this.rig = rig
       this.field = new FurField(rig)
       this.motion = new FaceMotion(rig)
+      // 앞발 층이 자기 프로그램을 쓰고 나면 그게 켜져 있어서, 아이를 바꿀 때 리그 값이 털 셰이더에 안 들어간다 (다른 아이 눈 자리에 눈 감은 사진이 뜬다)
+      gl.useProgram(this.prog)
       this.uploadField(true)
       gl.activeTexture(gl.TEXTURE7)
       gl.bindTexture(gl.TEXTURE_2D, this.catchTex)
@@ -1257,7 +1259,9 @@ export class FurRenderer {
     gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx, m.browR * BROW_LIFT * toPx)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
     const pantBob = this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
-    gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT + pantBob) * toPx)
+    // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다
+    const eatJaw = -(p.chomp * CHOMP_OPEN + p.chew * (0.5 + 0.5 * Math.sin(p.t * 11)) * CHEW_OPEN)
+    gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT + pantBob + eatJaw) * toPx)
     gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx : 0)
     gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx, -soft(m.pitch, 1) * PITCH_SHIFT * toPx)
     gl.uniform2f(this.loc('uGaze'), clamp(p.lookX, -1, 1) * GAZE, clamp(p.lookY, -1, 1) * GAZE * 0.6)
@@ -1390,6 +1394,10 @@ class PawLayer {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }
 }
+
+/** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
+const CHOMP_OPEN = 5
+const CHEW_OPEN = 2
 
 /** 표정 전환 시간 (초). 놀랄 때 귀는 빨리 젖히고 천천히 돌아온다 */
 const PANT_OPEN = 0.45

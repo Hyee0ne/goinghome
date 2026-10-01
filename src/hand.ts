@@ -205,6 +205,16 @@ export function isOfferingHand(lm: NormalizedLandmark[], aspect: number) {
   return flat && notFist
 }
 
+/**
+ * 엄지와 검지 끝을 맞대 무언가를 집은 손인지 (간식 주기). 손 크기(손목~가운데 손가락 뿌리)에 비해 두 끝이 가까우면 집은 것으로 본다.
+ * aspect: 카메라 영상의 가로/세로 (x, z와 y의 단위를 맞춘다)
+ */
+export function isPinchHand(lm: NormalizedLandmark[], aspect: number) {
+  const d = (a: number, b: number) =>
+    Math.hypot((lm[a].x - lm[b].x) * aspect, lm[a].y - lm[b].y, (lm[a].z - lm[b].z) * aspect)
+  return d(4, 8) < d(0, 9) * 0.28
+}
+
 /** 손가락 4개 중 3개 이상 펴져 있으면 '손바닥을 편 상태'로 본다. */
 export function isOpenHand(lm: NormalizedLandmark[]) {
   const wrist = lm[0]
