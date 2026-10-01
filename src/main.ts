@@ -331,6 +331,12 @@ function updateFur(dt: number, inputs: PetInput[]) {
     lastHandPx.set(input.id, { x, y })
     const pts = input.points
     const palm = pts.length === 21 ? Math.hypot(pts[0].x - pts[9].x, pts[0].y - pts[9].y) : 90
+    // 앞발을 맞댄 손은 털·얼굴 반응에서 뺀다 (턱 아래라서 턱 들기로 잡히지 않게)
+    if (input.id === pet.pawHandId || input.id === pet.pawOfferId) {
+      lastHandPx.delete(input.id)
+      tipTouch.set(input.id, [])
+      continue
+    }
     // 쓰다듬기는 편 손만 인정하지만, 턱을 받쳐 드는 건 손을 오므려도 된다
     const hit = pet.contactZone(input)
     const zone = input.active || hit === 'chin' ? hit : null

@@ -85,6 +85,10 @@ export interface Pose {
   flinch: number
   /** 손이 천천히 다가와 코를 내밀고 킁킁댐 (0~1) */
   reach: number
+  /** 손 주기: 앞발을 든 정도 (0~1)와 앞발이 놓일 손바닥 위치 (펫 로컬 좌표) */
+  paw: number
+  pawX: number
+  pawY: number
 }
 
 type Behavior = 'look' | 'earFlick' | 'lick' | 'tilt' | 'sigh' | 'slowBlink'
@@ -136,6 +140,14 @@ export class Pet {
   private leanX = 0
   private leanY = 0
   private strokeAcc = 0
+  /** 손 주기: 턱 아래에 편 손을 가만히 둔 시간, 앞발을 올린 손, 앞발 위치 */
+  private pawHold = 0
+  pawHandId: string | null = null
+  /** 앞발을 받으려고 손을 가만히 내밀고 있는 손 (아직 앞발을 올리기 전). 이 손은 턱 들기로 치지 않는다 */
+  pawOfferId: string | null = null
+  private paw = 0
+  private pawX = 0
+  private pawY = 0
   /** 손마다 지난 위치와 속도 */
   private hands = new Map<string, { x: number; y: number; speed: number }>()
   private bothFor = 0
@@ -254,10 +266,14 @@ export class Pet {
       this.sniffing = Math.max(0, this.sniffing - dt * 3)
     }
 
-    // 2) 쓰다듬기: 손마다 따로 판정한다. 한 손이라도 거칠면 놀란다
+    // 2) 손 주기: 턱 아래에 편 손바닥을 0.8초 가만히 내밀면 앞발을 올린다 (겁 많은 아이는 냄새를 맡은 뒤에만)
+    this.updatePaw(dt, hands)
+
+    // 3) 쓰다듬기: 손마다 따로 판정한다. 한 손이라도 거칠면 놀란다 (앞발을 올린 손은 빼고)
     const calm = this.startle < 0.35
     const touching: PetInput[] = []
     for (const { input, moved, speed } of hands) {
+      if (input.id === this.pawHandId) continue
       const zone = input.active ? this.contactZone(input) : this.tipZone(input)
       if (!zone || !calm || (!this.sniffed && nearNoseOf({ input, moved, speed }))) continue
       touching.push(input)
@@ -360,6 +376,47 @@ export class Pet {
   forgetHands() {
     this.hands.clear()
     this.handTrack.clear()
+    this.pawHold = 0
+    this.pawHandId = null
+    this.pawOfferId = null
+  }
+
+  /** 앞발을 받을 자리: 턱 아래, 얼굴 폭 안쪽 (scale 1이면 그 자리, 크면 놓아주는 범위) */
+  private inPawZone(x: number, y: number, scale = 1) {
+    const L = this.L
+    const top = L.headY + L.chinDy + L.headRy * 0.1
+    const bottom = L.headY + L.headRy * (1.9 + (scale - 1) * 0.6)
+    return Math.abs(x - this.leanX) < L.headRx * 0.75 * scale && y > top - (scale - 1) * L.headRy * 0.4 && y < bottom
+  }
+
+  private updatePaw(dt: number, hands: { input: PetInput; speed: number }[]) {
+    const ready = this.sniffed && this.startle < 0.2
+    if (!this.pawHandId) {
+      const offer = ready && hands.find(({ input, speed }) => input.active && speed < PAW_STILL && this.inPawZone(input.x, input.y))
+      this.pawHold = offer ? this.pawHold + dt : Math.max(0, this.pawHold - dt * 2)
+      this.pawOfferId = offer && this.pawHold > 0.1 ? offer.input.id : null
+      if (offer && this.pawHold >= PAW_HOLD) {
+        this.pawHandId = offer.input.id
+        this.pawOfferId = null
+        this.pawX = offer.input.x
+        this.pawY = offer.input.y
+        this.affection = Math.min(100, this.affection + 1.5)
+      }
+    } else {
+      const h = hands.find(({ input }) => input.id === this.pawHandId)
+      // 손을 빼거나, 주먹을 쥐거나, 놀라면 앞발을 내린다
+      if (!h || !h.input.active || this.startle > 0.3 || !this.inPawZone(h.input.x, h.input.y, 1.5)) {
+        this.pawHandId = null
+        this.pawHold = 0
+      } else {
+        this.pawX = approach(this.pawX, h.input.x, 10, dt)
+        this.pawY = approach(this.pawY, h.input.y, 10, dt)
+        // 손을 맞잡고 있으면 좋아한다
+        this.petting = Math.max(this.petting, 0.5)
+      }
+    }
+    // 들 때는 조금 빨리, 내릴 때는 천천히
+    this.paw = approach(this.paw, this.pawHandId ? 1 : 0, this.pawHandId ? 4 : 3, dt)
   }
 
   private blinkNow() {
@@ -559,6 +616,9 @@ export class Pet {
       breathRate: this.breathRate,
       flinch: this.flinch,
       reach: this.reach,
+      paw: this.paw,
+      pawX: this.pawX,
+      pawY: this.pawY,
     }
   }
 
@@ -976,6 +1036,9 @@ const BLINK_CLOSE = 0.07
 const BLINK_OPEN = 0.13
 /** 손이 이보다 빨리(로컬 단위/초) 다가오면 움찔한다 */
 const FLINCH_SPEED = 1100
+/** 손 주기: 손바닥을 이 시간(초) 동안 이 속도(로컬 단위/초) 아래로 가만히 두면 앞발을 올린다 */
+const PAW_HOLD = 0.8
+const PAW_STILL = 90
 /** 손이 초당 이 비율보다 빨리 커지면(카메라 쪽으로 불쑥 내밀면) 움찔한다 */
 const FLINCH_ZOOM = 1.6
 

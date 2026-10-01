@@ -85,6 +85,11 @@ export interface PhotoRig {
     /** 단계 사이의 움직임 아틀라스. 있으면 표정이 섞이는 대신 움직여서 바뀐다 */
     morph?: MorphAtlas
   }
+  /**
+   * 손 주기에 쓰는 앞발 사진 (발바닥이 카메라를 향하고 다리가 아래로 이어진 모습).
+   * anchorX/Y: 사진 안 발바닥 가운데 (0~1), width: 사진 폭이 두 눈 사이 거리의 몇 배인지
+   */
+  paw?: { src: string; anchorX: number; anchorY: number; width: number }
   /** 전신 사진이면 발밑에 그림자를 깐다. 얼굴 클로즈업처럼 아래가 잘린 사진은 false */
   floorShadow: boolean
   /** 사진 아래쪽을 이 높이(픽셀)만큼 배경으로 서서히 사라지게 한다 (잘린 가슴선을 숨긴다) */
@@ -210,6 +215,7 @@ export const PETS: PetProfile[] = [
       neck: { x: 575, y: 840 },
       nose: { x: 575, y: 565, rx: 81, ry: 66 },
       catchlight: `${BASE}pets/choco-face-catch.png`,
+      paw: { src: `${BASE}pets/choco-paw.webp`, anchorX: 0.369, anchorY: 0.155, width: 0.98 },
       nostrils: [
         { x: 540, y: 567, r: 22 },
         { x: 610, y: 567, r: 22 },

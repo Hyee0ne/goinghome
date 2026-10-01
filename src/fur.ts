@@ -916,6 +916,10 @@ export class FurRenderer {
   private morphTex: WebGLTexture
   /** 눈 반사광 조각 */
   private catchTex: WebGLTexture
+  private buf: WebGLBuffer
+  private aUv: number
+  /** 손 주기 앞발 (털 셰이더와 따로 그리는 층) */
+  private paw: PawLayer
   /** 표정 전환 상태 (0~1) */
   private pant = 0
   private earsBack = 0
@@ -959,14 +963,15 @@ export class FurRenderer {
     this.prog = link(gl, VERT, FRAG)
     gl.useProgram(this.prog)
 
-    const buf = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+    this.buf = gl.createBuffer()!
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     const a = -MARGIN
     const b = 1 + MARGIN
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([a, a, b, a, a, b, b, b]), gl.STATIC_DRAW)
-    const loc = gl.getAttribLocation(this.prog, 'aUv')
-    gl.enableVertexAttribArray(loc)
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
+    this.aUv = gl.getAttribLocation(this.prog, 'aUv')
+    gl.enableVertexAttribArray(this.aUv)
+    gl.vertexAttribPointer(this.aUv, 2, gl.FLOAT, false, 0, 0)
+    this.paw = new PawLayer(gl)
 
     this.imgTex = makeTexture(gl)
     this.flowTex = makeTexture(gl)
@@ -1065,6 +1070,7 @@ export class FurRenderer {
       }
       gl.uniform1f(this.loc('uHasCatch'), assets.catch ? 1 : 0)
       this.hasEyesPhoto = !!rig.expressions?.eyesClosed && !!assets.expr[1]
+      this.paw.load(rig.paw)
       this.setRigUniforms(rig, assets.expr.map((im) => !!im), !!assets.morph)
     } finally {
       if (this.loading === rig.src) this.loading = null
@@ -1161,6 +1167,12 @@ export class FurRenderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     gl.clear(gl.COLOR_BUFFER_BIT)
     this.cleared = false
+    // 앞발 층이 프로그램·버퍼·0번 텍스처를 바꿔 놓으므로 털 셰이더 상태를 되돌린다
+    gl.useProgram(this.prog)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
+    gl.vertexAttribPointer(this.aUv, 2, gl.FLOAT, false, 0, 0)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.imgTex)
 
     const k = rig.scale * view.scale
     const left = view.cx - rig.centerX * k
@@ -1255,6 +1267,110 @@ export class FurRenderer {
     gl.uniform1f(this.loc('uBreeze'), 0.7 + Math.min(0.6, Math.hypot(v.x, v.y) / 60))
 
     this.uploadField()
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+    // 손 주기: 앞발을 털 위에 따로 그린다
+    if (p.paw > 0.005 && rig.paw) {
+      const D = Math.hypot(rig.eyes[1].x - rig.eyes[0].x, rig.eyes[1].y - rig.eyes[0].y) * rig.scale
+      this.paw.draw(p, rig.paw, D, view)
+    }
+  }
+}
+
+/**
+ * 손 주기 앞발 층. 털 셰이더와 다른 작은 프로그램이라 텍스처 칸 제한(8개)과 상관없다.
+ * 앞발은 화면 아래에서 한 덩어리로 올라와 손바닥에 발바닥을 맞댄다 (늘이지 않아서 흐물거리지 않는다).
+ * 다리 아래쪽은 몸통 사진처럼 서서히 투명해져 화면 아래로 이어지는 것처럼 보인다
+ */
+class PawLayer {
+  private gl: WebGLRenderingContext
+  private prog: WebGLProgram
+  private buf: WebGLBuffer
+  private tex: WebGLTexture
+  private aspect = 0
+  private src = ''
+  private u: Record<string, WebGLUniformLocation | null> = {}
+
+  constructor(gl: WebGLRenderingContext) {
+    this.gl = gl
+    this.prog = link(
+      gl,
+      `attribute vec2 aUv;
+       uniform vec2 uOrigin; uniform vec2 uAxisX; uniform vec2 uAxisY;
+       varying vec2 vUv;
+       void main() { vUv = aUv; gl_Position = vec4(uOrigin + aUv.x * uAxisX + aUv.y * uAxisY, 0.0, 1.0); }`,
+      `precision mediump float;
+       uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha;
+       varying vec2 vUv;
+       void main() {
+         vec4 c = texture2D(uTex, vec2(mix(vUv.x, 1.0 - vUv.x, uFlip), vUv.y));
+         c *= (1.0 - smoothstep(0.5, 0.92, vUv.y)) * uAlpha;
+         gl_FragColor = c;
+       }`,
+    )
+    this.buf = gl.createBuffer()!
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW)
+    this.tex = makeTexture(gl)
+    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uFlip', 'uAlpha']) this.u[n] = gl.getUniformLocation(this.prog, n)
+  }
+
+  async load(paw: PhotoRig['paw']) {
+    if (!paw || paw.src === this.src) return
+    this.src = paw.src
+    this.aspect = 0
+    const img = await loadImage(paw.src).catch(() => null)
+    if (!img || this.src !== paw.src) return
+    const gl = this.gl
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.tex)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+    this.aspect = img.height / img.width
+  }
+
+  /** D: 두 눈 사이 거리 (펫 로컬 단위). view: 펫 로컬 → 화면 */
+  draw(p: Pose, paw: NonNullable<PhotoRig['paw']>, D: number, view: { cx: number; cy: number; scale: number; W: number; H: number }) {
+    if (!this.aspect) return
+    const gl = this.gl
+    const e = p.paw
+    // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
+    const s = 1.4
+    const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
+    // 손바닥이 오른쪽이면 오른쪽 앞발 (사진을 좌우로 뒤집는다)
+    const flip = p.pawX > 0 ? 1 : 0
+    const w = D * paw.width * view.scale
+    const h = w * this.aspect
+    // 발바닥 가운데가 손바닥에 오게. 들어 올리는 동안은 화면 아래에서 올라온다
+    const tx = view.cx + p.pawX * view.scale
+    const ty = view.cy + p.pawY * view.scale
+    const startY = view.H + h * 0.2
+    const ay = ty + (startY - ty) * (1 - rise)
+    // 다리가 아래쪽 몸통에서 뻗어 나오는 느낌으로 살짝 기울인다 (손에 얹은 동안은 아주 조금 흔들린다)
+    const ang = (flip ? 1 : -1) * (0.18 * (1 - e) + 0.05) + Math.sin(p.t * 2.1) * 0.015 * e
+    const ax = (flip ? 1 - paw.anchorX : paw.anchorX) * w
+    const axY = paw.anchorY * h
+    const cos = Math.cos(ang)
+    const sin = Math.sin(ang)
+    // 화면 픽셀 → 클립 좌표
+    const toClipX = (x: number) => (x / view.W) * 2 - 1
+    const toClipY = (y: number) => 1 - (y / view.H) * 2
+    // 사진의 왼쪽 위 모서리 (발바닥 가운데를 (tx, ay)에 두고 회전)
+    const ox = tx + (-ax * cos + axY * sin)
+    const oy = ay + (-ax * sin - axY * cos)
+    gl.useProgram(this.prog)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
+    const loc = gl.getAttribLocation(this.prog, 'aUv')
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.tex)
+    gl.uniform1i(this.u.uTex, 0)
+    gl.uniform1f(this.u.uFlip, flip)
+    gl.uniform1f(this.u.uAlpha, Math.min(1, e * 3))
+    gl.uniform2f(this.u.uOrigin, toClipX(ox), toClipY(oy))
+    gl.uniform2f(this.u.uAxisX, (w * cos * 2) / view.W, (-w * sin * 2) / view.H)
+    gl.uniform2f(this.u.uAxisY, (-h * sin * 2) / view.W, (-h * cos * 2) / view.H)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }
 }
