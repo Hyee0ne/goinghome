@@ -20,8 +20,33 @@ export interface PetProfile {
   belly: string
   eye: string
   pattern: 'none' | 'tabby' | 'patch'
+  /** 아이 정보 화면의 사진 슬라이드 (public/ 기준 경로 또는 전체 주소). 없으면 실사 얼굴 사진 한 장 */
+  photos?: string[]
+  /** '손' 개인기를 할 줄 아는지 (강아지만. 고양이는 이 값을 무시한다 → canGivePaw) */
+  canPaw?: boolean
+  /** 아이 정보 화면의 성격 태그 */
+  traits?: string[]
+  /** 보호·입양 정보 (아이 정보 화면). 실제 공고와 연결되기 전에는 sample: true */
+  adoption?: Adoption
   /** 실사 사진 리그. 있으면 WebGL 털 셰이더로 그리고, 없거나 WebGL을 못 쓰면 캔버스 그림으로 그린다 */
   photo?: PhotoRig
+}
+
+export interface Adoption {
+  shelter: string
+  region: string
+  noticeNo?: string
+  /** 포인핸드 공고 주소. 없으면 포인핸드 첫 화면으로 보낸다 */
+  url?: string
+  /** 가상의 아이라 실제 공고가 없다 */
+  sample?: boolean
+}
+
+export const PAWINHAND_URL = 'https://pawinhand.kr'
+
+/** '손' 개인기를 보여 줄 수 있는 아이: 체크된 강아지만 (고양이는 선택지 자체가 없다) */
+export function canGivePaw(p: PetProfile) {
+  return p.species === 'dog' && !!p.canPaw
 }
 
 interface Ellipse {
@@ -85,6 +110,12 @@ export interface PhotoRig {
     /** 단계 사이의 움직임 아틀라스. 있으면 표정이 섞이는 대신 움직여서 바뀐다 */
     morph?: MorphAtlas
   }
+  /**
+   * 손 주기에 쓰는 앞발 층: 같은 사진을 '앞발을 카메라 쪽으로 든 모습'으로 편집해 다리와 발만 잘라 낸 것 (정면 시점).
+   * x/y/width/height: 층이 놓이는 자리 (사진 좌표). 어깨 쪽은 몸에 섞이도록 서서히 투명하다.
+   * shoulder: 다리가 몸에 붙은 곳 (들어 올리고 기울이는 축), pad: 발바닥 가운데. 사진 오른쪽 다리 기준
+   */
+  paw?: { src: string; x: number; y: number; width: number; height: number; shoulder: { x: number; y: number }; pad: { x: number; y: number } }
   /** 전신 사진이면 발밑에 그림자를 깐다. 얼굴 클로즈업처럼 아래가 잘린 사진은 false */
   floorShadow: boolean
   /** 사진 아래쪽을 이 높이(픽셀)만큼 배경으로 서서히 사라지게 한다 (잘린 가슴선을 숨긴다) */
@@ -137,6 +168,8 @@ export interface Layout {
   chinDy: number
   chinDx: number
   noseY: number
+  /** 입 (간식을 받아먹는 자리). 사진이면 턱 부위 가운데 = 입이 벌어지는 곳 */
+  mouthY: number
   bodyY: number
   bodyRx: number
   bodyRy: number
@@ -157,6 +190,7 @@ export function layoutOf(p: PetProfile): Layout {
       chinDy: 35,
       chinDx: 90,
       noseY: -125 + (p.species === 'cat' ? 26 : 18),
+      mouthY: -125 + (p.species === 'cat' ? 50 : 45),
       bodyY: 100,
       bodyRx: 125,
       bodyRy: 140,
@@ -172,6 +206,7 @@ export function layoutOf(p: PetProfile): Layout {
     chinDy: (rig.chinY - rig.head.y) * s,
     chinDx: rig.nose.rx * 2.2 * s,
     noseY: photoToLocal(rig, rig.nose.x, rig.nose.y).y,
+    mouthY: photoToLocal(rig, rig.chin.x, rig.chin.y).y,
     bodyY: body.y,
     bodyRx: rig.body.rx * s,
     bodyRy: rig.body.ry * s,
@@ -193,6 +228,10 @@ export const PETS: PetProfile[] = [
     tip: '먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해주세요.',
     favorite: 'head',
     shy: true,
+    canPaw: true,
+    traits: ['낯을 가려요', '친해지면 애교쟁이', '산책 좋아해요'],
+    photos: ['gallery/choco/1.webp', 'gallery/choco/2.webp', 'gallery/choco/3.webp', 'gallery/choco/4.webp'],
+    adoption: { shelter: '마포구 동물보호센터', region: '서울 마포구', noticeNo: '서울-마포-2026-00123', sample: true },
     fur: '#9a6a44',
     furDark: '#6e4a2e',
     belly: '#f1dcc3',
@@ -210,6 +249,7 @@ export const PETS: PetProfile[] = [
       neck: { x: 575, y: 840 },
       nose: { x: 575, y: 565, rx: 81, ry: 66 },
       catchlight: `${BASE}pets/choco-face-catch.png`,
+      paw: { src: `${BASE}pets/choco-paw.webp`, x: 612, y: 848, width: 426, height: 477, shoulder: { x: 974, y: 840 }, pad: { x: 814, y: 1210 } },
       nostrils: [
         { x: 540, y: 567, r: 22 },
         { x: 610, y: 567, r: 22 },
@@ -311,6 +351,11 @@ for (const g of Object.values(generated)) {
   const known = PETS.find((p) => p.id === g.profile.id)
   if (known) known.photo = withBase(g.rig)
   else PETS.push({ ...g.profile, photo: withBase(g.rig) })
+}
+
+/** 사진 경로에 BASE_URL을 붙인다 (전체 주소나 이미 /로 시작하면 그대로) */
+export function assetUrl(path: string) {
+  return /^(https?:)?\//.test(path) ? path : `${BASE}${path}`
 }
 
 /** 받침 유무에 따라 조사를 고른다: josa('초코', '이', '가') → '초코가' */

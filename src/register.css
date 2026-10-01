@@ -1,0 +1,446 @@
+/* 보호소용 등록 화면 (style.css의 색·버튼을 같이 쓴다) */
+
+.reg-page {
+  height: auto;
+  min-height: 100%;
+  word-break: keep-all;
+}
+
+.reg-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.reg-back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  font-size: 22px;
+  text-decoration: none;
+}
+
+.reg-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.reg-top h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.reg-kicker {
+  margin: 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reg-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px max(32px, env(safe-area-inset-bottom));
+}
+
+.reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reg-card {
+  padding: 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(80, 50, 20, 0.06);
+}
+
+.reg-card[hidden] {
+  display: none;
+}
+
+.reg-card h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.reg-card h2 em,
+.field em {
+  margin-left: 4px;
+  color: var(--accent);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.reg-help {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.reg-error {
+  margin: 6px 0 0;
+  color: #c43d3d;
+  font-size: 13px;
+}
+
+.reg-error[hidden] {
+  display: none;
+}
+
+/* ── 입력 ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field > label,
+.field > .label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.field small,
+.check small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.field .label small {
+  display: inline;
+  margin-left: 4px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 420px) {
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.reg-page input:not([type='radio'], [type='checkbox'], [type='file']),
+.reg-page textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(120, 80, 40, 0.2);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* iOS 확대 방지 */
+}
+
+.reg-page textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.reg-page input:focus,
+.reg-page textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.reg-count {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-align: right;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* 하나 고르기 (세그먼트) */
+.seg {
+  display: flex;
+  gap: 6px;
+}
+
+.seg label {
+  flex: 1;
+}
+
+.seg input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seg span {
+  display: block;
+  padding: 10px 8px;
+  border: 1px solid rgba(120, 80, 40, 0.2);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.seg input:checked + span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.seg input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 체크 */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.check[hidden] {
+  display: none;
+}
+
+.check input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+/* 성격 칩 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 7px 12px;
+  border: 1px solid rgba(120, 80, 40, 0.2);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chip-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn.small {
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+/* ── 사진 ── */
+.photo-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.photo,
+.photo-add {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo.main {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.photo figcaption,
+.photo-lead {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.photo-lead {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.photo-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+}
+
+.photo-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1.5px dashed rgba(120, 80, 40, 0.3);
+  color: var(--ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.photo-add[hidden] {
+  display: none;
+}
+
+.photo-add span {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.photo-add input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ── 제출 ── */
+.reg-submit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.reg-submit .muted {
+  margin: 0;
+}
+
+/* ── 등록 목록 ── */
+.reg-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reg-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.reg-item:first-child {
+  border-top: 0;
+}
+
+.reg-item img {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.reg-item > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.reg-item b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.reg-item .status {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.reg-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

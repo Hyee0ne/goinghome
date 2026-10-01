@@ -1,4 +1,4 @@
-import { josa, layoutOf, type Layout, type PetProfile, type Zone } from './pets'
+import { canGivePaw, FLOOR_Y, josa, layoutOf, type Layout, type PetProfile, type Zone } from './pets'
 
 /**
  * 좌표계: 펫 로컬 단위. 원점은 몸통 중심 근처이고, 머리 중심은 (0, L.headY)에 있다.
@@ -25,6 +25,10 @@ export interface PetInput {
   y: number
   /** 손바닥을 편 상태 (쓰다듬기는 편 손으로만 인정) */
   active: boolean
+  /** 손바닥을 위로 해서 '손 달라'고 내민 손인지 (손 주기) */
+  offer?: boolean
+  /** 엄지와 검지로 무언가를 집은 손인지 (간식 주기). 간식은 두 손끝(4, 8번 점) 사이에 있다 */
+  pinch?: boolean
   /** 손 랜드마크 21개 (펫 로컬 좌표). 냄새 맡기와 닿는 부위 판정에 쓴다 */
   points: { x: number; y: number }[]
 }
@@ -85,6 +89,11 @@ export interface Pose {
   flinch: number
   /** 손이 천천히 다가와 코를 내밀고 킁킁댐 (0~1) */
   reach: number
+  /** 손 주기: [화면 왼쪽 앞발, 오른쪽 앞발]마다 든 정도 (0~1)와 앞발이 놓일 손바닥 위치 (펫 로컬 좌표) */
+  paws: { amt: number; x: number; y: number }[]
+  /** 간식 먹기: 한 입 무는 입 벌림 (0~1), 씹는 정도 (0~1) */
+  chomp: number
+  chew: number
 }
 
 type Behavior = 'look' | 'earFlick' | 'lick' | 'tilt' | 'sigh' | 'slowBlink'
@@ -136,6 +145,20 @@ export class Pet {
   private leanX = 0
   private leanY = 0
   private strokeAcc = 0
+  /** 손 주기: 화면 왼쪽·오른쪽 앞발 (0: 왼쪽, 1: 오른쪽). 구역마다 따로 손을 받는다 */
+  private pawSides: PawSide[] = [newPawSide(-1), newPawSide(1)]
+  /** "손!"이라고 말한 뒤 남은 시간 (이 안에 앞발을 준다) */
+  private pawCommand = 0
+  /** 간식 주기: 손마다 집은 간식의 남은 입 수 (손끝을 떼면 사라지고, 다시 집으면 새 간식) */
+  private treats = new Map<string, number>()
+  /** 지금 먹고 있는 간식을 든 손, 단계, 단계 안 시간 */
+  private eatHand: string | null = null
+  private eatPhase: 'sniff' | 'bite' | 'chew' = 'sniff'
+  private eatT = 0
+  private chomp = 0
+  private chew = 0
+  /** 간식을 먹고 난 기분 좋음 (표정에 더한다) */
+  private treatJoy = 0
   /** 손마다 지난 위치와 속도 */
   private hands = new Map<string, { x: number; y: number; speed: number }>()
   private bothFor = 0
@@ -254,10 +277,16 @@ export class Pet {
       this.sniffing = Math.max(0, this.sniffing - dt * 3)
     }
 
-    // 2) 쓰다듬기: 손마다 따로 판정한다. 한 손이라도 거칠면 놀란다
+    // 2) 손 주기: 손바닥을 위로 해서 내밀거나 "손!" 하면 앞발을 준다. '손' 개인기가 있는 강아지만 (고양이는 하지 않는다)
+    if (this.canPaw) this.updatePaw(dt, hands)
+    // 2-1) 간식 주기: 엄지·검지로 집은 간식을 입 앞에 가만히 대면 냄새 맡고 세 입에 나눠 먹는다 (고양이)
+    if (this.canEatTreat) this.updateTreat(dt, hands)
+
+    // 3) 쓰다듬기: 손마다 따로 판정한다. 한 손이라도 거칠면 놀란다 (앞발을 올린 손은 빼고)
     const calm = this.startle < 0.35
     const touching: PetInput[] = []
     for (const { input, moved, speed } of hands) {
+      if (this.isBusyHand(input.id)) continue
       const zone = input.active ? this.contactZone(input) : this.tipZone(input)
       if (!zone || !calm || (!this.sniffed && nearNoseOf({ input, moved, speed }))) continue
       touching.push(input)
@@ -317,7 +346,7 @@ export class Pet {
     this.petting = approach(this.petting, stroking ? 1 : 0, stroking ? 8 : 1.5, dt)
     const baseHappy = (this.affection / 100) * 0.35
     const both = Math.min(1, this.bothFor / 0.6) * 0.15
-    this.happy = approach(this.happy, Math.min(1, Math.max(this.petting, baseHappy) + both) * (1 - this.startle), 4, dt)
+    this.happy = approach(this.happy, Math.min(1, Math.max(this.petting, baseHappy, this.treatJoy) + both) * (1 - this.startle), 4, dt)
     this.perk = approach(this.perk, nearHead && !stroking ? 1 : 0, 5, dt)
     this.wary = approach(this.wary, p.shy && !this.sniffed && nearHead ? 1 : 0, 3, dt)
     this.leanX = approach(this.leanX, leanTargetX, 5, dt)
@@ -360,6 +389,201 @@ export class Pet {
   forgetHands() {
     this.hands.clear()
     this.handTrack.clear()
+    this.pawSides = [newPawSide(-1), newPawSide(1)]
+    this.treats.clear()
+    this.eatHand = null
+  }
+
+  /**
+   * 쓰다듬기·턱 들기로 치지 않는 손인지: 앞발을 얹었거나 앞발을 받으려고 내밀고 있는 손,
+   * 간식을 집은 손 (다 먹은 뒤에도 손끝을 뗄 때까지. 씹는 동안 턱 들기로 잡히지 않게)
+   */
+  isBusyHand(id: string) {
+    return this.pawSides.some((s) => s.handId === id || s.offerId === id) || this.treats.has(id)
+  }
+
+  /** 간식을 먹는 아이인지 (지금은 고양이) */
+  get canEatTreat() {
+    return this.p.species === 'cat'
+  }
+
+  /** 그 손이 든 간식의 남은 입 수 (3: 그대로, 0: 다 먹음). 간식을 들지 않았으면 0 */
+  treatOf(id: string) {
+    return this.treats.get(id) ?? 0
+  }
+
+  /** 입 자리 (펫 로컬 좌표): 입이 벌어지는 곳 */
+  private get mouth() {
+    return { x: this.leanX, y: this.L.mouthY }
+  }
+
+  private updateTreat(dt: number, hands: { input: PetInput; speed: number }[]) {
+    // 손끝을 떼거나 손이 사라지면 간식도 없어진다. 새로 집으면 새 간식
+    for (const id of [...this.treats.keys()]) if (!hands.some(({ input }) => input.id === id && input.pinch)) this.treats.delete(id)
+    for (const { input } of hands) if (input.pinch && !this.treats.has(input.id)) this.treats.set(input.id, TREAT_BITES)
+    const tip = (input: PetInput) =>
+      input.points.length === 21
+        ? { x: (input.points[4].x + input.points[8].x) / 2, y: (input.points[4].y + input.points[8].y) / 2 }
+        : { x: input.x, y: input.y }
+    const m = this.mouth
+    const near = (input: PetInput, k = 1) => {
+      const t = tip(input)
+      return Math.hypot(t.x - m.x, t.y - m.y) < this.L.headRx * TREAT_REACH * k
+    }
+    this.eatT += dt
+    if (!this.eatHand) {
+      const h = this.startle < 0.25 && hands.find(({ input, speed }) => (this.treats.get(input.id) ?? 0) > 0 && speed < TREAT_STILL && near(input))
+      if (h) {
+        this.eatHand = h.input.id
+        this.eatPhase = 'sniff'
+        this.eatT = 0
+      }
+    } else if (this.eatPhase !== 'chew') {
+      const h = hands.find(({ input }) => input.id === this.eatHand)
+      // 간식을 치우거나 놀라면 그만둔다 (남은 간식은 그대로, 다시 대면 이어서 먹는다)
+      if (!h || !h.input.pinch || this.startle > 0.3 || !near(h.input, 1.5)) this.eatHand = null
+      else if (this.eatPhase === 'sniff') {
+        this.sniffing = 1
+        if (this.eatT > TREAT_SNIFF) {
+          this.eatPhase = 'bite'
+          this.eatT = 0
+        }
+      } else {
+        // 한 입: 입을 벌렸다 다물 때(한 입의 55%) 간식이 줄어든다
+        const left = this.treats.get(this.eatHand) ?? 0
+        const bitten = TREAT_BITES - left
+        if (this.eatT > TREAT_BITE * (bitten + 0.55) && left > 0) this.treats.set(this.eatHand, left - 1)
+        if ((this.treats.get(this.eatHand) ?? 0) === 0 && this.eatT > TREAT_BITE * TREAT_BITES) {
+          this.eatPhase = 'chew'
+          this.eatT = 0
+          // 간식을 받아먹으면 낯가리던 아이도 마음을 연다
+          this.sniffed = true
+          this.affection = Math.min(100, this.affection + 3)
+        }
+      }
+    } else if (this.eatT > TREAT_CHEW) {
+      this.eatHand = null
+      // 다 먹고 나면 천천히 눈을 깜빡여 고맙다고 한다
+      if (!this.behavior) this.startBehavior('slowBlink')
+    }
+    // 입 벌림: 무는 동안 한 입마다 벌렸다 다문다
+    const biting = this.eatHand && this.eatPhase === 'bite'
+    const ph = biting ? (this.eatT / TREAT_BITE) % 1 : 0
+    this.chomp = approach(this.chomp, biting ? Math.sin(Math.PI * Math.min(1, ph / 0.6)) : 0, 18, dt)
+    this.chew = approach(this.chew, this.eatHand && this.eatPhase === 'chew' && this.eatT < TREAT_CHEW - 0.3 ? 1 : 0, 6, dt)
+    this.treatJoy = this.eatHand && this.eatPhase === 'chew' ? approach(this.treatJoy, 0.9, 3, dt) : Math.max(0, this.treatJoy - dt * 0.15)
+  }
+
+  /** 손 주기를 하는 아이인지: '손' 개인기가 있는 강아지이고 앞발 사진이 있을 때 */
+  get canPaw() {
+    return canGivePaw(this.p) && !!this.p.photo?.paw
+  }
+
+  /**
+   * 앞발을 받을 손의 자리: 입보다 아래, 얼굴 폭 근처. 아래로는 끝까지 받는다
+   * (손을 내밀면 손은 보통 화면 아래쪽에 있다. 앞발이 닿는 자리는 clampPaw가 턱 아래로 묶는다)
+   */
+  private inPawZone(x: number, y: number, scale = 1) {
+    const L = this.L
+    const top = L.headY + L.chinDy - (scale - 1) * L.headRy * 0.4
+    return Math.abs(x - this.leanX) < L.headRx * 1.1 * scale && y > top
+  }
+
+  /**
+   * 손이 어느 쪽 앞발 구역에 있는지: -1 왼쪽, 1 오른쪽, 0 가운데(어느 쪽도 아님).
+   * 가운데를 비워 둬서 손이 가운데쯤 있을 때 왼발·오른발이 번갈아 나오지 않게 한다
+   */
+  private pawSideOf(x: number) {
+    const d = x - this.leanX
+    const dead = this.L.headRx * PAW_DEAD
+    return d < -dead ? -1 : d > dead ? 1 : 0
+  }
+
+  /**
+   * "손!" 같은 말로 앞발을 달라고 할 때 부른다 (voice.ts). 손이 보이면 그 손에, 안 보이면 앞에 들었다가 내린다
+   */
+  commandPaw() {
+    if (!this.canPaw || this.startle > 0.3) return
+    this.pawCommand = PAW_COMMAND_WINDOW
+  }
+
+  /** 앞발이 갈 자리: 턱보다 아래, 자기 쪽 절반 안으로 묶는다 (앞발이 입과 코를 덮거나 가운데를 넘어가지 않게) */
+  private clampPaw(side: number, x: number, y: number) {
+    const L = this.L
+    const near = this.leanX + side * L.headRx * 0.12
+    const far = this.leanX + side * L.headRx * 0.7
+    return {
+      x: clamp(x, Math.min(near, far), Math.max(near, far)),
+      // 가슴 높이보다 아래로만 (위로 올리면 다리가 턱에서 자라난 것처럼 보인다)
+      y: clamp(y, L.headY + L.headRy * 2.0, FLOOR_Y + L.headRy * 0.35),
+    }
+  }
+
+  private updatePaw(dt: number, hands: { input: PetInput; speed: number }[]) {
+    // 겁 많은 아이도 손은 주지만, 냄새를 맡기 전에는 더 오래 기다려야 한다
+    const hold = this.sniffed ? PAW_HOLD : PAW_HOLD_SHY
+    this.pawCommand = Math.max(0, this.pawCommand - dt)
+    const taken = (id: string, except: PawSide) => this.pawSides.some((o) => o !== except && (o.handId === id || o.offerId === id))
+    // 말로 시켰으면 한 발만 준다: 편 손이 있는 빈 쪽 먼저, 손이 없으면 오른쪽
+    let commanded = this.pawCommand > 0 && this.startle < 0.2
+    const voiceSide = commanded
+      ? (this.pawSides.find((sd) => !sd.handId && hands.some(({ input }) => (input.offer || input.active) && this.pawSideOf(input.x) === sd.side && this.inPawZone(input.x, input.y) && !taken(input.id, sd))) ??
+        (this.pawSides.some((sd) => sd.handId) ? undefined : this.pawSides[1]))
+      : undefined
+    if (commanded && !voiceSide) this.pawCommand = 0
+
+    for (const sd of this.pawSides) {
+      // 자기 구역에 있는 손만 본다 (다른 쪽 앞발이 이미 잡은 손은 빼고)
+      const mine = ({ input }: { input: PetInput }) =>
+        this.pawSideOf(input.x) === sd.side && this.inPawZone(input.x, input.y) && !taken(input.id, sd)
+      if (!sd.handId) {
+        const offer = this.startle < 0.2 && hands.find((h) => h.input.offer && h.speed < PAW_STILL && mine(h))
+        sd.hold = offer ? sd.hold + dt : Math.max(0, sd.hold - dt * 2)
+        sd.offerId = offer && sd.hold > 0.1 ? offer.input.id : null
+        const byVoice = commanded && sd === voiceSide
+        const target =
+          offer && sd.hold >= hold ? offer.input : byVoice ? hands.find((h) => (h.input.offer || h.input.active) && mine(h))?.input : undefined
+        if (target || byVoice) {
+          sd.handId = target ? target.id : PAW_AIR
+          sd.airLeft = target ? 0 : PAW_AIR_SECONDS
+          sd.offerId = null
+          sd.hold = 0
+          if (byVoice) {
+            this.pawCommand = 0
+            commanded = false
+          }
+          // 손이 없으면 가슴 앞에 든다 (입과 코를 가리지 않게)
+          const p = this.clampPaw(sd.side, target?.x ?? this.leanX + sd.side * this.L.headRx * 0.3, target?.y ?? this.L.headY + this.L.headRy * 2.4)
+          sd.x = p.x
+          sd.y = p.y
+          this.affection = Math.min(100, this.affection + 1.5)
+        }
+      } else if (sd.handId === PAW_AIR) {
+        // 손 없이 말로만 시켰을 때: 잠깐 들고 있다가 내린다. 그사이 이쪽에 편 손이 다가오면 그 손에 얹는다
+        sd.airLeft -= dt
+        const h = hands.find((h) => (h.input.offer || h.input.active) && this.pawSideOf(h.input.x) === sd.side && this.inPawZone(h.input.x, h.input.y, 1.3) && !taken(h.input.id, sd))
+        if (h) sd.handId = h.input.id
+        else if (sd.airLeft <= 0 || this.startle > 0.3) sd.handId = null
+        this.petting = Math.max(this.petting, 0.4)
+      } else {
+        const h = hands.find(({ input }) => input.id === sd.handId)
+        // 손을 빼거나, 놀라거나, 손이 가운데를 확실히 넘어 반대쪽으로 가면 앞발을 내린다
+        // (가운데 근처에서는 그대로 둔다. 반대쪽 앞발은 그 손을 다시 가만히 내밀어야 준다)
+        const crossed = h && (h.input.x - this.leanX) * sd.side < -this.L.headRx * PAW_CROSS
+        if (!h || this.startle > 0.3 || crossed || !this.inPawZone(h.input.x, h.input.y, 1.6)) {
+          sd.handId = null
+          sd.hold = 0
+        } else {
+          const p = this.clampPaw(sd.side, h.input.x, h.input.y)
+          sd.x = approach(sd.x, p.x, 10, dt)
+          sd.y = approach(sd.y, p.y, 10, dt)
+          // 손을 맞잡고 있으면 좋아한다
+          this.petting = Math.max(this.petting, 0.5)
+        }
+      }
+      // 들 때는 조금 빨리, 내릴 때는 천천히
+      sd.amt = approach(sd.amt, sd.handId ? 1 : 0, sd.handId ? 4 : 3, dt)
+    }
   }
 
   private blinkNow() {
@@ -429,6 +653,8 @@ export class Pet {
     // 천천히 다가오거나 가까이 있는 손에는 코를 내밀고 킁킁댄다 (겁 많은 아이가 낯설어하는 동안은 덜)
     const reachTarget = (gentle || hover) && this.flinch < 0.2 ? (this.wary > 0.5 ? 0.4 : 1) : 0
     this.reach = approach(this.reach, reachTarget, reachTarget > this.reach ? 4 : 2, dt)
+    // 간식 냄새를 맡고 받아먹는 동안은 코를 내민다
+    if (this.eatHand && this.eatPhase !== 'chew') this.reach = approach(this.reach, 1, 6, dt)
     // 가까이 가만히 대고 있으면 궁금해서 갸웃한다
     this.hoverFor = hover ? this.hoverFor + dt : 0
     if (this.hoverFor > 0.9 && !this.behavior) {
@@ -559,6 +785,9 @@ export class Pet {
       breathRate: this.breathRate,
       flinch: this.flinch,
       reach: this.reach,
+      paws: this.pawSides.map((sd) => ({ amt: sd.amt, x: sd.x, y: sd.y })),
+      chomp: this.chomp,
+      chew: this.chew,
     }
   }
 
@@ -976,6 +1205,50 @@ const BLINK_CLOSE = 0.07
 const BLINK_OPEN = 0.13
 /** 손이 이보다 빨리(로컬 단위/초) 다가오면 움찔한다 */
 const FLINCH_SPEED = 1100
+/** 손 주기: 손바닥을 이 시간(초) 동안 이 속도(로컬 단위/초) 아래로 가만히 두면 앞발을 올린다 */
+const PAW_HOLD = 0.8
+/** 겁 많은 아이가 냄새를 맡기 전이면 더 오래 */
+const PAW_HOLD_SHY = 1.4
+/** 실제 카메라는 가만히 둔 손도 조금씩 떨려 보여서 넉넉하게 */
+const PAW_STILL = 260
+/** 말로 시켰을 때: 이 시간 안에 앞발을 준다, 손이 없으면 이만큼 들고 있다 */
+const PAW_COMMAND_WINDOW = 1
+const PAW_AIR_SECONDS = 2.5
+/** 손 없이 앞에 들고 있는 상태의 이름 (손 id 대신) */
+const PAW_AIR = 'air'
+/** 간식 주기: 간식 수, 한 입 시간, 먹기 전 냄새 맡는 시간, 다 먹고 씹는 시간 (초) */
+const TREAT_BITES = 3
+const TREAT_BITE = 0.55
+const TREAT_SNIFF = 0.7
+const TREAT_CHEW = 1.8
+/** 간식이 입에서 얼굴 반폭의 이 비율 안에 오면 받아먹는다 */
+const TREAT_REACH = 0.55
+/** 이보다 빨리(로컬 단위/초) 움직이는 간식은 아직 받지 않는다 (실제 카메라 손 떨림은 넉넉히) */
+const TREAT_STILL = 260
+/** 앞발 구역: 얼굴 가운데에서 얼굴 반폭의 이 비율 안은 어느 쪽도 아니다 (새로 앞발을 주지 않는다) */
+const PAW_DEAD = 0.15
+/** 앞발을 얹은 손이 가운데를 넘어 반대쪽으로 이만큼(얼굴 반폭 비율) 가면 앞발을 내린다 */
+const PAW_CROSS = 0.3
+
+/** 한쪽 앞발의 상태 */
+interface PawSide {
+  /** -1: 화면 왼쪽 앞발, 1: 오른쪽 */
+  side: number
+  /** 이쪽 구역에 편 손을 가만히 둔 시간 */
+  hold: number
+  /** 앞발을 얹은 손 (PAW_AIR면 손 없이 들고 있음) */
+  handId: string | null
+  /** 앞발을 받으려고 가만히 내밀고 있는 손 (아직 앞발을 올리기 전) */
+  offerId: string | null
+  airLeft: number
+  amt: number
+  x: number
+  y: number
+}
+
+function newPawSide(side: number): PawSide {
+  return { side, hold: 0, handId: null, offerId: null, airLeft: 0, amt: 0, x: 0, y: 0 }
+}
 /** 손이 초당 이 비율보다 빨리 커지면(카메라 쪽으로 불쑥 내밀면) 움찔한다 */
 const FLINCH_ZOOM = 1.6
 

@@ -1,9 +1,11 @@
 import './style.css'
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
-import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOpenHand } from './hand'
+import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand, isPinchHand } from './hand'
+import { Voice } from './voice'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
-import { FLOOR_Y, PETS, type PetProfile } from './pets'
+import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
+import { TreatTray } from './treatTray'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -19,6 +21,8 @@ const tabs = $('pet-tabs')
 const hud = $('debug-hud')
 
 const tracker = new HandTracker(video)
+/** "손!" 하고 말하면 앞발을 준다 (지원하는 브라우저만. 시작 버튼을 누를 때 켠다) */
+const voice = new Voice(() => pet.commandPaw())
 
 /** 실사 털 셰이더. WebGL을 못 쓰거나 셰이더가 안 되는 기기에서는 null이고 캔버스 그림으로 그린다 */
 const fur = (() => {
@@ -73,6 +77,10 @@ interface HandView {
   id: string
   points: Pt[]
   open: boolean
+  /** 손바닥을 위로 해서 '손 달라'고 내민 손 */
+  offer: boolean
+  /** 엄지·검지로 간식을 집은 손 */
+  pinch: boolean
   palm: Pt
 }
 let handViews: HandView[] = []
@@ -120,7 +128,206 @@ function renderTabs() {
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
+  renderBanner()
+  renderHelp()
 }
+
+// ───────────────────────── 간식 접시 ─────────────────────────
+
+/** 무대 옆 간식 접시. 손 인식 쪽에서 hit/setHover/take로 쓴다 (treatTray.ts) */
+export const treatTray = new TreatTray($('treat-tray'), stage, assetUrl('pets/treat.webp'))
+if (debug) Object.assign(window, { __treatTray: treatTray })
+
+// ───────────────────────── 도움말 ─────────────────────────
+
+const help = $('help')
+const helpToggle = $('help-toggle')
+const HELP_KEY = 'sonkkeut.help.v1'
+const ZONE_LABEL = { head: '머리', chin: '턱 밑', body: '등' } as const
+
+function renderHelp() {
+  const p = pet.p
+  const cat = p.species === 'cat'
+  $('help-title').textContent = `${josa(p.name, '과', '와')} 교감하는 법`
+  const steps: [string, string][] = [
+    ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
+    ...(p.shy
+      ? ([
+          [
+            '👃',
+            `${josa(p.name, '은', '는')} 겁이 많아요. 먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해 주세요. 간식을 받아먹어도 마음을 열어요.`,
+          ],
+        ] as [string, string][])
+      : []),
+    ['🫳', '손끝 점이 주황색이 되면 몸에 닿은 거예요. 살살 쓰다듬어 주세요.'],
+    ['💛', `${ZONE_LABEL[p.favorite]}${p.favorite === 'chin' ? '을 긁어' : '를 쓰다듬어'} 주면 가장 좋아해요.`],
+    ['⚡', '너무 빨리 움직이면 깜짝 놀라요. 양손으로 쓰다듬어도 돼요.'],
+  ]
+  if (cat) steps.push(['😌', '고양이는 기분이 좋으면 눈을 지그시 감아요.'])
+  $('help-steps').replaceChildren(
+    ...steps.map(([icon, text]) => {
+      const li = document.createElement('li')
+      li.append(Object.assign(document.createElement('span'), { className: 'help-icon', textContent: icon }), text)
+      return li
+    }),
+  )
+  // 특별한 교감: 간식 주기(모두), '손' 개인기(체크된 강아지만)
+  const specials: [string, string][] = [
+    [
+      '🍗 간식 주기',
+      `왼쪽 간식 접시 위에서 엄지와 검지 끝을 모아 간식을 집고, ${p.name} 입 앞에 가만히 대 보세요. 냄새를 맡고 세 입에 나눠 받아먹어요.`,
+    ],
+  ]
+  if (canGivePaw(p)) {
+    specials.push([
+      "🐾 개인기 '손'",
+      `턱 아래 왼쪽이나 오른쪽에 손바닥을 위로 펴고 1초쯤 가만히 내밀면, ${josa(p.name, '이', '가')} 그쪽 앞발을 올려요. 정가운데에서는 앞발을 주지 않아요. 양손을 내밀면 두 앞발을 모두 올려요. "손!" 하고 말해도 돼요.`,
+    ])
+  }
+  $('help-trick').replaceChildren(
+    ...specials.map(([title, text]) => {
+      const box = document.createElement('div')
+      box.className = 'help-special'
+      box.append(
+        Object.assign(document.createElement('b'), { textContent: title }),
+        Object.assign(document.createElement('p'), { textContent: text }),
+      )
+      return box
+    }),
+  )
+}
+
+function setHelp(open: boolean) {
+  help.hidden = !open
+  helpToggle.setAttribute('aria-expanded', String(open))
+  try {
+    localStorage.setItem(HELP_KEY, open ? 'open' : 'closed')
+  } catch {
+    /* 기억 못 해도 괜찮다 */
+  }
+}
+helpToggle.onclick = () => setHelp(help.hidden !== false)
+$('help-close').onclick = () => setHelp(false)
+// 처음 온 사람에게는 펼쳐 둔다. 휴대폰은 화면이 좁아서 버튼만 두고, 직접 닫았으면 다음에도 닫아 둔다
+setHelp(
+  ((): boolean => {
+    try {
+      const v = localStorage.getItem(HELP_KEY)
+      if (v) return v === 'open'
+    } catch {
+      /* 무시 */
+    }
+    return window.matchMedia('(min-width: 721px)').matches
+  })(),
+)
+
+function renderBanner() {
+  const p = pet.p
+  $('info-banner-title').textContent = `${josa(p.name, '이', '가')} 가족을 기다려요`
+  const thumb = $<HTMLImageElement>('info-thumb')
+  // 썸네일은 셰이더가 이미 불러온 얼굴 사진을 써서 따로 내려받지 않는다
+  const src = p.photo?.src ?? (p.photos?.length ? assetUrl(p.photos[0]) : undefined)
+  thumb.hidden = !src
+  if (src) thumb.src = src
+}
+
+// 아이 정보 → 입양 문의. 시트를 열 때만 DOM을 채워서 매 프레임 루프에는 영향이 없다
+const info = $<HTMLDialogElement>('info')
+const FAVORITE_LABEL = { head: '머리 쓰다듬기', chin: '턱 밑 긁기', body: '등 쓰다듬기' } as const
+
+const slides = $('info-slides')
+const dots = $('info-dots')
+
+function fillGallery(p: PetProfile) {
+  const srcs = p.photos?.length ? p.photos.map(assetUrl) : p.photo ? [p.photo.src] : []
+  $('info-gallery').hidden = srcs.length === 0
+  // 사진이 있으면 이모지 아이콘은 뺀다
+  $('info-emoji').hidden = srcs.length > 0
+  slides.replaceChildren(
+    ...srcs.map((src, i) => {
+      const img = new Image()
+      img.src = src
+      img.alt = `${p.name} 사진 ${i + 1}`
+      img.decoding = 'async'
+      if (i > 0) img.loading = 'lazy'
+      return img
+    }),
+  )
+  dots.replaceChildren(...srcs.map(() => document.createElement('i')))
+  const many = srcs.length > 1
+  dots.hidden = !many
+  $('info-prev').hidden = !many
+  $('info-next').hidden = !many
+  slides.scrollLeft = 0
+  markSlide()
+}
+
+/** 지금 보이는 사진 번호를 점과 화살표에 반영한다 (스크롤할 때만) */
+function markSlide() {
+  const n = slides.children.length
+  const i = Math.round(slides.scrollLeft / Math.max(1, slides.clientWidth))
+  ;[...dots.children].forEach((d, k) => d.classList.toggle('on', k === i))
+  $<HTMLButtonElement>('info-prev').disabled = i <= 0
+  $<HTMLButtonElement>('info-next').disabled = i >= n - 1
+}
+slides.addEventListener('scroll', markSlide, { passive: true })
+const slideBy = (d: number) => slides.scrollBy({ left: d * slides.clientWidth, behavior: 'smooth' })
+$('info-prev').onclick = () => slideBy(-1)
+$('info-next').onclick = () => slideBy(1)
+slides.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault()
+    slideBy(e.key === 'ArrowLeft' ? -1 : 1)
+  }
+})
+
+function fillInfo(p: PetProfile) {
+  fillGallery(p)
+  $('info-emoji').textContent = p.species === 'dog' ? '🐶' : '🐱'
+  $('info-name').textContent = p.name
+  $('info-meta').textContent = [p.breed, p.sex, p.age].filter(Boolean).join(' · ')
+
+  const traits = [...(p.traits ?? []), `${FAVORITE_LABEL[p.favorite]} 좋아해요`]
+  if (canGivePaw(p)) traits.push("'손' 할 줄 알아요 🐾")
+  if (p.shy && !traits.some((t) => t.includes('낯'))) traits.unshift('겁이 많아요')
+  $('info-traits').replaceChildren(
+    ...traits.map((t) => Object.assign(document.createElement('li'), { textContent: t })),
+  )
+
+  $('info-story-wrap').hidden = !p.story
+  $('info-story').textContent = p.story
+
+  const a = p.adoption
+  $('info-shelter-wrap').hidden = !a
+  $('info-sample').hidden = !a?.sample
+  $('info-shelter').replaceChildren(
+    ...(a
+      ? ([['보호소', a.shelter], ['지역', a.region], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
+          v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
+        )
+      : []),
+  )
+
+  const adopt = $<HTMLAnchorElement>('info-adopt')
+  adopt.href = a?.url ?? PAWINHAND_URL
+  $('info-adopt-note').textContent = a?.url
+    ? `포인핸드에서 ${josa(p.name, '이의', '의')} 공고를 열어요.`
+    : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
+}
+
+$('info-open').onclick = () => {
+  fillInfo(pet.p)
+  // 시트를 보는 동안은 손 인식과 셰이더를 멈춰 배터리를 아낀다 (닫히면 close 이벤트에서 다시 켠다)
+  setPaused(true)
+  info.showModal()
+  info.querySelector('.sheet-body')!.scrollTop = 0
+}
+$('info-close').onclick = () => info.close()
+info.addEventListener('close', () => setPaused(false))
+// 시트 바깥(어두운 배경)을 누르면 닫는다
+info.addEventListener('click', (e) => {
+  if (e.target === info) info.close()
+})
 
 
 function selectPet(p: PetProfile) {
@@ -136,6 +343,8 @@ function selectPet(p: PetProfile) {
 const startBtn = $<HTMLButtonElement>('start-camera')
 
 async function startCamera() {
+  // 사용자가 누른 순간에만 마이크를 켤 수 있어서 카메라를 기다리기 전에 켠다
+  voice.start()
   introError.hidden = true
   startBtn.disabled = true
   startBtn.textContent = '카메라 준비 중…'
@@ -167,12 +376,18 @@ startBtn.onclick = startCamera
 function currentInputs(now: number, dt: number): PetInput[] {
   const tracked = mouseSim
     ? simulatedHands()
-    : tracker.update(now).map((h) => ({ id: h.id, raw: h.landmarks.map(landmarkToStage), open: isOpenHand(h.landmarks) }))
+    : tracker.update(now).map((h) => ({
+        id: h.id,
+        raw: h.landmarks.map(landmarkToStage),
+        open: isOpenHand(h.landmarks),
+        offer: isOfferingHand(h.landmarks, (video.videoWidth || 4) / (video.videoHeight || 3)),
+        pinch: isPinchHand(h.landmarks, (video.videoWidth || 4) / (video.videoHeight || 3)),
+      }))
 
   // 시상수 약 25ms: 인식 사이 프레임을 메우고 손 떨림을 줄이되, 지연은 거의 느껴지지 않게
   const a = 1 - Math.exp(-dt * 40)
   for (const id of smoothed.keys()) if (!tracked.some((t) => t.id === id)) smoothed.delete(id)
-  handViews = tracked.map(({ id, raw, open }) => {
+  handViews = tracked.map(({ id, raw, open, offer, pinch }) => {
     const prev = smoothed.get(id)
     const points = prev ? prev.map((q, i) => ({ x: q.x + (raw[i].x - q.x) * a, y: q.y + (raw[i].y - q.y) * a })) : raw
     smoothed.set(id, points)
@@ -180,7 +395,7 @@ function currentInputs(now: number, dt: number): PetInput[] {
       (acc, i) => ({ x: acc.x + points[i].x / PALM_POINTS.length, y: acc.y + points[i].y / PALM_POINTS.length }),
       { x: 0, y: 0 },
     )
-    return { id, points, open, palm }
+    return { id, points, open, offer, pinch, palm }
   })
 
   if (tracker.running || mouseSim) {
@@ -198,6 +413,8 @@ function currentInputs(now: number, dt: number): PetInput[] {
     id: h.id,
     ...toLocal(h.palm.x, h.palm.y),
     active: h.open,
+    offer: h.offer,
+    pinch: h.pinch,
     points: h.points.map((q) => toLocal(q.x, q.y)),
   }))
 }
@@ -208,7 +425,7 @@ function currentInputs(now: number, dt: number): PetInput[] {
  * 일반 접속에서는 README대로 카메라 입력만 받는다.
  */
 const mouseSim = new URLSearchParams(location.search).get('debug') === 'mouse'
-let simPointer: { x: number; y: number; both: boolean } | null = null
+let simPointer: { x: number; y: number; both: boolean; offer: boolean; pinch: boolean } | null = null
 /** 손바닥 중심 기준 편 손 21개 점 (펫 로컬 단위, 손가락이 위) */
 const SIM_HAND: [number, number][] = [
   [0, 55], [-25, 40], [-45, 25], [-60, 10], [-72, -5],
@@ -220,10 +437,17 @@ const SIM_HAND: [number, number][] = [
 function simulatedHands() {
   if (!simPointer) return []
   const c = toLocal(simPointer.x, simPointer.y)
+  // Ctrl(맥은 Cmd)을 누르고 있으면 엄지와 검지 끝을 맞대 간식을 집은 손 (두 손끝이 마우스 자리에서 만난다)
+  const pinch = simPointer.pinch
   const hand = (id: string, cx: number, flip: number) => ({
     id,
-    raw: SIM_HAND.map(([x, y]) => toStage(cx + x * flip, c.y + y)),
-    open: true,
+    raw: SIM_HAND.map(([x, y], i) =>
+      pinch && (i === 4 || i === 8) ? toStage(cx, c.y) : pinch ? toStage(cx + x * flip, c.y + y + 90) : toStage(cx + x * flip, c.y + y),
+    ),
+    open: !pinch,
+    // Alt를 누르고 있으면 손바닥을 위로 해서 '손 달라'고 내민 손으로 흉내낸다
+    offer: simPointer!.offer,
+    pinch,
   })
   const hands = [hand('Right', c.x, 1)]
   if (simPointer.both) hands.push(hand('Left', -c.x, -1))
@@ -233,7 +457,7 @@ if (mouseSim) {
   intro.hidden = true
   const at = (e: PointerEvent) => {
     const r = stage.getBoundingClientRect()
-    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey }
+    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey }
   }
   stage.addEventListener('pointerdown', at)
   stage.addEventListener('pointermove', (e) => e.buttons && at(e))
@@ -252,6 +476,7 @@ function frame(now: number) {
   const workStart = performance.now()
 
   const inputs = currentInputs(now, dt)
+  if (debug) (window as unknown as { __lastInputs: PetInput[] }).__lastInputs = inputs
   // 하트와 말풍선은 쓰지 않는다 (펫 로직이 내는 이벤트는 무시)
   pet.update(dt, inputs)
 
@@ -282,10 +507,12 @@ export function setPaused(on: boolean) {
   if (on) {
     cancelAnimationFrame(raf)
     tracker.pause()
+    voice.setActive(false)
     return
   }
   // 다시 시작: 멈추기 전 손 기록을 버려서, 순간이동한 손에 아이가 놀라지 않게 한다
   tracker.resume()
+  voice.setActive(true)
   pet.forgetHands()
   smoothed.clear()
   handViews = []
@@ -331,6 +558,12 @@ function updateFur(dt: number, inputs: PetInput[]) {
     lastHandPx.set(input.id, { x, y })
     const pts = input.points
     const palm = pts.length === 21 ? Math.hypot(pts[0].x - pts[9].x, pts[0].y - pts[9].y) : 90
+    // 앞발을 맞댄 손은 털·얼굴 반응에서 뺀다 (턱 아래라서 턱 들기로 잡히지 않게)
+    if (pet.isBusyHand(input.id)) {
+      lastHandPx.delete(input.id)
+      tipTouch.set(input.id, [])
+      continue
+    }
     // 쓰다듬기는 편 손만 인정하지만, 턱을 받쳐 드는 건 손을 오므려도 된다
     const hit = pet.contactZone(input)
     const zone = input.active || hit === 'chin' ? hit : null
@@ -417,6 +650,7 @@ function renderQuality(frameMs: number, dt: number, workMs: number) {
       `${(1000 / frameEma).toFixed(0)} fps · 메인 스레드 ${workEma.toFixed(1)}ms`,
       `그리기 ${photoActive() ? `실사 셰이더 (배율 ${glDpr})` : fur ? '그림 (사진 없음/로딩 중)' : '그림 (WebGL 없음)'}`,
       st.mode ? `손 인식 ${st.mode === 'worker' ? '워커' : '메인 스레드'} · ${st.inferMs.toFixed(1)}ms · ${st.detectFps.toFixed(0)}회/초` : '손 인식 대기',
+      `손 모양 ${handViews.map((h) => (h.pinch ? '집은 손' : h.offer ? '내민 손' : h.open ? '편 손' : '오므림')).join(', ') || '-'} · 음성 ${voice.supported ? `"${voice.heard}"` : '지원 안 함'}`,
     ].join('\n')
   }
 }
@@ -465,7 +699,58 @@ function drawHands() {
       ctx.stroke()
     })
     ctx.restore()
+    // 간식은 손끝 점 위에 (두 손끝이 간식을 집고 있는 것처럼)
+    drawTreat(pet.treatOf(id), pts)
   }
+}
+
+/** 간식 그림과, 한 입씩 베어 먹은 모양 (남은 입 수마다 한 번만 만들어 둔다) */
+const treatImg = new Image()
+treatImg.src = assetUrl('pets/treat.webp')
+const treatStages: HTMLCanvasElement[] = []
+
+function treatStage(left: number) {
+  if (treatStages[left]) return treatStages[left]
+  if (!treatImg.complete || !treatImg.naturalWidth) return null
+  const w = treatImg.naturalWidth
+  const h = treatImg.naturalHeight
+  const c = document.createElement('canvas')
+  c.width = w
+  c.height = h
+  const g = c.getContext('2d')!
+  g.drawImage(treatImg, 0, 0)
+  // 위쪽(입 쪽)부터 둥글게 베어 문 자국
+  g.globalCompositeOperation = 'destination-out'
+  const bites: [number, number, number][] = [
+    [0.3, 0.02, 0.3],
+    [0.72, 0.08, 0.32],
+    [0.5, 0.42, 0.42],
+  ]
+  for (const [bx, by, br] of bites.slice(0, 3 - left)) {
+    g.beginPath()
+    g.arc(bx * w, by * h, br * w, 0, Math.PI * 2)
+    g.fill()
+  }
+  treatStages[left] = c
+  return c
+}
+
+/** 엄지·검지 끝 사이에 간식을 그린다 (left: 남은 입 수, 0이면 다 먹어서 없다) */
+function drawTreat(left: number, pts: Pt[]) {
+  if (left <= 0) return
+  const img = treatStage(left)
+  if (!img) return
+  const x = (pts[4].x + pts[8].x) / 2
+  const y = (pts[4].y + pts[8].y) / 2
+  // 크기는 아이 얼굴에 맞춘다 (손 크기는 카메라 거리마다 달라서, 손 기준이면 간식이 너무 작거나 커 보인다)
+  const w = pet.L.headRx * 0.3 * scale
+  const h = (w * img.height) / img.width
+  ctx.save()
+  ctx.shadowColor = 'rgba(60, 35, 15, 0.35)'
+  ctx.shadowBlur = w * 0.15
+  ctx.shadowOffsetY = w * 0.06
+  ctx.drawImage(img, x - w / 2, y - h / 2, w, h)
+  ctx.restore()
 }
 
 function drawCameraOverlay() {

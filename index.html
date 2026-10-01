@@ -11,12 +11,77 @@
     <div id="app">
       <header class="topbar">
         <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
+        <a class="shelter-link" href="register.html">보호소 등록</a>
+        <button id="help-toggle" class="help-toggle" type="button" aria-controls="help" aria-expanded="false" aria-label="도움말">
+          <span aria-hidden="true">?</span><span class="help-label">도움말</span>
+        </button>
       </header>
+
+      <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
+      <dialog id="info" class="info-sheet" aria-labelledby="info-name">
+        <div class="sheet-body">
+          <!-- 사진 슬라이드: 자주 보며 얼굴을 눈에 익히도록 맨 위에 크게 -->
+          <div id="info-gallery" class="gallery">
+            <div id="info-slides" class="slides" tabindex="0" aria-label="사진, 옆으로 넘겨 보기"></div>
+            <button id="info-prev" class="slide-nav prev" type="button" aria-label="이전 사진">‹</button>
+            <button id="info-next" class="slide-nav next" type="button" aria-label="다음 사진">›</button>
+            <div id="info-dots" class="dots" aria-hidden="true"></div>
+          </div>
+          <header class="sheet-head">
+            <span id="info-emoji" class="sheet-emoji" aria-hidden="true"></span>
+            <div>
+              <h2 id="info-name"></h2>
+              <p id="info-meta" class="sheet-meta"></p>
+            </div>
+            <button id="info-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
+          </header>
+          <ul id="info-traits" class="traits"></ul>
+          <section id="info-story-wrap">
+            <h3>이야기</h3>
+            <p id="info-story"></p>
+          </section>
+          <section id="info-shelter-wrap">
+            <h3>보호 정보 <span id="info-sample" class="sample-badge">예시</span></h3>
+            <dl id="info-shelter" class="shelter"></dl>
+          </section>
+        </div>
+        <footer class="sheet-foot">
+          <a id="info-adopt" class="btn primary adopt" target="_blank" rel="noopener">포인핸드에서 입양 문의하기</a>
+          <p id="info-adopt-note" class="muted"></p>
+        </footer>
+      </dialog>
 
       <main class="stage-wrap">
         <canvas id="pet-gl" aria-hidden="true"></canvas>
         <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
         <pre id="debug-hud" class="debug-hud" hidden></pre>
+
+        <!-- 간식 접시: 손끝을 모아 집어서 아이 입 앞으로 끌어온다 (손 인식 전용, 클릭으로는 안 집힌다) -->
+        <div id="treat-tray" class="treat-tray" role="img" aria-label="간식 접시. 손끝을 모아 간식을 집어 아이 입 앞에 대 주세요">
+          <div class="tray-pile"></div>
+          <div class="tray-bowl"></div>
+          <span class="tray-label">간식</span>
+        </div>
+
+        <!-- 도움말: 어떻게 쓰다듬고 개인기를 보는지. 아이를 바꿀 때만 내용을 바꾼다 -->
+        <aside id="help" class="help-box" aria-labelledby="help-title" hidden>
+          <header>
+            <h2 id="help-title"></h2>
+            <button id="help-close" class="help-close" type="button" aria-label="도움말 닫기">✕</button>
+          </header>
+          <ol id="help-steps" class="help-steps"></ol>
+          <div id="help-trick" class="help-trick"></div>
+        </aside>
+
+        <!-- 아이 정보 열기 배너 (시작 화면이 떠 있는 동안은 그 아래에 가려진다) -->
+        <button id="info-open" class="info-banner" type="button" aria-haspopup="dialog">
+          <img id="info-thumb" class="banner-thumb" alt="" />
+          <span class="banner-text">
+            <b id="info-banner-title"></b>
+            <span>사진과 이야기 보고 입양 문의하기</span>
+          </span>
+          <span class="banner-go" aria-hidden="true">›</span>
+        </button>
 
         <!-- 카메라 영상은 손 인식에만 쓰고 화면에는 보이지 않는다 (display:none이면 일부 브라우저가 프레임을 멈춰서 투명하게 숨긴다) -->
         <div id="camera-box" class="camera-box camera-hidden">
@@ -34,6 +99,7 @@
               너무 세게 움직이면 깜짝 놀라요.
             </p>
             <p class="muted">카메라 영상은 기기 안에서만 처리되고, 어디로도 전송되지 않아요.</p>
+            <p class="muted">"손!" 같은 말을 알아듣도록 마이크도 함께 켜요. 크롬 등 일부 브라우저는 음성 인식을 위해 소리를 브라우저 회사 서버로 보내요.</p>
             <div class="actions">
               <button id="start-camera" class="btn primary" type="button">카메라로 시작하기</button>
             </div>
