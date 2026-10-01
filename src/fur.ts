@@ -1247,7 +1247,8 @@ export class FurRenderer {
     // (강아지는 헥헥대는 입 사진이라 끝까지 벌리면 혀가 너무 나와서 80%까지)
     // 씹기: 다문 입과 살짝 벌린 입 사진을 번갈아 빠르게 오간다 (사이 모양은 한두 프레임만)
     this.chewW = ramp(this.chewW, p.chew > 0.5 && Math.sin(p.t * 9) > -0.3, 0.05, 0.05, dt)
-    const eatW = Math.max(p.chomp * (p.species === 'dog' ? 0.8 : 1), this.chewW * 0.5)
+    // 고양이는 크게 벌린 입 사진이 너무 커 보여서, 한 입 물 때도 살짝 벌린 입 사진(0.5)까지만 쓴다
+    const eatW = Math.max(p.chomp * (p.species === 'dog' ? 0.8 : 0.5), this.chewW * 0.5)
     gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42, eatW) : eatW)
     gl.uniform1f(this.loc('uEarsW'), this.earsBack)
 
