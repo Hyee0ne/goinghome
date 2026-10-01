@@ -19,6 +19,24 @@
   background: var(--bg);
 }
 
+.reg-back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  font-size: 22px;
+  text-decoration: none;
+}
+
+.reg-title {
+  flex: 1;
+  min-width: 0;
+}
+
 .reg-top h1 {
   margin: 0;
   font-size: 20px;

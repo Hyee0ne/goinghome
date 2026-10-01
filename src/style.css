@@ -95,7 +95,23 @@ button {
   white-space: nowrap;
 }
 
-.help-toggle span {
+/* 보호소용 등록 화면으로 가는 링크 (한켠에 작게) */
+.shelter-link {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shelter-link:hover {
+  color: var(--ink);
+}
+
+.help-toggle span:first-child {
   display: grid;
   place-items: center;
   width: 20px;
@@ -194,8 +210,21 @@ button {
   margin: 4px 0 0;
 }
 
-/* 휴대폰: 무대 위쪽 폭 전체 */
+/* 휴대폰: 무대 위쪽 폭 전체, 상단 바는 탭이 먼저 보이게 도움말을 ? 하나로 */
 @media (max-width: 720px) {
+  .help-label {
+    display: none;
+  }
+
+  .help-toggle {
+    padding: 7px;
+  }
+
+  .shelter-link {
+    padding: 7px 4px;
+    font-size: 13px;
+  }
+
   .help-box {
     top: 10px;
     left: 10px;
