@@ -110,6 +110,12 @@ export interface PhotoRig {
     /** 단계 사이의 움직임 아틀라스. 있으면 표정이 섞이는 대신 움직여서 바뀐다 */
     morph?: MorphAtlas
   }
+  /**
+   * 손 주기에 쓰는 앞발 층: 같은 사진을 '앞발을 카메라 쪽으로 든 모습'으로 편집해 다리와 발만 잘라 낸 것 (정면 시점).
+   * x/y/width/height: 층이 놓이는 자리 (사진 좌표). 어깨 쪽은 몸에 섞이도록 서서히 투명하다.
+   * shoulder: 다리가 몸에 붙은 곳 (들어 올리고 기울이는 축), pad: 발바닥 가운데. 사진 오른쪽 다리 기준
+   */
+  paw?: { src: string; x: number; y: number; width: number; height: number; shoulder: { x: number; y: number }; pad: { x: number; y: number } }
   /** 전신 사진이면 발밑에 그림자를 깐다. 얼굴 클로즈업처럼 아래가 잘린 사진은 false */
   floorShadow: boolean
   /** 사진 아래쪽을 이 높이(픽셀)만큼 배경으로 서서히 사라지게 한다 (잘린 가슴선을 숨긴다) */
@@ -162,6 +168,8 @@ export interface Layout {
   chinDy: number
   chinDx: number
   noseY: number
+  /** 입 (간식을 받아먹는 자리). 사진이면 턱 부위 가운데 = 입이 벌어지는 곳 */
+  mouthY: number
   bodyY: number
   bodyRx: number
   bodyRy: number
@@ -182,6 +190,7 @@ export function layoutOf(p: PetProfile): Layout {
       chinDy: 35,
       chinDx: 90,
       noseY: -125 + (p.species === 'cat' ? 26 : 18),
+      mouthY: -125 + (p.species === 'cat' ? 50 : 45),
       bodyY: 100,
       bodyRx: 125,
       bodyRy: 140,
@@ -197,6 +206,7 @@ export function layoutOf(p: PetProfile): Layout {
     chinDy: (rig.chinY - rig.head.y) * s,
     chinDx: rig.nose.rx * 2.2 * s,
     noseY: photoToLocal(rig, rig.nose.x, rig.nose.y).y,
+    mouthY: photoToLocal(rig, rig.chin.x, rig.chin.y).y,
     bodyY: body.y,
     bodyRx: rig.body.rx * s,
     bodyRy: rig.body.ry * s,
@@ -239,6 +249,7 @@ export const PETS: PetProfile[] = [
       neck: { x: 575, y: 840 },
       nose: { x: 575, y: 565, rx: 81, ry: 66 },
       catchlight: `${BASE}pets/choco-face-catch.png`,
+      paw: { src: `${BASE}pets/choco-paw.webp`, x: 612, y: 848, width: 426, height: 477, shoulder: { x: 974, y: 840 }, pad: { x: 814, y: 1210 } },
       nostrils: [
         { x: 540, y: 567, r: 22 },
         { x: 610, y: 567, r: 22 },

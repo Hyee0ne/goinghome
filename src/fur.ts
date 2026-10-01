@@ -916,6 +916,10 @@ export class FurRenderer {
   private morphTex: WebGLTexture
   /** 눈 반사광 조각 */
   private catchTex: WebGLTexture
+  private buf: WebGLBuffer
+  private aUv: number
+  /** 손 주기 앞발 (털 셰이더와 따로 그리는 층) */
+  private paw: PawLayer
   /** 표정 전환 상태 (0~1) */
   private pant = 0
   private earsBack = 0
@@ -959,14 +963,15 @@ export class FurRenderer {
     this.prog = link(gl, VERT, FRAG)
     gl.useProgram(this.prog)
 
-    const buf = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf)
+    this.buf = gl.createBuffer()!
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     const a = -MARGIN
     const b = 1 + MARGIN
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([a, a, b, a, a, b, b, b]), gl.STATIC_DRAW)
-    const loc = gl.getAttribLocation(this.prog, 'aUv')
-    gl.enableVertexAttribArray(loc)
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
+    this.aUv = gl.getAttribLocation(this.prog, 'aUv')
+    gl.enableVertexAttribArray(this.aUv)
+    gl.vertexAttribPointer(this.aUv, 2, gl.FLOAT, false, 0, 0)
+    this.paw = new PawLayer(gl)
 
     this.imgTex = makeTexture(gl)
     this.flowTex = makeTexture(gl)
@@ -1055,6 +1060,8 @@ export class FurRenderer {
       this.rig = rig
       this.field = new FurField(rig)
       this.motion = new FaceMotion(rig)
+      // 앞발 층이 자기 프로그램을 쓰고 나면 그게 켜져 있어서, 아이를 바꿀 때 리그 값이 털 셰이더에 안 들어간다 (다른 아이 눈 자리에 눈 감은 사진이 뜬다)
+      gl.useProgram(this.prog)
       this.uploadField(true)
       gl.activeTexture(gl.TEXTURE7)
       gl.bindTexture(gl.TEXTURE_2D, this.catchTex)
@@ -1065,6 +1072,7 @@ export class FurRenderer {
       }
       gl.uniform1f(this.loc('uHasCatch'), assets.catch ? 1 : 0)
       this.hasEyesPhoto = !!rig.expressions?.eyesClosed && !!assets.expr[1]
+      this.paw.load(rig.paw)
       this.setRigUniforms(rig, assets.expr.map((im) => !!im), !!assets.morph)
     } finally {
       if (this.loading === rig.src) this.loading = null
@@ -1161,6 +1169,12 @@ export class FurRenderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     gl.clear(gl.COLOR_BUFFER_BIT)
     this.cleared = false
+    // 앞발 층이 프로그램·버퍼·0번 텍스처를 바꿔 놓으므로 털 셰이더 상태를 되돌린다
+    gl.useProgram(this.prog)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
+    gl.vertexAttribPointer(this.aUv, 2, gl.FLOAT, false, 0, 0)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.imgTex)
 
     const k = rig.scale * view.scale
     const left = view.cx - rig.centerX * k
@@ -1224,7 +1238,9 @@ export class FurRenderer {
     this.pant = ramp(this.pant, this.panting, PANT_OPEN, PANT_CLOSE, dt)
     this.earsBack = ramp(this.earsBack, this.wary, EARS_BACK, EARS_RETURN, dt)
     // 입맛 다시기: 입을 살짝 열었다 닫는다 (헥헥 중간 단계까지만)
-    gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42) : 0)
+    // 고양이는 헥헥대지 않고, 간식을 받아먹을 때만 입을 벌린다: 한 입 물 때 크게(끝까지 벌리면 하악질처럼 보여 80%까지), 씹을 때는 살짝 벌렸다 다문다
+    const eatW = Math.max(p.chomp * 0.8, p.chew * (0.22 + 0.22 * Math.sin(p.t * 11)))
+    gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42) : eatW)
     gl.uniform1f(this.loc('uEarsW'), this.earsBack)
 
     // 눈 감은 사진이 없으면 눈꺼풀을 털을 끌어내려 흉내 낸다. 오래 유지하면 늘어진 게 보이므로 지그시 감기는 얕게
@@ -1245,7 +1261,9 @@ export class FurRenderer {
     gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx, m.browR * BROW_LIFT * toPx)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
     const pantBob = this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
-    gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT + pantBob) * toPx)
+    // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다 (입 벌린 사진이 있으면 그 사진이 움직이므로 턱은 그대로)
+    const eatJaw = rig.expressions?.pant ? 0 : -(p.chomp * CHOMP_OPEN + p.chew * (0.5 + 0.5 * Math.sin(p.t * 11)) * CHEW_OPEN)
+    gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT + pantBob + eatJaw) * toPx)
     gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx : 0)
     gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx, -soft(m.pitch, 1) * PITCH_SHIFT * toPx)
     gl.uniform2f(this.loc('uGaze'), clamp(p.lookX, -1, 1) * GAZE, clamp(p.lookY, -1, 1) * GAZE * 0.6)
@@ -1256,8 +1274,132 @@ export class FurRenderer {
 
     this.uploadField()
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+    // 손 주기: 앞발을 털 위에 따로 그린다
+    if (rig.paw) {
+      for (const [k, pw] of p.paws.entries()) if (pw.amt > 0.005) this.paw.draw(pw, k === 0, p.t, rig, view)
+    }
   }
 }
+
+/**
+ * 손 주기 앞발 층. 털 셰이더와 다른 작은 프로그램이라 텍스처 칸 제한(8개)과 상관없다.
+ * 같은 사진을 앞발을 든 모습으로 편집해 잘라 낸 층(정면 시점)을 사진 좌표 그대로 겹친다.
+ * 어깨를 축으로 아래에서 들어 올리고, 손 쪽으로 살짝 기운다 (늘이지 않아서 흐물거리지 않는다).
+ */
+class PawLayer {
+  private gl: WebGLRenderingContext
+  private prog: WebGLProgram
+  private buf: WebGLBuffer
+  private tex: WebGLTexture
+  private ready = false
+  private src = ''
+  private u: Record<string, WebGLUniformLocation | null> = {}
+
+  constructor(gl: WebGLRenderingContext) {
+    this.gl = gl
+    this.prog = link(
+      gl,
+      `attribute vec2 aUv;
+       uniform vec2 uOrigin; uniform vec2 uAxisX; uniform vec2 uAxisY;
+       varying vec2 vUv;
+       void main() { vUv = aUv; gl_Position = vec4(uOrigin + aUv.x * uAxisX + aUv.y * uAxisY, 0.0, 1.0); }`,
+      `precision mediump float;
+       uniform sampler2D uTex; uniform float uAlpha;
+       uniform vec2 uFade;     // 층 안 세로 0~1: 여기부터 아래로 사진 아랫단처럼 서서히 사라진다
+       varying vec2 vUv;
+       void main() {
+         vec4 c = texture2D(uTex, vUv);
+         c *= (1.0 - smoothstep(uFade.x, uFade.y, vUv.y)) * uAlpha;
+         gl_FragColor = c;
+       }`,
+    )
+    this.buf = gl.createBuffer()!
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW)
+    this.tex = makeTexture(gl)
+    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uAlpha', 'uFade']) this.u[n] = gl.getUniformLocation(this.prog, n)
+  }
+
+  async load(paw: PhotoRig['paw']) {
+    if (!paw || paw.src === this.src) return
+    this.src = paw.src
+    this.ready = false
+    const img = await loadImage(paw.src).catch(() => null)
+    if (!img || this.src !== paw.src) return
+    const gl = this.gl
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.tex)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+    this.ready = true
+  }
+
+  /** view: 펫 로컬 → 화면 (털 셰이더와 같은 사진 배치) */
+  /** pw: 한쪽 앞발 (펫 로컬 좌표). flip: 화면 왼쪽 앞발이면 사진 속 다리를 좌우로 뒤집어 쓴다 */
+  draw(pw: Pose['paws'][number], flip: boolean, t: number, rig: PhotoRig, view: { cx: number; cy: number; scale: number; W: number; H: number }) {
+    const paw = rig.paw
+    if (!this.ready || !paw) return
+    const gl = this.gl
+    const e = pw.amt
+    // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
+    const s = 1.4
+    const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
+    // 사진 속 앞발은 사진 오른쪽 다리. 화면 왼쪽 앞발은 좌우를 뒤집어 쓴다
+    const mirror = (x: number) => (flip ? 2 * rig.centerX - x : x)
+    // 손 위치 (사진 좌표, 뒤집기 전 기준)
+    const hx = mirror(pw.x / rig.scale + rig.centerX)
+    const hy = (pw.y - FLOOR_Y) / rig.scale + rig.footY
+    const S = paw.shoulder
+    const v0x = paw.pad.x - S.x
+    const v0y = paw.pad.y - S.y
+    const v1x = hx - S.x
+    const v1y = hy - S.y
+    // 어깨를 축으로 손 쪽으로 조금만 기울이고, 손이 멀면 카메라 쪽으로 조금 더 뻗는다 (크게 틀면 사진 티가 난다)
+    const toward = clamp(Math.atan2(v1y, v1x) - Math.atan2(v0y, v0x), -0.3, 0.3) * 0.5
+    const reach = clamp(Math.hypot(v1x, v1y) / Math.hypot(v0x, v0y), 0.95, 1.08)
+    // 들어 올리는 동안: 아래로 내려 있던 발이 어깨를 축으로 올라오며 앞으로(크게) 나온다
+    const ang = toward + (1 - rise) * 0.35 + Math.sin(t * 2.1) * 0.012 * e
+    const sc = reach * (0.88 + 0.12 * rise)
+    const drop = (1 - rise) * paw.height * 0.25
+    const cos = Math.cos(ang)
+    const sin = Math.sin(ang)
+    const k = rig.scale * view.scale
+    const left = view.cx - rig.centerX * k
+    const top = view.cy + (FLOOR_Y - rig.footY * rig.scale) * view.scale
+    // 층의 사진 좌표 → 클립 공간 (어깨 축 회전·확대 → 좌우 뒤집기 → 화면)
+    const map = (X: number, Y: number) => {
+      const dx = (X - S.x) * sc
+      const dy = (Y - S.y) * sc
+      const qx = mirror(S.x + dx * cos - dy * sin)
+      const qy = S.y + dx * sin + dy * cos + drop
+      return [((left + qx * k) / view.W) * 2 - 1, 1 - ((top + qy * k) / view.H) * 2]
+    }
+    const o = map(paw.x, paw.y)
+    const ax = map(paw.x + paw.width, paw.y)
+    const ay = map(paw.x, paw.y + paw.height)
+    // 사진 아랫단이 사라지는 높이에 맞춰 발도 끝자락만 같이 사라진다 (발바닥은 남게 털 셰이더보다 늦게)
+    const fadeFrom = rig.fadeBottom > 0 ? rig.height - rig.fadeBottom * 0.35 : rig.height + 1
+    gl.useProgram(this.prog)
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
+    const loc = gl.getAttribLocation(this.prog, 'aUv')
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.tex)
+    gl.uniform1i(this.u.uTex, 0)
+    gl.uniform1f(this.u.uAlpha, Math.min(1, e * 2.5))
+    gl.uniform2f(this.u.uFade, (fadeFrom - paw.y - drop) / paw.height, (rig.height - paw.y - drop) / paw.height + 1e-3)
+    gl.uniform2f(this.u.uOrigin, o[0], o[1])
+    gl.uniform2f(this.u.uAxisX, ax[0] - o[0], ax[1] - o[1])
+    gl.uniform2f(this.u.uAxisY, ay[0] - o[0], ay[1] - o[1])
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+  }
+}
+
+/** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
+const CHOMP_OPEN = 5
+const CHEW_OPEN = 2
 
 /** 표정 전환 시간 (초). 놀랄 때 귀는 빨리 젖히고 천천히 돌아온다 */
 const PANT_OPEN = 0.45
