@@ -1305,7 +1305,8 @@ class PawLayer {
        void main() {
          vec4 c = texture2D(uTex, vec2(mix(vUv.x, 1.0 - vUv.x, uFlip), vUv.y));
          // 다리가 이어지는 쪽(가슴 쪽)은 서서히 투명하게 해 몸에서 뻗어 나온 것처럼
-         float fade = uLegUp > 0.5 ? smoothstep(0.03, 0.45, vUv.y) : 1.0 - smoothstep(0.5, 0.92, vUv.y);
+         // (위로 이어지는 다리는 아래쪽 절반쯤만 보이게: 길게 보이면 턱에서 다리가 자라난 것처럼 보인다)
+         float fade = uLegUp > 0.5 ? smoothstep(0.32, 0.62, vUv.y) : 1.0 - smoothstep(0.5, 0.92, vUv.y);
          c *= fade * uAlpha;
          gl_FragColor = c;
        }`,
@@ -1351,7 +1352,7 @@ class PawLayer {
     const tx = view.cx + p.pawX * view.scale
     const ty = view.cy + p.pawY * view.scale
     // 위로 든 다리: 가슴 쪽에서 내려와 손바닥에 톡 얹는다 / 아래에서 올라오는 다리: 화면 아래에서 올라온다
-    const startY = legUp ? ty - h * 0.35 : view.H + h * 0.2
+    const startY = legUp ? ty - h * 0.08 : view.H + h * 0.2
     const ay = ty + (startY - ty) * (1 - rise) + (legUp ? Math.sin(p.t * 2.4) * 1.2 * e : 0)
     // 다리가 몸 가운데 쪽에서 뻗어 나오게 기울인다 (손에 얹은 동안은 아주 조금 흔들린다)
     const lean = legUp ? (flip ? -1 : 1) * 0.14 : (flip ? 1 : -1) * (0.18 * (1 - e) + 0.05)

@@ -11,6 +11,15 @@ export default defineConfig({
   plugins: [...(process.env.HTTPS ? [basicSsl()] : []), petEditorApi()],
   // 손 인식 워커는 MediaPipe의 ES 모듈판 wasm 로더를 동적 import하므로 모듈 워커로 빌드한다
   worker: { format: 'es' },
+  // 배포에 넣을 화면: 앱, 보호소용 등록 화면(있으면). 기준점 편집 화면(rig.html)은 개발 서버 전용이라 넣지 않는다
+  build: {
+    rollupOptions: {
+      input: {
+        main: join(import.meta.dirname, 'index.html'),
+        ...(existsSync(join(import.meta.dirname, 'register.html')) && { register: join(import.meta.dirname, 'register.html') }),
+      },
+    },
+  },
 })
 
 /**

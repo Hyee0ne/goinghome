@@ -415,7 +415,8 @@ export class Pet {
     const L = this.L
     return {
       x: clamp(x, this.leanX - L.headRx * 0.7, this.leanX + L.headRx * 0.7),
-      y: clamp(y, L.headY + L.chinDy + L.headRy * 0.45, L.headY + L.headRy * 2.5),
+      // 가슴 높이보다 아래로만 (위로 올리면 다리가 턱에서 자라난 것처럼 보인다)
+      y: clamp(y, L.headY + L.headRy * 1.45, L.headY + L.headRy * 2.6),
     }
   }
 
@@ -438,7 +439,7 @@ export class Pet {
         this.pawOfferId = null
         this.pawCommand = 0
         // 손이 없으면 가슴 앞에 든다 (입과 코를 가리지 않게)
-        const p = this.clampPaw(target?.x ?? this.leanX + this.L.headRx * 0.15, target?.y ?? this.L.headY + this.L.headRy * 2)
+        const p = this.clampPaw(target?.x ?? this.leanX + this.L.headRx * 0.15, target?.y ?? this.L.headY + this.L.headRy * 2.1)
         this.pawX = p.x
         this.pawY = p.y
         this.affection = Math.min(100, this.affection + 1.5)
