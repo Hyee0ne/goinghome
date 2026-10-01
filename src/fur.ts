@@ -1300,14 +1300,19 @@ class PawLayer {
        varying vec2 vUv;
        void main() { vUv = aUv; gl_Position = vec4(uOrigin + aUv.x * uAxisX + aUv.y * uAxisY, 0.0, 1.0); }`,
       `precision mediump float;
-       uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha; uniform float uLegUp;
+       uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha;
+       uniform vec2 uAnchor;   // 발끝 (사진 0~1)
+       uniform vec2 uLegDir;   // 발 → 다리 끝 방향 (사진 좌표, 길이 1)
+       uniform float uLegLen;  // 발끝에서 사진 끝까지 다리 길이 (사진 좌표)
+       uniform float uAspect;  // 사진 세로/가로
        varying vec2 vUv;
        void main() {
-         vec4 c = texture2D(uTex, vec2(mix(vUv.x, 1.0 - vUv.x, uFlip), vUv.y));
-         // 다리가 이어지는 쪽(가슴 쪽)은 서서히 투명하게 해 몸에서 뻗어 나온 것처럼
-         // (위로 이어지는 다리는 아래쪽 절반쯤만 보이게: 길게 보이면 턱에서 다리가 자라난 것처럼 보인다)
-         float fade = uLegUp > 0.5 ? smoothstep(0.32, 0.62, vUv.y) : 1.0 - smoothstep(0.5, 0.92, vUv.y);
-         c *= fade * uAlpha;
+         vec2 uv = vec2(mix(vUv.x, 1.0 - vUv.x, uFlip), vUv.y);
+         vec4 c = texture2D(uTex, uv);
+         // 다리 끝(몸 쪽)으로 갈수록 서서히 투명하게: 몸에서 뻗어 나온 것처럼
+         vec2 d = (uv - uAnchor) * vec2(1.0, uAspect);
+         float t = dot(d, uLegDir) / uLegLen;
+         c *= (1.0 - smoothstep(0.5, 0.95, t)) * uAlpha;
          gl_FragColor = c;
        }`,
     )
@@ -1315,7 +1320,8 @@ class PawLayer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW)
     this.tex = makeTexture(gl)
-    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uFlip', 'uAlpha', 'uLegUp']) this.u[n] = gl.getUniformLocation(this.prog, n)
+    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uFlip', 'uAlpha', 'uAnchor', 'uLegDir', 'uLegLen', 'uAspect'])
+      this.u[n] = gl.getUniformLocation(this.prog, n)
   }
 
   async load(paw: PhotoRig['paw']) {
@@ -1339,33 +1345,32 @@ class PawLayer {
     const gl = this.gl
     const e = p.paw
     // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
-    const s = 1.4
+    const s = 1.3
     const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
-    // 손이 오른쪽이면 오른쪽 앞발 (사진을 좌우로 뒤집는다)
+    // 화면 왼쪽 손에는 사진 그대로, 오른쪽 손에는 좌우를 뒤집은 앞발 (오른발/왼발)
     const flip = p.pawX > 0 ? 1 : 0
-    const legUp = !!paw.legUp
-    // 다리가 위(가슴)로 이어지는 앞발은 가슴에서 앞으로 나오며 커지는 느낌을 준다
-    const grow = legUp ? 0.82 + 0.18 * rise : 1
-    const w = D * paw.width * view.scale * grow
+    const w = D * paw.width * view.scale
     const h = w * this.aspect
-    // 접촉점(발바닥 가운데 또는 발가락 끝)이 손바닥에 오게
+    // 손에 닿는 발끝 자리
     const tx = view.cx + p.pawX * view.scale
     const ty = view.cy + p.pawY * view.scale
-    // 위로 든 다리: 가슴 쪽에서 내려와 손바닥에 톡 얹는다 / 아래에서 올라오는 다리: 화면 아래에서 올라온다
-    const startY = legUp ? ty - h * 0.08 : view.H + h * 0.2
-    const ay = ty + (startY - ty) * (1 - rise) + (legUp ? Math.sin(p.t * 2.4) * 1.2 * e : 0)
-    // 다리가 몸 가운데 쪽에서 뻗어 나오게 기울인다 (손에 얹은 동안은 아주 조금 흔들린다)
-    const lean = legUp ? (flip ? -1 : 1) * 0.14 : (flip ? 1 : -1) * (0.18 * (1 - e) + 0.05)
-    const ang = lean + Math.sin(p.t * 2.1) * 0.015 * e
+    // 다리가 향할 몸 쪽: 발에서 가슴 가운데 쪽으로 비스듬히 아래 (화면 맨 아래로 향하면 다리가 몸 밖으로 삐져나온다)
+    const side = Math.max(-1, Math.min(1, p.pawX / (D * 1.2)))
+    const want = Math.atan2(1, -side * 0.75)
+    const leg = ((flip ? 180 - paw.legDir : paw.legDir) * Math.PI) / 180
+    const ang = want - leg + Math.sin(p.t * 2.1) * 0.02 * e
+    // 들어 올리는 동안은 몸 쪽에서 앞으로 뻗어 나온다
+    const back = (1 - rise) * h * 0.6
+    const ay = ty + Math.sin(want) * back
+    const axs = tx + Math.cos(want) * back
     const ax = (flip ? 1 - paw.anchorX : paw.anchorX) * w
     const axY = paw.anchorY * h
     const cos = Math.cos(ang)
     const sin = Math.sin(ang)
-    // 화면 픽셀 → 클립 좌표
     const toClipX = (x: number) => (x / view.W) * 2 - 1
     const toClipY = (y: number) => 1 - (y / view.H) * 2
-    // 사진의 왼쪽 위 모서리 (발바닥 가운데를 (tx, ay)에 두고 회전)
-    const ox = tx + (-ax * cos + axY * sin)
+    // 사진의 왼쪽 위 모서리 (발끝을 (axs, ay)에 두고 회전)
+    const ox = axs + (-ax * cos + axY * sin)
     const oy = ay + (-ax * sin - axY * cos)
     gl.useProgram(this.prog)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
@@ -1376,7 +1381,17 @@ class PawLayer {
     gl.uniform1i(this.u.uTex, 0)
     gl.uniform1f(this.u.uFlip, flip)
     gl.uniform1f(this.u.uAlpha, Math.min(1, e * 3))
-    gl.uniform1f(this.u.uLegUp, legUp ? 1 : 0)
+    // 다리 방향과 길이 (사진 좌표, 뒤집기 전 기준)
+    const ld = (paw.legDir * Math.PI) / 180
+    const dir = { x: Math.cos(ld), y: Math.sin(ld) }
+    const toEdge = Math.min(
+      dir.x > 0 ? (1 - paw.anchorX) / dir.x : dir.x < 0 ? -paw.anchorX / dir.x : 1e3,
+      dir.y > 0 ? ((1 - paw.anchorY) * this.aspect) / dir.y : dir.y < 0 ? (-paw.anchorY * this.aspect) / dir.y : 1e3,
+    )
+    gl.uniform2f(this.u.uAnchor, paw.anchorX, paw.anchorY)
+    gl.uniform2f(this.u.uLegDir, dir.x, dir.y)
+    gl.uniform1f(this.u.uLegLen, toEdge)
+    gl.uniform1f(this.u.uAspect, this.aspect)
     gl.uniform2f(this.u.uOrigin, toClipX(ox), toClipY(oy))
     gl.uniform2f(this.u.uAxisX, (w * cos * 2) / view.W, (-w * sin * 2) / view.H)
     gl.uniform2f(this.u.uAxisY, (-h * sin * 2) / view.W, (-h * cos * 2) / view.H)
