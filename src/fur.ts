@@ -1270,8 +1270,8 @@ export class FurRenderer {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
     // 손 주기: 앞발을 털 위에 따로 그린다
-    if (p.paw > 0.005 && rig.paw) {
-      this.paw.draw(p, rig, view)
+    if (rig.paw) {
+      for (const [k, pw] of p.paws.entries()) if (pw.amt > 0.005) this.paw.draw(pw, k === 0, p.t, rig, view)
     }
   }
 }
@@ -1331,20 +1331,20 @@ class PawLayer {
   }
 
   /** view: 펫 로컬 → 화면 (털 셰이더와 같은 사진 배치) */
-  draw(p: Pose, rig: PhotoRig, view: { cx: number; cy: number; scale: number; W: number; H: number }) {
+  /** pw: 한쪽 앞발 (펫 로컬 좌표). flip: 화면 왼쪽 앞발이면 사진 속 다리를 좌우로 뒤집어 쓴다 */
+  draw(pw: Pose['paws'][number], flip: boolean, t: number, rig: PhotoRig, view: { cx: number; cy: number; scale: number; W: number; H: number }) {
     const paw = rig.paw
     if (!this.ready || !paw) return
     const gl = this.gl
-    const e = p.paw
+    const e = pw.amt
     // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
     const s = 1.4
     const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
-    // 사진 속 앞발은 사진 오른쪽 다리. 화면 왼쪽 손에는 좌우를 뒤집어 반대쪽 다리로 준다
-    const flip = p.pawX < 0
+    // 사진 속 앞발은 사진 오른쪽 다리. 화면 왼쪽 앞발은 좌우를 뒤집어 쓴다
     const mirror = (x: number) => (flip ? 2 * rig.centerX - x : x)
     // 손 위치 (사진 좌표, 뒤집기 전 기준)
-    const hx = mirror(p.pawX / rig.scale + rig.centerX)
-    const hy = (p.pawY - FLOOR_Y) / rig.scale + rig.footY
+    const hx = mirror(pw.x / rig.scale + rig.centerX)
+    const hy = (pw.y - FLOOR_Y) / rig.scale + rig.footY
     const S = paw.shoulder
     const v0x = paw.pad.x - S.x
     const v0y = paw.pad.y - S.y
@@ -1354,7 +1354,7 @@ class PawLayer {
     const toward = clamp(Math.atan2(v1y, v1x) - Math.atan2(v0y, v0x), -0.3, 0.3) * 0.5
     const reach = clamp(Math.hypot(v1x, v1y) / Math.hypot(v0x, v0y), 0.95, 1.08)
     // 들어 올리는 동안: 아래로 내려 있던 발이 어깨를 축으로 올라오며 앞으로(크게) 나온다
-    const ang = toward + (1 - rise) * 0.35 + Math.sin(p.t * 2.1) * 0.012 * e
+    const ang = toward + (1 - rise) * 0.35 + Math.sin(t * 2.1) * 0.012 * e
     const sc = reach * (0.88 + 0.12 * rise)
     const drop = (1 - rise) * paw.height * 0.25
     const cos = Math.cos(ang)

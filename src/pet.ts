@@ -87,10 +87,8 @@ export interface Pose {
   flinch: number
   /** 손이 천천히 다가와 코를 내밀고 킁킁댐 (0~1) */
   reach: number
-  /** 손 주기: 앞발을 든 정도 (0~1)와 앞발이 놓일 손바닥 위치 (펫 로컬 좌표) */
-  paw: number
-  pawX: number
-  pawY: number
+  /** 손 주기: [화면 왼쪽 앞발, 오른쪽 앞발]마다 든 정도 (0~1)와 앞발이 놓일 손바닥 위치 (펫 로컬 좌표) */
+  paws: { amt: number; x: number; y: number }[]
 }
 
 type Behavior = 'look' | 'earFlick' | 'lick' | 'tilt' | 'sigh' | 'slowBlink'
@@ -142,18 +140,10 @@ export class Pet {
   private leanX = 0
   private leanY = 0
   private strokeAcc = 0
-  /** 손 주기: 턱 아래에 편 손을 가만히 둔 시간, 앞발을 올린 손, 앞발 위치 */
-  private pawHold = 0
-  pawHandId: string | null = null
-  /** 앞발을 받으려고 손을 가만히 내밀고 있는 손 (아직 앞발을 올리기 전). 이 손은 턱 들기로 치지 않는다 */
-  pawOfferId: string | null = null
+  /** 손 주기: 화면 왼쪽·오른쪽 앞발 (0: 왼쪽, 1: 오른쪽). 구역마다 따로 손을 받는다 */
+  private pawSides: PawSide[] = [newPawSide(-1), newPawSide(1)]
   /** "손!"이라고 말한 뒤 남은 시간 (이 안에 앞발을 준다) */
   private pawCommand = 0
-  /** 손 없이 앞에 들고 있을 남은 시간 */
-  private pawAirLeft = 0
-  private paw = 0
-  private pawX = 0
-  private pawY = 0
   /** 손마다 지난 위치와 속도 */
   private hands = new Map<string, { x: number; y: number; speed: number }>()
   private bothFor = 0
@@ -279,7 +269,7 @@ export class Pet {
     const calm = this.startle < 0.35
     const touching: PetInput[] = []
     for (const { input, moved, speed } of hands) {
-      if (input.id === this.pawHandId) continue
+      if (this.isPawHand(input.id)) continue
       const zone = input.active ? this.contactZone(input) : this.tipZone(input)
       if (!zone || !calm || (!this.sniffed && nearNoseOf({ input, moved, speed }))) continue
       touching.push(input)
@@ -382,9 +372,12 @@ export class Pet {
   forgetHands() {
     this.hands.clear()
     this.handTrack.clear()
-    this.pawHold = 0
-    this.pawHandId = null
-    this.pawOfferId = null
+    this.pawSides = [newPawSide(-1), newPawSide(1)]
+  }
+
+  /** 앞발을 얹었거나 앞발을 받으려고 내밀고 있는 손인지 (이 손은 쓰다듬기·턱 들기로 치지 않는다) */
+  isPawHand(id: string) {
+    return this.pawSides.some((s) => s.handId === id || s.offerId === id)
   }
 
   /** 손 주기를 하는 아이인지: '손' 개인기가 있는 강아지이고 앞발 사진이 있을 때 */
@@ -403,6 +396,16 @@ export class Pet {
   }
 
   /**
+   * 손이 어느 쪽 앞발 구역에 있는지: -1 왼쪽, 1 오른쪽, 0 가운데(어느 쪽도 아님).
+   * 가운데를 비워 둬서 손이 가운데쯤 있을 때 왼발·오른발이 번갈아 나오지 않게 한다
+   */
+  private pawSideOf(x: number) {
+    const d = x - this.leanX
+    const dead = this.L.headRx * PAW_DEAD
+    return d < -dead ? -1 : d > dead ? 1 : 0
+  }
+
+  /**
    * "손!" 같은 말로 앞발을 달라고 할 때 부른다 (voice.ts). 손이 보이면 그 손에, 안 보이면 앞에 들었다가 내린다
    */
   commandPaw() {
@@ -410,13 +413,14 @@ export class Pet {
     this.pawCommand = PAW_COMMAND_WINDOW
   }
 
-  /** 앞발이 갈 자리: 턱보다 아래, 얼굴 폭 안쪽으로 묶는다 (손이 얼굴 위에 있어도 앞발이 입과 코를 덮지 않게) */
-  private clampPaw(x: number, y: number) {
+  /** 앞발이 갈 자리: 턱보다 아래, 자기 쪽 절반 안으로 묶는다 (앞발이 입과 코를 덮거나 가운데를 넘어가지 않게) */
+  private clampPaw(side: number, x: number, y: number) {
     const L = this.L
+    const near = this.leanX + side * L.headRx * 0.12
+    const far = this.leanX + side * L.headRx * 0.7
     return {
-      x: clamp(x, this.leanX - L.headRx * 0.7, this.leanX + L.headRx * 0.7),
+      x: clamp(x, Math.min(near, far), Math.max(near, far)),
       // 가슴 높이보다 아래로만 (위로 올리면 다리가 턱에서 자라난 것처럼 보인다)
-      // 앞발은 카메라(손) 쪽으로 뻗으므로 가슴보다 아래, 화면 아래쪽까지 (다리는 가슴으로 이어진다)
       y: clamp(y, L.headY + L.headRy * 2.0, FLOOR_Y + L.headRy * 0.35),
     }
   }
@@ -425,49 +429,67 @@ export class Pet {
     // 겁 많은 아이도 손은 주지만, 냄새를 맡기 전에는 더 오래 기다려야 한다
     const hold = this.sniffed ? PAW_HOLD : PAW_HOLD_SHY
     this.pawCommand = Math.max(0, this.pawCommand - dt)
-    if (!this.pawHandId) {
-      const offer =
-        this.startle < 0.2 && hands.find(({ input, speed }) => input.offer && speed < PAW_STILL && this.inPawZone(input.x, input.y))
-      this.pawHold = offer ? this.pawHold + dt : Math.max(0, this.pawHold - dt * 2)
-      this.pawOfferId = offer && this.pawHold > 0.1 ? offer.input.id : null
-      // 말로 시켰으면: 편 손이 보이면 그 손에, 아니면 앞에 든다
-      const commanded = this.pawCommand > 0 && this.startle < 0.2
-      const target =
-        offer && this.pawHold >= hold ? offer.input : commanded ? hands.find(({ input }) => input.offer || input.active)?.input : undefined
-      if (target || commanded) {
-        this.pawHandId = target ? target.id : PAW_AIR
-        this.pawAirLeft = target ? 0 : PAW_AIR_SECONDS
-        this.pawOfferId = null
-        this.pawCommand = 0
-        // 손이 없으면 가슴 앞에 든다 (입과 코를 가리지 않게)
-        const p = this.clampPaw(target?.x ?? this.leanX + this.L.headRx * 0.15, target?.y ?? this.L.headY + this.L.headRy * 2.4)
-        this.pawX = p.x
-        this.pawY = p.y
-        this.affection = Math.min(100, this.affection + 1.5)
-      }
-    } else if (this.pawHandId === PAW_AIR) {
-      // 손 없이 말로만 시켰을 때: 잠깐 들고 있다가 내린다. 그사이 편 손이 다가오면 그 손에 얹는다
-      this.pawAirLeft -= dt
-      const h = hands.find(({ input }) => (input.offer || input.active) && this.inPawZone(input.x, input.y, 1.3))
-      if (h) this.pawHandId = h.input.id
-      else if (this.pawAirLeft <= 0 || this.startle > 0.3) this.pawHandId = null
-      this.petting = Math.max(this.petting, 0.4)
-    } else {
-      const h = hands.find(({ input }) => input.id === this.pawHandId)
-      // 손을 빼거나, 놀라면 앞발을 내린다 (앞발을 얹은 뒤에는 손 모양이 조금 흔들려도 그대로 둔다)
-      if (!h || this.startle > 0.3 || !this.inPawZone(h.input.x, h.input.y, 1.6)) {
-        this.pawHandId = null
-        this.pawHold = 0
+    const taken = (id: string, except: PawSide) => this.pawSides.some((o) => o !== except && (o.handId === id || o.offerId === id))
+    // 말로 시켰으면 한 발만 준다: 편 손이 있는 빈 쪽 먼저, 손이 없으면 오른쪽
+    let commanded = this.pawCommand > 0 && this.startle < 0.2
+    const voiceSide = commanded
+      ? (this.pawSides.find((sd) => !sd.handId && hands.some(({ input }) => (input.offer || input.active) && this.pawSideOf(input.x) === sd.side && this.inPawZone(input.x, input.y) && !taken(input.id, sd))) ??
+        (this.pawSides.some((sd) => sd.handId) ? undefined : this.pawSides[1]))
+      : undefined
+    if (commanded && !voiceSide) this.pawCommand = 0
+
+    for (const sd of this.pawSides) {
+      // 자기 구역에 있는 손만 본다 (다른 쪽 앞발이 이미 잡은 손은 빼고)
+      const mine = ({ input }: { input: PetInput }) =>
+        this.pawSideOf(input.x) === sd.side && this.inPawZone(input.x, input.y) && !taken(input.id, sd)
+      if (!sd.handId) {
+        const offer = this.startle < 0.2 && hands.find((h) => h.input.offer && h.speed < PAW_STILL && mine(h))
+        sd.hold = offer ? sd.hold + dt : Math.max(0, sd.hold - dt * 2)
+        sd.offerId = offer && sd.hold > 0.1 ? offer.input.id : null
+        const byVoice = commanded && sd === voiceSide
+        const target =
+          offer && sd.hold >= hold ? offer.input : byVoice ? hands.find((h) => (h.input.offer || h.input.active) && mine(h))?.input : undefined
+        if (target || byVoice) {
+          sd.handId = target ? target.id : PAW_AIR
+          sd.airLeft = target ? 0 : PAW_AIR_SECONDS
+          sd.offerId = null
+          sd.hold = 0
+          if (byVoice) {
+            this.pawCommand = 0
+            commanded = false
+          }
+          // 손이 없으면 가슴 앞에 든다 (입과 코를 가리지 않게)
+          const p = this.clampPaw(sd.side, target?.x ?? this.leanX + sd.side * this.L.headRx * 0.3, target?.y ?? this.L.headY + this.L.headRy * 2.4)
+          sd.x = p.x
+          sd.y = p.y
+          this.affection = Math.min(100, this.affection + 1.5)
+        }
+      } else if (sd.handId === PAW_AIR) {
+        // 손 없이 말로만 시켰을 때: 잠깐 들고 있다가 내린다. 그사이 이쪽에 편 손이 다가오면 그 손에 얹는다
+        sd.airLeft -= dt
+        const h = hands.find((h) => (h.input.offer || h.input.active) && this.pawSideOf(h.input.x) === sd.side && this.inPawZone(h.input.x, h.input.y, 1.3) && !taken(h.input.id, sd))
+        if (h) sd.handId = h.input.id
+        else if (sd.airLeft <= 0 || this.startle > 0.3) sd.handId = null
+        this.petting = Math.max(this.petting, 0.4)
       } else {
-        const p = this.clampPaw(h.input.x, h.input.y)
-        this.pawX = approach(this.pawX, p.x, 10, dt)
-        this.pawY = approach(this.pawY, p.y, 10, dt)
-        // 손을 맞잡고 있으면 좋아한다
-        this.petting = Math.max(this.petting, 0.5)
+        const h = hands.find(({ input }) => input.id === sd.handId)
+        // 손을 빼거나, 놀라거나, 손이 가운데를 확실히 넘어 반대쪽으로 가면 앞발을 내린다
+        // (가운데 근처에서는 그대로 둔다. 반대쪽 앞발은 그 손을 다시 가만히 내밀어야 준다)
+        const crossed = h && (h.input.x - this.leanX) * sd.side < -this.L.headRx * PAW_CROSS
+        if (!h || this.startle > 0.3 || crossed || !this.inPawZone(h.input.x, h.input.y, 1.6)) {
+          sd.handId = null
+          sd.hold = 0
+        } else {
+          const p = this.clampPaw(sd.side, h.input.x, h.input.y)
+          sd.x = approach(sd.x, p.x, 10, dt)
+          sd.y = approach(sd.y, p.y, 10, dt)
+          // 손을 맞잡고 있으면 좋아한다
+          this.petting = Math.max(this.petting, 0.5)
+        }
       }
+      // 들 때는 조금 빨리, 내릴 때는 천천히
+      sd.amt = approach(sd.amt, sd.handId ? 1 : 0, sd.handId ? 4 : 3, dt)
     }
-    // 들 때는 조금 빨리, 내릴 때는 천천히
-    this.paw = approach(this.paw, this.pawHandId ? 1 : 0, this.pawHandId ? 4 : 3, dt)
   }
 
   private blinkNow() {
@@ -667,9 +689,7 @@ export class Pet {
       breathRate: this.breathRate,
       flinch: this.flinch,
       reach: this.reach,
-      paw: this.paw,
-      pawX: this.pawX,
-      pawY: this.pawY,
+      paws: this.pawSides.map((sd) => ({ amt: sd.amt, x: sd.x, y: sd.y })),
     }
   }
 
@@ -1098,6 +1118,30 @@ const PAW_COMMAND_WINDOW = 1
 const PAW_AIR_SECONDS = 2.5
 /** 손 없이 앞에 들고 있는 상태의 이름 (손 id 대신) */
 const PAW_AIR = 'air'
+/** 앞발 구역: 얼굴 가운데에서 얼굴 반폭의 이 비율 안은 어느 쪽도 아니다 (새로 앞발을 주지 않는다) */
+const PAW_DEAD = 0.15
+/** 앞발을 얹은 손이 가운데를 넘어 반대쪽으로 이만큼(얼굴 반폭 비율) 가면 앞발을 내린다 */
+const PAW_CROSS = 0.3
+
+/** 한쪽 앞발의 상태 */
+interface PawSide {
+  /** -1: 화면 왼쪽 앞발, 1: 오른쪽 */
+  side: number
+  /** 이쪽 구역에 편 손을 가만히 둔 시간 */
+  hold: number
+  /** 앞발을 얹은 손 (PAW_AIR면 손 없이 들고 있음) */
+  handId: string | null
+  /** 앞발을 받으려고 가만히 내밀고 있는 손 (아직 앞발을 올리기 전) */
+  offerId: string | null
+  airLeft: number
+  amt: number
+  x: number
+  y: number
+}
+
+function newPawSide(side: number): PawSide {
+  return { side, hold: 0, handId: null, offerId: null, airLeft: 0, amt: 0, x: 0, y: 0 }
+}
 /** 손이 초당 이 비율보다 빨리 커지면(카메라 쪽으로 불쑥 내밀면) 움찔한다 */
 const FLINCH_ZOOM = 1.6
 
