@@ -11,7 +11,39 @@
     <div id="app">
       <header class="topbar">
         <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
+        <button id="info-open" class="info-btn" type="button" aria-haspopup="dialog"></button>
       </header>
+
+      <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
+      <dialog id="info" class="info-sheet" aria-labelledby="info-name">
+        <div class="sheet-body">
+          <header class="sheet-head">
+            <span id="info-emoji" class="sheet-emoji" aria-hidden="true"></span>
+            <div>
+              <h2 id="info-name"></h2>
+              <p id="info-meta" class="sheet-meta"></p>
+            </div>
+            <button id="info-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
+          </header>
+          <ul id="info-traits" class="traits"></ul>
+          <section id="info-story-wrap">
+            <h3>이야기</h3>
+            <p id="info-story"></p>
+          </section>
+          <section>
+            <h3>처음 만날 때</h3>
+            <p id="info-tip"></p>
+          </section>
+          <section id="info-shelter-wrap">
+            <h3>보호 정보 <span id="info-sample" class="sample-badge">예시</span></h3>
+            <dl id="info-shelter" class="shelter"></dl>
+          </section>
+        </div>
+        <footer class="sheet-foot">
+          <a id="info-adopt" class="btn primary adopt" target="_blank" rel="noopener">포인핸드에서 입양 문의하기</a>
+          <p id="info-adopt-note" class="muted"></p>
+        </footer>
+      </dialog>
 
       <main class="stage-wrap">
         <canvas id="pet-gl" aria-hidden="true"></canvas>

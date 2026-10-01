@@ -3,7 +3,7 @@ import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOpenHand } from './hand'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
-import { FLOOR_Y, PETS, type PetProfile } from './pets'
+import { FLOOR_Y, PAWINHAND_URL, PETS, josa, type PetProfile } from './pets'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -120,7 +120,57 @@ function renderTabs() {
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
+  infoOpen.textContent = `${pet.p.name} 알아보기`
 }
+
+// 아이 정보 → 입양 문의. 시트를 열 때만 DOM을 채워서 매 프레임 루프에는 영향이 없다
+const infoOpen = $<HTMLButtonElement>('info-open')
+const info = $<HTMLDialogElement>('info')
+const FAVORITE_LABEL = { head: '머리 쓰다듬기', chin: '턱 밑 긁기', body: '등 쓰다듬기' } as const
+
+function fillInfo(p: PetProfile) {
+  $('info-emoji').textContent = p.species === 'dog' ? '🐶' : '🐱'
+  $('info-name').textContent = p.name
+  $('info-meta').textContent = [p.breed, p.sex, p.age].filter(Boolean).join(' · ')
+
+  const traits = [...(p.traits ?? []), `${FAVORITE_LABEL[p.favorite]} 좋아해요`]
+  if (p.shy && !traits.some((t) => t.includes('낯'))) traits.unshift('겁이 많아요')
+  $('info-traits').replaceChildren(
+    ...traits.map((t) => Object.assign(document.createElement('li'), { textContent: t })),
+  )
+
+  $('info-story-wrap').hidden = !p.story
+  $('info-story').textContent = p.story
+  $('info-tip').textContent = p.tip
+
+  const a = p.adoption
+  $('info-shelter-wrap').hidden = !a
+  $('info-sample').hidden = !a?.sample
+  $('info-shelter').replaceChildren(
+    ...(a
+      ? ([['보호소', a.shelter], ['지역', a.region], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
+          v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
+        )
+      : []),
+  )
+
+  const adopt = $<HTMLAnchorElement>('info-adopt')
+  adopt.href = a?.url ?? PAWINHAND_URL
+  $('info-adopt-note').textContent = a?.url
+    ? `포인핸드에서 ${josa(p.name, '이의', '의')} 공고를 열어요.`
+    : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
+}
+
+infoOpen.onclick = () => {
+  fillInfo(pet.p)
+  info.showModal()
+  info.querySelector('.sheet-body')!.scrollTop = 0
+}
+$('info-close').onclick = () => info.close()
+// 시트 바깥(어두운 배경)을 누르면 닫는다
+info.addEventListener('click', (e) => {
+  if (e.target === info) info.close()
+})
 
 
 function selectPet(p: PetProfile) {

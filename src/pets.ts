@@ -20,9 +20,25 @@ export interface PetProfile {
   belly: string
   eye: string
   pattern: 'none' | 'tabby' | 'patch'
+  /** 아이 정보 화면의 성격 태그 */
+  traits?: string[]
+  /** 보호·입양 정보 (아이 정보 화면). 실제 공고와 연결되기 전에는 sample: true */
+  adoption?: Adoption
   /** 실사 사진 리그. 있으면 WebGL 털 셰이더로 그리고, 없거나 WebGL을 못 쓰면 캔버스 그림으로 그린다 */
   photo?: PhotoRig
 }
+
+export interface Adoption {
+  shelter: string
+  region: string
+  noticeNo?: string
+  /** 포인핸드 공고 주소. 없으면 포인핸드 첫 화면으로 보낸다 */
+  url?: string
+  /** 가상의 아이라 실제 공고가 없다 */
+  sample?: boolean
+}
+
+export const PAWINHAND_URL = 'https://pawinhand.kr'
 
 interface Ellipse {
   x: number
@@ -193,6 +209,8 @@ export const PETS: PetProfile[] = [
     tip: '먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해주세요.',
     favorite: 'head',
     shy: true,
+    traits: ['낯을 가려요', '친해지면 애교쟁이', '산책 좋아해요'],
+    adoption: { shelter: '마포구 동물보호센터', region: '서울 마포구', noticeNo: '서울-마포-2026-00123', sample: true },
     fur: '#9a6a44',
     furDark: '#6e4a2e',
     belly: '#f1dcc3',
