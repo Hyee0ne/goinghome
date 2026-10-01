@@ -11,6 +11,10 @@
     <div id="app">
       <header class="topbar">
         <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
+        <a class="shelter-link" href="register.html">보호소 등록</a>
+        <button id="help-toggle" class="help-toggle" type="button" aria-controls="help" aria-expanded="false" aria-label="도움말">
+          <span aria-hidden="true">?</span><span class="help-label">도움말</span>
+        </button>
       </header>
 
       <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
@@ -52,6 +56,23 @@
         <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
         <pre id="debug-hud" class="debug-hud" hidden></pre>
 
+        <!-- 간식 접시: 손끝을 모아 집어서 아이 입 앞으로 끌어온다 (손 인식 전용, 클릭으로는 안 집힌다) -->
+        <div id="treat-tray" class="treat-tray" role="img" aria-label="간식 접시. 손끝을 모아 간식을 집어 아이 입 앞에 대 주세요">
+          <div class="tray-pile"></div>
+          <div class="tray-bowl"></div>
+          <span class="tray-label">간식</span>
+        </div>
+
+        <!-- 도움말: 어떻게 쓰다듬고 개인기를 보는지. 아이를 바꿀 때만 내용을 바꾼다 -->
+        <aside id="help" class="help-box" aria-labelledby="help-title" hidden>
+          <header>
+            <h2 id="help-title"></h2>
+            <button id="help-close" class="help-close" type="button" aria-label="도움말 닫기">✕</button>
+          </header>
+          <ol id="help-steps" class="help-steps"></ol>
+          <div id="help-trick" class="help-trick"></div>
+        </aside>
+
         <!-- 아이 정보 열기 배너 (시작 화면이 떠 있는 동안은 그 아래에 가려진다) -->
         <button id="info-open" class="info-banner" type="button" aria-haspopup="dialog">
           <img id="info-thumb" class="banner-thumb" alt="" />
@@ -78,6 +99,7 @@
               너무 세게 움직이면 깜짝 놀라요.
             </p>
             <p class="muted">카메라 영상은 기기 안에서만 처리되고, 어디로도 전송되지 않아요.</p>
+            <p class="muted">"손!" 같은 말을 알아듣도록 마이크도 함께 켜요. 크롬 등 일부 브라우저는 음성 인식을 위해 소리를 브라우저 회사 서버로 보내요.</p>
             <div class="actions">
               <button id="start-camera" class="btn primary" type="button">카메라로 시작하기</button>
             </div>

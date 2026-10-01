@@ -80,6 +80,289 @@ button {
   min-width: 0;
 }
 
+/* ── 간식 접시 (무대 왼쪽, 세로 가운데) ── */
+.treat-tray {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 104px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.tray-pile {
+  position: relative;
+  width: 84px;
+  height: 44px;
+  margin-bottom: -18px;
+  z-index: 1;
+}
+
+.tray-treat {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(80, 50, 20, 0.25));
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.tray-treat.t0 {
+  left: 6px;
+  bottom: 0;
+  transform: rotate(-14deg);
+}
+
+.tray-treat.t1 {
+  right: 6px;
+  bottom: 0;
+  transform: rotate(10deg);
+}
+
+.tray-treat.t2 {
+  left: 23px;
+  bottom: 12px;
+  transform: rotate(3deg);
+}
+
+/* 집어 가면 사라지고, 채워지면 톡 튀어나온다 */
+.tray-treat.gone {
+  opacity: 0;
+  transform: translateY(-14px) scale(0.6);
+}
+
+.tray-bowl {
+  position: relative;
+  width: 104px;
+  height: 46px;
+  border-radius: 0 0 52px 52px / 0 0 42px 42px;
+  background: linear-gradient(180deg, #fffaf3 0%, #f1dcc3 100%);
+  box-shadow:
+    inset 0 -6px 10px rgba(120, 80, 40, 0.12),
+    0 8px 18px rgba(80, 50, 20, 0.18);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+/* 접시 테두리 */
+.tray-bowl::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: -8px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 3px 6px rgba(120, 80, 40, 0.18);
+}
+
+.tray-label {
+  margin-top: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.treat-tray.empty .tray-label::after {
+  content: ' 채우는 중…';
+  font-weight: 400;
+}
+
+/* 손이 접시 위에 오면 */
+.treat-tray.hover .tray-bowl {
+  transform: scale(1.06);
+  box-shadow:
+    inset 0 -6px 10px rgba(120, 80, 40, 0.12),
+    0 0 0 4px rgba(255, 138, 61, 0.55),
+    0 8px 22px rgba(255, 138, 61, 0.35);
+}
+
+.treat-tray.hover .tray-label {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 휴대폰은 아이가 폭을 다 채워서, 흐려지는 가슴 아래 왼쪽(배너 위)에 둔다 */
+@media (max-width: 720px) {
+  .treat-tray {
+    left: 10px;
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px);
+    transform: scale(0.85);
+    transform-origin: left bottom;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tray-treat,
+  .tray-bowl {
+    transition: none;
+  }
+}
+
+/* ── 도움말 ── */
+.help-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* 보호소용 등록 화면으로 가는 링크 (한켠에 작게) */
+.shelter-link {
+  flex: none;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shelter-link:hover {
+  color: var(--ink);
+}
+
+.help-toggle span:first-child {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.help-toggle[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 무대 오른쪽 위에 붙는 상자. 뒤 WebGL 때문에 블러 없이 불투명에 가깝게 */
+.help-box {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 4;
+  width: 280px;
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  padding: 16px 16px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 28px rgba(80, 50, 20, 0.16);
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.help-box[hidden] {
+  display: none;
+}
+
+.help-box header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.help-box h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.help-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.help-steps li {
+  display: flex;
+  gap: 8px;
+}
+
+.help-icon {
+  flex: none;
+  width: 22px;
+  text-align: center;
+}
+
+.help-trick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.help-special {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 14px;
+}
+
+.help-special p {
+  margin: 4px 0 0;
+}
+
+/* 휴대폰: 무대 위쪽 폭 전체, 상단 바는 탭이 먼저 보이게 도움말을 ? 하나로 */
+@media (max-width: 720px) {
+  .help-label {
+    display: none;
+  }
+
+  .help-toggle {
+    padding: 7px;
+  }
+
+  .shelter-link {
+    padding: 7px 4px;
+    font-size: 13px;
+  }
+
+  .help-box {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: calc(100% - 110px);
+  }
+}
+
 /* ── 아이 정보 열기 배너 (무대 아래쪽, 엄지가 닿는 자리) ── */
 .info-banner {
   position: absolute;
@@ -631,7 +914,7 @@ button {
   font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
   white-space: pre;
   pointer-events: none;
-  z-index: 5;
+  z-index: 3; /* 도움말·배너 아래 */
 }
 
 /* 손 인식용 카메라 영상: 화면에는 보이지 않게 */

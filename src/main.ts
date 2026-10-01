@@ -5,6 +5,7 @@ import { Voice } from './voice'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
+import { TreatTray } from './treatTray'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -128,7 +129,97 @@ function renderTabs() {
     tabs.append(b)
   }
   renderBanner()
+  renderHelp()
 }
+
+// ───────────────────────── 간식 접시 ─────────────────────────
+
+/** 무대 옆 간식 접시. 손 인식 쪽에서 hit/setHover/take로 쓴다 (treatTray.ts) */
+export const treatTray = new TreatTray($('treat-tray'), stage, assetUrl('pets/treat.webp'))
+if (debug) Object.assign(window, { __treatTray: treatTray })
+
+// ───────────────────────── 도움말 ─────────────────────────
+
+const help = $('help')
+const helpToggle = $('help-toggle')
+const HELP_KEY = 'sonkkeut.help.v1'
+const ZONE_LABEL = { head: '머리', chin: '턱 밑', body: '등' } as const
+
+function renderHelp() {
+  const p = pet.p
+  const cat = p.species === 'cat'
+  $('help-title').textContent = `${josa(p.name, '과', '와')} 교감하는 법`
+  const steps: [string, string][] = [
+    ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
+    ...(p.shy
+      ? ([
+          [
+            '👃',
+            `${josa(p.name, '은', '는')} 겁이 많아요. 먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해 주세요. 간식을 받아먹어도 마음을 열어요.`,
+          ],
+        ] as [string, string][])
+      : []),
+    ['🫳', '손끝 점이 주황색이 되면 몸에 닿은 거예요. 살살 쓰다듬어 주세요.'],
+    ['💛', `${ZONE_LABEL[p.favorite]}${p.favorite === 'chin' ? '을 긁어' : '를 쓰다듬어'} 주면 가장 좋아해요.`],
+    ['⚡', '너무 빨리 움직이면 깜짝 놀라요. 양손으로 쓰다듬어도 돼요.'],
+  ]
+  if (cat) steps.push(['😌', '고양이는 기분이 좋으면 눈을 지그시 감아요.'])
+  $('help-steps').replaceChildren(
+    ...steps.map(([icon, text]) => {
+      const li = document.createElement('li')
+      li.append(Object.assign(document.createElement('span'), { className: 'help-icon', textContent: icon }), text)
+      return li
+    }),
+  )
+  // 특별한 교감: 간식 주기(모두), '손' 개인기(체크된 강아지만)
+  const specials: [string, string][] = [
+    [
+      '🍗 간식 주기',
+      `왼쪽 간식 접시 위에서 엄지와 검지 끝을 모아 간식을 집고, ${p.name} 입 앞에 가만히 대 보세요. 냄새를 맡고 세 입에 나눠 받아먹어요.`,
+    ],
+  ]
+  if (canGivePaw(p)) {
+    specials.push([
+      "🐾 개인기 '손'",
+      `턱 아래 왼쪽이나 오른쪽에 손바닥을 위로 펴고 1초쯤 가만히 내밀면, ${josa(p.name, '이', '가')} 그쪽 앞발을 올려요. 정가운데에서는 앞발을 주지 않아요. 양손을 내밀면 두 앞발을 모두 올려요. "손!" 하고 말해도 돼요.`,
+    ])
+  }
+  $('help-trick').replaceChildren(
+    ...specials.map(([title, text]) => {
+      const box = document.createElement('div')
+      box.className = 'help-special'
+      box.append(
+        Object.assign(document.createElement('b'), { textContent: title }),
+        Object.assign(document.createElement('p'), { textContent: text }),
+      )
+      return box
+    }),
+  )
+}
+
+function setHelp(open: boolean) {
+  help.hidden = !open
+  helpToggle.setAttribute('aria-expanded', String(open))
+  try {
+    localStorage.setItem(HELP_KEY, open ? 'open' : 'closed')
+  } catch {
+    /* 기억 못 해도 괜찮다 */
+  }
+}
+helpToggle.onclick = () => setHelp(help.hidden !== false)
+$('help-close').onclick = () => setHelp(false)
+// 처음 온 사람에게는 펼쳐 둔다. 휴대폰은 화면이 좁아서 버튼만 두고, 직접 닫았으면 다음에도 닫아 둔다
+setHelp(
+  ((): boolean => {
+    try {
+      const v = localStorage.getItem(HELP_KEY)
+      if (v) return v === 'open'
+    } catch {
+      /* 무시 */
+    }
+    return window.matchMedia('(min-width: 721px)').matches
+  })(),
+)
 
 function renderBanner() {
   const p = pet.p
