@@ -111,12 +111,11 @@ export interface PhotoRig {
     morph?: MorphAtlas
   }
   /**
-   * 손 주기에 쓰는 앞발 사진 (발과 그 뒤로 이어진 다리).
-   * anchorX/Y: 손에 닿는 발끝 (사진 안 0~1), width: 사진 폭이 두 눈 사이 거리의 몇 배인지,
-   * legDir: 사진 안에서 발 → 다리 끝 방향 (도, 아래가 +). 그릴 때 이 방향이 몸 쪽을 향하게 돌린다.
-   * 다리 끝(몸 쪽)은 사진 가장자리에서 서서히 투명해진다
+   * 손 주기에 쓰는 앞발 층: 같은 사진을 '앞발을 카메라 쪽으로 든 모습'으로 편집해 다리와 발만 잘라 낸 것 (정면 시점).
+   * x/y/width/height: 층이 놓이는 자리 (사진 좌표). 어깨 쪽은 몸에 섞이도록 서서히 투명하다.
+   * shoulder: 다리가 몸에 붙은 곳 (들어 올리고 기울이는 축), pad: 발바닥 가운데. 사진 오른쪽 다리 기준
    */
-  paw?: { src: string; anchorX: number; anchorY: number; width: number; legDir: number }
+  paw?: { src: string; x: number; y: number; width: number; height: number; shoulder: { x: number; y: number }; pad: { x: number; y: number } }
   /** 전신 사진이면 발밑에 그림자를 깐다. 얼굴 클로즈업처럼 아래가 잘린 사진은 false */
   floorShadow: boolean
   /** 사진 아래쪽을 이 높이(픽셀)만큼 배경으로 서서히 사라지게 한다 (잘린 가슴선을 숨긴다) */
@@ -246,7 +245,7 @@ export const PETS: PetProfile[] = [
       neck: { x: 575, y: 840 },
       nose: { x: 575, y: 565, rx: 81, ry: 66 },
       catchlight: `${BASE}pets/choco-face-catch.png`,
-      paw: { src: `${BASE}pets/choco-paw.webp`, anchorX: 0.175, anchorY: 0.954, width: 3.6, legDir: -24.3 },
+      paw: { src: `${BASE}pets/choco-paw.webp`, x: 612, y: 848, width: 426, height: 477, shoulder: { x: 974, y: 840 }, pad: { x: 814, y: 1210 } },
       nostrils: [
         { x: 540, y: 567, r: 22 },
         { x: 610, y: 567, r: 22 },

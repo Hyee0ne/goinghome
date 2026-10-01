@@ -1271,23 +1271,22 @@ export class FurRenderer {
 
     // 손 주기: 앞발을 털 위에 따로 그린다
     if (p.paw > 0.005 && rig.paw) {
-      const D = Math.hypot(rig.eyes[1].x - rig.eyes[0].x, rig.eyes[1].y - rig.eyes[0].y) * rig.scale
-      this.paw.draw(p, rig.paw, D, view)
+      this.paw.draw(p, rig, view)
     }
   }
 }
 
 /**
  * 손 주기 앞발 층. 털 셰이더와 다른 작은 프로그램이라 텍스처 칸 제한(8개)과 상관없다.
- * 앞발은 화면 아래에서 한 덩어리로 올라와 손바닥에 발바닥을 맞댄다 (늘이지 않아서 흐물거리지 않는다).
- * 다리 아래쪽은 몸통 사진처럼 서서히 투명해져 화면 아래로 이어지는 것처럼 보인다
+ * 같은 사진을 앞발을 든 모습으로 편집해 잘라 낸 층(정면 시점)을 사진 좌표 그대로 겹친다.
+ * 어깨를 축으로 아래에서 들어 올리고, 손 쪽으로 살짝 기운다 (늘이지 않아서 흐물거리지 않는다).
  */
 class PawLayer {
   private gl: WebGLRenderingContext
   private prog: WebGLProgram
   private buf: WebGLBuffer
   private tex: WebGLTexture
-  private aspect = 0
+  private ready = false
   private src = ''
   private u: Record<string, WebGLUniformLocation | null> = {}
 
@@ -1300,19 +1299,12 @@ class PawLayer {
        varying vec2 vUv;
        void main() { vUv = aUv; gl_Position = vec4(uOrigin + aUv.x * uAxisX + aUv.y * uAxisY, 0.0, 1.0); }`,
       `precision mediump float;
-       uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha;
-       uniform vec2 uAnchor;   // 발끝 (사진 0~1)
-       uniform vec2 uLegDir;   // 발 → 다리 끝 방향 (사진 좌표, 길이 1)
-       uniform float uLegLen;  // 발끝에서 가슴(다리가 사라지는 곳)까지 길이 (사진 좌표)
-       uniform float uAspect;  // 사진 세로/가로
+       uniform sampler2D uTex; uniform float uAlpha;
+       uniform vec2 uFade;     // 층 안 세로 0~1: 여기부터 아래로 사진 아랫단처럼 서서히 사라진다
        varying vec2 vUv;
        void main() {
-         vec2 uv = vec2(mix(vUv.x, 1.0 - vUv.x, uFlip), vUv.y);
-         vec4 c = texture2D(uTex, uv);
-         // 다리 끝(몸 쪽)으로 갈수록 서서히 투명하게: 몸에서 뻗어 나온 것처럼
-         vec2 d = (uv - uAnchor) * vec2(1.0, uAspect);
-         float t = dot(d, uLegDir) / uLegLen;
-         c *= (1.0 - smoothstep(0.7, 1.05, t)) * uAlpha;
+         vec4 c = texture2D(uTex, vUv);
+         c *= (1.0 - smoothstep(uFade.x, uFade.y, vUv.y)) * uAlpha;
          gl_FragColor = c;
        }`,
     )
@@ -1320,14 +1312,13 @@ class PawLayer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW)
     this.tex = makeTexture(gl)
-    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uFlip', 'uAlpha', 'uAnchor', 'uLegDir', 'uLegLen', 'uAspect'])
-      this.u[n] = gl.getUniformLocation(this.prog, n)
+    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uAlpha', 'uFade']) this.u[n] = gl.getUniformLocation(this.prog, n)
   }
 
   async load(paw: PhotoRig['paw']) {
     if (!paw || paw.src === this.src) return
     this.src = paw.src
-    this.aspect = 0
+    this.ready = false
     const img = await loadImage(paw.src).catch(() => null)
     if (!img || this.src !== paw.src) return
     const gl = this.gl
@@ -1336,46 +1327,54 @@ class PawLayer {
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
-    this.aspect = img.height / img.width
+    this.ready = true
   }
 
-  /** D: 두 눈 사이 거리 (펫 로컬 단위). view: 펫 로컬 → 화면 */
-  draw(p: Pose, paw: NonNullable<PhotoRig['paw']>, D: number, view: { cx: number; cy: number; scale: number; W: number; H: number }) {
-    if (!this.aspect) return
+  /** view: 펫 로컬 → 화면 (털 셰이더와 같은 사진 배치) */
+  draw(p: Pose, rig: PhotoRig, view: { cx: number; cy: number; scale: number; W: number; H: number }) {
+    const paw = rig.paw
+    if (!this.ready || !paw) return
     const gl = this.gl
     const e = p.paw
     // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
-    const s = 1.2
+    const s = 1.4
     const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
-    // 화면 왼쪽 손에는 사진 그대로, 오른쪽 손에는 좌우를 뒤집은 앞발 (오른발/왼발)
-    const flip = p.pawX > 0 ? 1 : 0
-    // 카메라(손) 쪽으로 뻗어 나오며 커진다
-    const grow = 0.7 + 0.3 * rise
-    const w = D * paw.width * view.scale * grow
-    const h = w * this.aspect
-    // 손에 닿는 발끝 자리, 다리가 시작되는 가슴 자리
-    const tx = view.cx + p.pawX * view.scale
-    const ty = view.cy + p.pawY * view.scale
-    const rx = view.cx + p.pawRootX * view.scale
-    const ry = view.cy + p.pawRootY * view.scale
-    // 다리는 발에서 가슴 쪽으로 (위로) 이어진다
-    const want = Math.atan2(ry - ty, rx - tx)
-    const reach = Math.hypot(rx - tx, ry - ty)
-    const leg = ((flip ? 180 - paw.legDir : paw.legDir) * Math.PI) / 180
-    const ang = want - leg + Math.sin(p.t * 2.1) * 0.015 * e
-    // 들어 올리는 동안은 가슴 쪽에서 앞으로 뻗어 나온다
-    const back = (1 - rise) * reach * 0.55
-    const ay = ty + Math.sin(want) * back
-    const axs = tx + Math.cos(want) * back
-    const ax = (flip ? 1 - paw.anchorX : paw.anchorX) * w
-    const axY = paw.anchorY * h
+    // 사진 속 앞발은 사진 오른쪽 다리. 화면 왼쪽 손에는 좌우를 뒤집어 반대쪽 다리로 준다
+    const flip = p.pawX < 0
+    const mirror = (x: number) => (flip ? 2 * rig.centerX - x : x)
+    // 손 위치 (사진 좌표, 뒤집기 전 기준)
+    const hx = mirror(p.pawX / rig.scale + rig.centerX)
+    const hy = (p.pawY - FLOOR_Y) / rig.scale + rig.footY
+    const S = paw.shoulder
+    const v0x = paw.pad.x - S.x
+    const v0y = paw.pad.y - S.y
+    const v1x = hx - S.x
+    const v1y = hy - S.y
+    // 어깨를 축으로 손 쪽으로 조금만 기울이고, 손이 멀면 카메라 쪽으로 조금 더 뻗는다 (크게 틀면 사진 티가 난다)
+    const toward = clamp(Math.atan2(v1y, v1x) - Math.atan2(v0y, v0x), -0.3, 0.3) * 0.5
+    const reach = clamp(Math.hypot(v1x, v1y) / Math.hypot(v0x, v0y), 0.95, 1.08)
+    // 들어 올리는 동안: 아래로 내려 있던 발이 어깨를 축으로 올라오며 앞으로(크게) 나온다
+    const ang = toward + (1 - rise) * 0.35 + Math.sin(p.t * 2.1) * 0.012 * e
+    const sc = reach * (0.88 + 0.12 * rise)
+    const drop = (1 - rise) * paw.height * 0.25
     const cos = Math.cos(ang)
     const sin = Math.sin(ang)
-    const toClipX = (x: number) => (x / view.W) * 2 - 1
-    const toClipY = (y: number) => 1 - (y / view.H) * 2
-    // 사진의 왼쪽 위 모서리 (발끝을 (axs, ay)에 두고 회전)
-    const ox = axs + (-ax * cos + axY * sin)
-    const oy = ay + (-ax * sin - axY * cos)
+    const k = rig.scale * view.scale
+    const left = view.cx - rig.centerX * k
+    const top = view.cy + (FLOOR_Y - rig.footY * rig.scale) * view.scale
+    // 층의 사진 좌표 → 클립 공간 (어깨 축 회전·확대 → 좌우 뒤집기 → 화면)
+    const map = (X: number, Y: number) => {
+      const dx = (X - S.x) * sc
+      const dy = (Y - S.y) * sc
+      const qx = mirror(S.x + dx * cos - dy * sin)
+      const qy = S.y + dx * sin + dy * cos + drop
+      return [((left + qx * k) / view.W) * 2 - 1, 1 - ((top + qy * k) / view.H) * 2]
+    }
+    const o = map(paw.x, paw.y)
+    const ax = map(paw.x + paw.width, paw.y)
+    const ay = map(paw.x, paw.y + paw.height)
+    // 사진 아랫단이 사라지는 높이에 맞춰 발도 끝자락만 같이 사라진다 (발바닥은 남게 털 셰이더보다 늦게)
+    const fadeFrom = rig.fadeBottom > 0 ? rig.height - rig.fadeBottom * 0.35 : rig.height + 1
     gl.useProgram(this.prog)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     const loc = gl.getAttribLocation(this.prog, 'aUv')
@@ -1383,23 +1382,11 @@ class PawLayer {
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, this.tex)
     gl.uniform1i(this.u.uTex, 0)
-    gl.uniform1f(this.u.uFlip, flip)
-    gl.uniform1f(this.u.uAlpha, Math.min(1, e * 3))
-    // 다리 방향과 길이 (사진 좌표, 뒤집기 전 기준)
-    const ld = (paw.legDir * Math.PI) / 180
-    const dir = { x: Math.cos(ld), y: Math.sin(ld) }
-    // 다리는 가슴에 닿는 곳에서 사라진다 (사진 끝이 먼저면 거기서). 사진 좌표 = 화면 거리 / 사진 폭
-    const toEdge = Math.min(
-      dir.x > 0 ? (1 - paw.anchorX) / dir.x : dir.x < 0 ? -paw.anchorX / dir.x : 1e3,
-      dir.y > 0 ? ((1 - paw.anchorY) * this.aspect) / dir.y : dir.y < 0 ? (-paw.anchorY * this.aspect) / dir.y : 1e3,
-    )
-    gl.uniform2f(this.u.uAnchor, paw.anchorX, paw.anchorY)
-    gl.uniform2f(this.u.uLegDir, dir.x, dir.y)
-    gl.uniform1f(this.u.uLegLen, Math.min(toEdge, Math.max(0.15, (reach - back) / w)))
-    gl.uniform1f(this.u.uAspect, this.aspect)
-    gl.uniform2f(this.u.uOrigin, toClipX(ox), toClipY(oy))
-    gl.uniform2f(this.u.uAxisX, (w * cos * 2) / view.W, (-w * sin * 2) / view.H)
-    gl.uniform2f(this.u.uAxisY, (-h * sin * 2) / view.W, (-h * cos * 2) / view.H)
+    gl.uniform1f(this.u.uAlpha, Math.min(1, e * 2.5))
+    gl.uniform2f(this.u.uFade, (fadeFrom - paw.y - drop) / paw.height, (rig.height - paw.y - drop) / paw.height + 1e-3)
+    gl.uniform2f(this.u.uOrigin, o[0], o[1])
+    gl.uniform2f(this.u.uAxisX, ax[0] - o[0], ax[1] - o[1])
+    gl.uniform2f(this.u.uAxisY, ay[0] - o[0], ay[1] - o[1])
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }
 }

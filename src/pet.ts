@@ -91,9 +91,6 @@ export interface Pose {
   paw: number
   pawX: number
   pawY: number
-  /** 앞다리가 시작되는 가슴 자리 (펫 로컬 좌표). 다리는 발에서 여기로 이어지고 여기서 사라진다 */
-  pawRootX: number
-  pawRootY: number
 }
 
 type Behavior = 'look' | 'earFlick' | 'lick' | 'tilt' | 'sigh' | 'slowBlink'
@@ -673,8 +670,6 @@ export class Pet {
       paw: this.paw,
       pawX: this.pawX,
       pawY: this.pawY,
-      pawRootX: this.leanX + this.pawX * 0.25,
-      pawRootY: this.L.headY + this.L.headRy * 1.55,
     }
   }
 
