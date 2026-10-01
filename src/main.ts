@@ -158,7 +158,7 @@ function renderHelp() {
     trick.replaceChildren(
       Object.assign(document.createElement('b'), { textContent: "🐾 개인기 '손'" }),
       Object.assign(document.createElement('p'), {
-        textContent: `턱 아래에 손바닥을 위로 향하게 접시처럼 내밀고 1초쯤 가만히 있어 보세요. ${josa(p.name, '이', '가')} 앞발을 올려 줘요. "손!" 하고 말해도 돼요. 손을 빼면 앞발을 내려요.`,
+        textContent: `턱 아래에 손바닥을 위로 향하게 접시처럼 내밀고 1초쯤 가만히 있어 보세요. ${josa(p.name, '이', '가')} 앞발을 올려 줘요. 양손을 내밀면 두 앞발을 모두 올려요. "손!" 하고 말해도 돼요. 손을 빼면 앞발을 내려요.`,
       }),
     )
   }
