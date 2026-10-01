@@ -21,7 +21,8 @@
  *   frame        얼굴 위주로 잘라 base.png를 만들고, 기준점을 최종 사진 좌표로 옮겨 landmarks.json에 쓴다
  *   prepare      앱용 사진·털 결 맵 (눈 반사광은 떼어 두었다가 셰이더가 조명 기준 위치에 다시 얹는다)
  *   expressions  표정 사진 2장: 중간(입 살짝·눈 반쯤·귀 절반)과 최종(입 벌림·눈 감음·귀 젖힘).
- *                입·눈·귀는 겹치지 않는 부위라 한 장에 같이 바꾸고, 다음 단계가 부위별로 잘라 쓴다
+ *                입·눈·귀는 겹치지 않는 부위라 한 장에 같이 바꾸고, 다음 단계가 부위별로 잘라 쓴다.
+ *                고양이는 입을 그대로 두고, 간식 먹는 입(살짝 벌림·크게 벌려 묾) 2장을 따로 만든다
  *   assets       표정 레이어와 표정 사이 움직임 아틀라스
  *   register     src/rigs/<id>.json (앱이 자동으로 불러온다)
  *
@@ -375,16 +376,28 @@ if (run('expressions')) {
     [...inSq(lm.mouth), D * 0.55, D * 0.45],
     ...[lm.leftEar, lm.rightEar].flatMap((e) => [e.tip, e.outer, e.base].map((q) => [...inSq(q), D * 0.45, D * 0.45])),
   ].map((v) => v.map(Math.round))
-  // 고양이는 입 표정이 없다 (기분이 좋아도 입을 벌리지 않는다)
+  // 고양이는 기분이 좋아도 입을 벌리지 않아 위 두 장에서는 입을 그대로 둔다 (입 표정은 아래에서 따로)
   const cat = lm.species === 'cat'
   const parts = { mid: [...(cat ? [] : ['pantMid']), 'eyesHalf', 'earsMid'], final: [...(cat ? [] : ['pant']), 'eyesClosed', 'earsBack'] }
-  for (const name of ['pantMid', 'pant']) if (cat) rmSync(f.expr(name), { force: true })
   for (const k of ['mid', 'final'] as const) {
     for (const name of parts[k]) rmSync(f.expr(name), { force: true })
     if (!existsSync(out[k])) continue
     const full = join(SRC, `expr-${k}.png`)
     py('pet_tools.py', 'paste', f.base, out[k], full, String(sq.x0), String(sq.y0), String(side), JSON.stringify(exclude))
     for (const name of parts[k]) copyFileSync(full, f.expr(name))
+  }
+  // 고양이 입은 간식을 받아먹을 때만 쓴다: 살짝 벌린 입, 크게 벌려 무는 입 2장을 따로 만든다 (약 2장 비용 추가)
+  if (cat) {
+    const eatOut = { pantMid: join(SRC, 'expr-eatmid-square.png'), pant: join(SRC, 'expr-eat-square.png') }
+    const eatJobs = (['pantMid', 'pant'] as const)
+      .filter((k) => args.regen === 'true' || !existsSync(eatOut[k]))
+      .map((k) => ({ id: `eat-${k}`, mode: 'edit', edit_target: faceSq, prompt: k === 'pant' ? P.eat : P.eatMid, background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: eatOut[k] }))
+    const eatFailed = eatJobs.length ? await gptImage(eatJobs) : []
+    if (eatFailed.length) warn(`간식 먹는 입 사진을 만들지 못했어요: ${eatFailed.join(', ')}. 입은 턱만 조금 움직입니다`)
+    for (const k of ['pantMid', 'pant'] as const) {
+      rmSync(f.expr(k), { force: true })
+      if (existsSync(eatOut[k])) py('pet_tools.py', 'paste', f.base, eatOut[k], f.expr(k), String(sq.x0), String(sq.y0), String(side), JSON.stringify(exclude))
+    }
   }
 }
 
@@ -404,7 +417,7 @@ if (run('assets')) {
   if (has('earsMid', 'earsBack')) py('prepare-expression.py', f.base, join(PUB, 'ears'), ...box(b.ears), f.expr('earsMid'), f.expr('earsBack'))
   const part = (name: string, x: { x0: number; y0: number; x1: number; y1: number }, a: string, c: string, extra = '') =>
     `${name}:${x.x0},${x.y0},${x.x1},${x.y1}:${f.expr(a)}:${f.expr(c)}${extra}`
-  // 움직임 아틀라스: 눈·귀는 꼭 있어야 하고, 입은 있을 때만 (고양이는 입 표정이 없다)
+  // 움직임 아틀라스: 눈·귀는 꼭 있어야 하고, 입은 있을 때만 (고양이 입은 간식 먹을 때 쓰는 입)
   if (has('eyesHalf', 'eyesClosed', 'earsMid', 'earsBack'))
     py('prepare-morph.py', f.base, join(PUB, 'morph.png'),
       ...(has('pantMid', 'pant') ? [part('pant', b.pant, 'pantMid', 'pant')] : []),
@@ -495,6 +508,13 @@ function prompts(species: 'dog' | 'cat') {
         ? `Edit this photo so the cat's mouth is open in a soft, relaxed meow, showing a little of the pink tongue. Eyes and ears unchanged. ${KEEP}`
         : `Edit this photo so the dog is happily panting: mouth open in a relaxed doggy smile with the pink tongue slightly out and resting over the lower teeth. Eyes and ears unchanged. ${KEEP}`,
     pantMid: `Edit this photo so the ${a}'s mouth is only slightly open: lips just parted, jaw raised about halfway toward closed, with only the tip of the same pink tongue visible behind the lower lip. Eyes and ears unchanged. ${KEEP}`,
+    // 고양이가 간식을 받아먹을 때의 입 (앞 장은 오물오물 씹는 정도, 뒤 장은 한 입 무는 순간)
+    eatMid:
+      `Edit this photo so the cat's mouth is slightly open as if chewing: lower jaw dropped a little, lips just parted, ` +
+      `a hint of the small lower teeth and the pink tongue tip inside. Eyes, nose, whiskers and ears unchanged. No food in the image. ${KEEP}`,
+    eat:
+      `Edit this photo so the cat's mouth is wide open as if taking a bite of a small treat: lower jaw dropped, ` +
+      `small sharp canines and lower teeth visible, pink tongue inside the mouth. Eyes, nose, whiskers and ears unchanged. No food in the image. ${KEEP}`,
     eyesHalf: `Edit this photo so the ${a}'s eyes are half closed: upper eyelids lowered halfway over the eyes in a relaxed, sleepy, content look, lower half of the irises still visible. Mouth and ears unchanged. ${KEEP}`,
     eyesClosed: `Edit this photo so the ${a} has both eyes gently closed, relaxed and content, eyelids fully shut. Mouth and ears unchanged. ${KEEP}`,
     earsMid:

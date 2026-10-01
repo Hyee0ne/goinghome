@@ -412,10 +412,9 @@ export class Pet {
     return this.treats.get(id) ?? 0
   }
 
-  /** 입 자리 (펫 로컬 좌표): 코와 턱 사이 */
+  /** 입 자리 (펫 로컬 좌표): 입이 벌어지는 곳 */
   private get mouth() {
-    const L = this.L
-    return { x: this.leanX, y: L.noseY + (L.headY + L.chinDy - L.noseY) * 0.6 }
+    return { x: this.leanX, y: this.L.mouthY }
   }
 
   private updateTreat(dt: number, hands: { input: PetInput; speed: number }[]) {

@@ -168,6 +168,8 @@ export interface Layout {
   chinDy: number
   chinDx: number
   noseY: number
+  /** 입 (간식을 받아먹는 자리). 사진이면 턱 부위 가운데 = 입이 벌어지는 곳 */
+  mouthY: number
   bodyY: number
   bodyRx: number
   bodyRy: number
@@ -188,6 +190,7 @@ export function layoutOf(p: PetProfile): Layout {
       chinDy: 35,
       chinDx: 90,
       noseY: -125 + (p.species === 'cat' ? 26 : 18),
+      mouthY: -125 + (p.species === 'cat' ? 50 : 45),
       bodyY: 100,
       bodyRx: 125,
       bodyRy: 140,
@@ -203,6 +206,7 @@ export function layoutOf(p: PetProfile): Layout {
     chinDy: (rig.chinY - rig.head.y) * s,
     chinDx: rig.nose.rx * 2.2 * s,
     noseY: photoToLocal(rig, rig.nose.x, rig.nose.y).y,
+    mouthY: photoToLocal(rig, rig.chin.x, rig.chin.y).y,
     bodyY: body.y,
     bodyRx: rig.body.rx * s,
     bodyRy: rig.body.ry * s,
