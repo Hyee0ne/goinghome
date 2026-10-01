@@ -1239,7 +1239,8 @@ export class FurRenderer {
     this.earsBack = ramp(this.earsBack, this.wary, EARS_BACK, EARS_RETURN, dt)
     // 입맛 다시기: 입을 살짝 열었다 닫는다 (헥헥 중간 단계까지만)
     // 고양이는 헥헥대지 않고, 간식을 받아먹을 때만 입을 벌린다: 한 입 물 때 크게(끝까지 벌리면 하악질처럼 보여 80%까지), 씹을 때는 살짝 벌렸다 다문다
-    const eatW = Math.max(p.chomp * 0.8, p.chew * (0.22 + 0.22 * Math.sin(p.t * 11)))
+    // 씹을 때는 살짝 벌린 입(중간 사진)에 머문 채 아래턱만 오르내린다 (닫힌 입과 사이를 오가면 사진 사이 변형만 보여 입이 물결친다)
+    const eatW = Math.max(p.chomp * 0.8, p.chew * 0.5)
     gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42) : eatW)
     gl.uniform1f(this.loc('uEarsW'), this.earsBack)
 
@@ -1261,8 +1262,10 @@ export class FurRenderer {
     gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx, m.browR * BROW_LIFT * toPx)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
     const pantBob = this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
-    // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다 (입 벌린 사진이 있으면 그 사진이 움직이므로 턱은 그대로)
-    const eatJaw = rig.expressions?.pant ? 0 : -(p.chomp * CHOMP_OPEN + p.chew * (0.5 + 0.5 * Math.sin(p.t * 11)) * CHEW_OPEN)
+    // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다
+    // (입 벌린 사진이 있으면 무는 동작은 사진이 하고, 씹을 때 아래턱만 오르내린다)
+    const chewBob = p.chew * (0.5 + 0.5 * Math.sin(p.t * 9)) * CHEW_OPEN
+    const eatJaw = rig.expressions?.pant ? -chewBob : -(p.chomp * CHOMP_OPEN + chewBob)
     gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT + pantBob + eatJaw) * toPx)
     gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx : 0)
     gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx, -soft(m.pitch, 1) * PITCH_SHIFT * toPx)
@@ -1399,7 +1402,7 @@ class PawLayer {
 
 /** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
 const CHOMP_OPEN = 5
-const CHEW_OPEN = 2
+const CHEW_OPEN = 3
 
 /** 표정 전환 시간 (초). 놀랄 때 귀는 빨리 젖히고 천천히 돌아온다 */
 const PANT_OPEN = 0.45
