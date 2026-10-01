@@ -55,7 +55,9 @@ export class Voice {
         for (let k = 0; k < r.length; k++) {
           const text = r[k].transcript.trim()
           this.heard = text
-          if (PAW_WORDS.test(` ${text} `)) {
+          // 한 글자 "손"은 중간 결과(말이 끝나기 전 추측)에서 잘못 나오기 쉬워 최종 결과만 믿는다
+          const short = text.replace(/[\s!.?]/g, '').length <= 1
+          if (PAW_WORDS.test(` ${text} `) && (!short || r.isFinal)) {
             const now = performance.now()
             // 같은 말의 중간·최종 결과가 여러 번 와도 한 번만
             if (now - this.lastFire > 1500) {

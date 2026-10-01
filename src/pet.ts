@@ -1,4 +1,4 @@
-import { josa, layoutOf, type Layout, type PetProfile, type Zone } from './pets'
+import { canGivePaw, josa, layoutOf, type Layout, type PetProfile, type Zone } from './pets'
 
 /**
  * 좌표계: 펫 로컬 단위. 원점은 몸통 중심 근처이고, 머리 중심은 (0, L.headY)에 있다.
@@ -272,8 +272,8 @@ export class Pet {
       this.sniffing = Math.max(0, this.sniffing - dt * 3)
     }
 
-    // 2) 손 주기: 턱 아래에 편 손바닥을 0.8초 가만히 내밀면 앞발을 올린다 (겁 많은 아이는 냄새를 맡은 뒤에만)
-    this.updatePaw(dt, hands)
+    // 2) 손 주기: 손바닥을 위로 해서 내밀거나 "손!" 하면 앞발을 준다. '손' 개인기가 있는 강아지만 (고양이는 하지 않는다)
+    if (this.canPaw) this.updatePaw(dt, hands)
 
     // 3) 쓰다듬기: 손마다 따로 판정한다. 한 손이라도 거칠면 놀란다 (앞발을 올린 손은 빼고)
     const calm = this.startle < 0.35
@@ -387,28 +387,35 @@ export class Pet {
     this.pawOfferId = null
   }
 
-  /** 앞발을 받을 자리: 턱 아래, 얼굴 폭 안쪽 (scale 1이면 그 자리, 크면 놓아주는 범위) */
+  /** 손 주기를 하는 아이인지: '손' 개인기가 있는 강아지이고 앞발 사진이 있을 때 */
+  get canPaw() {
+    return canGivePaw(this.p) && !!this.p.photo?.paw
+  }
+
+  /**
+   * 앞발을 받을 손의 자리: 입보다 아래, 얼굴 폭 근처. 아래로는 끝까지 받는다
+   * (손을 내밀면 손은 보통 화면 아래쪽에 있다. 앞발이 닿는 자리는 clampPaw가 턱 아래로 묶는다)
+   */
   private inPawZone(x: number, y: number, scale = 1) {
     const L = this.L
-    const top = L.headY + L.chinDy + L.headRy * 0.1
-    const bottom = L.headY + L.headRy * (1.9 + (scale - 1) * 0.6)
-    return Math.abs(x - this.leanX) < L.headRx * 0.75 * scale && y > top - (scale - 1) * L.headRy * 0.4 && y < bottom
+    const top = L.headY + L.chinDy - (scale - 1) * L.headRy * 0.4
+    return Math.abs(x - this.leanX) < L.headRx * 1.1 * scale && y > top
   }
 
   /**
    * "손!" 같은 말로 앞발을 달라고 할 때 부른다 (voice.ts). 손이 보이면 그 손에, 안 보이면 앞에 들었다가 내린다
    */
   commandPaw() {
-    if (this.startle > 0.3) return
+    if (!this.canPaw || this.startle > 0.3) return
     this.pawCommand = PAW_COMMAND_WINDOW
   }
 
-  /** 앞발이 갈 자리: 턱 아래 얼굴 폭 안쪽으로 묶는다 (손이 얼굴 위에 있어도 앞발이 얼굴을 덮지 않게) */
+  /** 앞발이 갈 자리: 턱보다 아래, 얼굴 폭 안쪽으로 묶는다 (손이 얼굴 위에 있어도 앞발이 입과 코를 덮지 않게) */
   private clampPaw(x: number, y: number) {
     const L = this.L
     return {
       x: clamp(x, this.leanX - L.headRx * 0.7, this.leanX + L.headRx * 0.7),
-      y: clamp(y, L.headY + L.chinDy + L.headRy * 0.2, L.headY + L.headRy * 1.8),
+      y: clamp(y, L.headY + L.chinDy + L.headRy * 0.45, L.headY + L.headRy * 2.5),
     }
   }
 
@@ -430,7 +437,8 @@ export class Pet {
         this.pawAirLeft = target ? 0 : PAW_AIR_SECONDS
         this.pawOfferId = null
         this.pawCommand = 0
-        const p = this.clampPaw(target?.x ?? this.leanX, target?.y ?? this.L.headY + this.L.headRy * 1.3)
+        // 손이 없으면 가슴 앞에 든다 (입과 코를 가리지 않게)
+        const p = this.clampPaw(target?.x ?? this.leanX + this.L.headRx * 0.15, target?.y ?? this.L.headY + this.L.headRy * 2)
         this.pawX = p.x
         this.pawY = p.y
         this.affection = Math.min(100, this.affection + 1.5)

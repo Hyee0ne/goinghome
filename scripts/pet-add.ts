@@ -5,6 +5,7 @@
  *   npm run pet:add -- --id bori --from prepare     기준점 편집 화면(/rig.html?id=bori)에서 고친 뒤 그 뒤만 다시
  *   npm run pet:add -- --id bori --from expressions --regen    표정 사진을 새로 만들기
  *   --until <단계>   그 단계까지만 (예: --until frontal 로 정면 맞추기까지만 확인)
+ *   --paw true|false '손' 개인기를 할 줄 아는 강아지 (손 주기가 켜진다. 앞발 사진은 따로 필요). 고양이는 무시
  *
  * 원본 사진을 편집해 실제 아이의 모습을 지킨다: 배경만 지우고, 표정은 원본을 편집해 만든다.
  *
@@ -569,6 +570,12 @@ function profile(species: 'dog' | 'cat', prev?: Record<string, unknown>) {
   const out: Record<string, unknown> = { ...base, species }
   for (const k of pick) if (args[k]) out[k] = args[k]
   if (args.shy) out.shy = args.shy === 'true' || args.shy === '1'
+  // '손' 개인기: 강아지만. 고양이에 주면 무시한다 (고양이는 손 주기가 없다)
+  if (args.paw) {
+    if (species === 'cat') warn("고양이는 '손' 개인기를 쓰지 않아요. --paw는 무시합니다")
+    else out.canPaw = args.paw === 'true' || args.paw === '1'
+  }
+  if (species === 'cat') delete out.canPaw
   return out
 }
 
