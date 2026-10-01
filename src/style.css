@@ -80,6 +80,131 @@ button {
   min-width: 0;
 }
 
+/* ── 간식 접시 (무대 왼쪽, 세로 가운데) ── */
+.treat-tray {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 104px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.tray-pile {
+  position: relative;
+  width: 84px;
+  height: 44px;
+  margin-bottom: -18px;
+  z-index: 1;
+}
+
+.tray-treat {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(80, 50, 20, 0.25));
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.tray-treat.t0 {
+  left: 6px;
+  bottom: 0;
+  transform: rotate(-14deg);
+}
+
+.tray-treat.t1 {
+  right: 6px;
+  bottom: 0;
+  transform: rotate(10deg);
+}
+
+.tray-treat.t2 {
+  left: 23px;
+  bottom: 12px;
+  transform: rotate(3deg);
+}
+
+/* 집어 가면 사라지고, 채워지면 톡 튀어나온다 */
+.tray-treat.gone {
+  opacity: 0;
+  transform: translateY(-14px) scale(0.6);
+}
+
+.tray-bowl {
+  position: relative;
+  width: 104px;
+  height: 46px;
+  border-radius: 0 0 52px 52px / 0 0 42px 42px;
+  background: linear-gradient(180deg, #fffaf3 0%, #f1dcc3 100%);
+  box-shadow:
+    inset 0 -6px 10px rgba(120, 80, 40, 0.12),
+    0 8px 18px rgba(80, 50, 20, 0.18);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+/* 접시 테두리 */
+.tray-bowl::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: -8px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 3px 6px rgba(120, 80, 40, 0.18);
+}
+
+.tray-label {
+  margin-top: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.treat-tray.empty .tray-label::after {
+  content: ' 채우는 중…';
+  font-weight: 400;
+}
+
+/* 손이 접시 위에 오면 */
+.treat-tray.hover .tray-bowl {
+  transform: scale(1.06);
+  box-shadow:
+    inset 0 -6px 10px rgba(120, 80, 40, 0.12),
+    0 0 0 4px rgba(255, 138, 61, 0.55),
+    0 8px 22px rgba(255, 138, 61, 0.35);
+}
+
+.treat-tray.hover .tray-label {
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .treat-tray {
+    left: 8px;
+    top: 46%;
+    transform: translateY(-50%) scale(0.85);
+    transform-origin: left center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tray-treat,
+  .tray-bowl {
+    transition: none;
+  }
+}
+
 /* ── 도움말 ── */
 .help-toggle {
   flex: none;
@@ -195,18 +320,20 @@ button {
 }
 
 .help-trick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.help-special {
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--bg);
   font-size: 14px;
 }
 
-.help-trick[hidden] {
-  display: none;
-}
-
-.help-trick p {
+.help-special p {
   margin: 4px 0 0;
 }
 

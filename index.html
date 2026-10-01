@@ -56,6 +56,13 @@
         <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
         <pre id="debug-hud" class="debug-hud" hidden></pre>
 
+        <!-- 간식 접시: 손끝을 모아 집어서 아이 입 앞으로 끌어온다 (손 인식 전용, 클릭으로는 안 집힌다) -->
+        <div id="treat-tray" class="treat-tray" role="img" aria-label="간식 접시. 손끝을 모아 간식을 집어 아이 입 앞에 대 주세요">
+          <div class="tray-pile"></div>
+          <div class="tray-bowl"></div>
+          <span class="tray-label">간식</span>
+        </div>
+
         <!-- 도움말: 어떻게 쓰다듬고 개인기를 보는지. 아이를 바꿀 때만 내용을 바꾼다 -->
         <aside id="help" class="help-box" aria-labelledby="help-title" hidden>
           <header>
