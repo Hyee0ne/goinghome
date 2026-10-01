@@ -3,7 +3,7 @@ import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOpenHand } from './hand'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
-import { FLOOR_Y, PAWINHAND_URL, PETS, josa, type PetProfile } from './pets'
+import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, josa, type PetProfile } from './pets'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -128,7 +128,54 @@ const infoOpen = $<HTMLButtonElement>('info-open')
 const info = $<HTMLDialogElement>('info')
 const FAVORITE_LABEL = { head: '머리 쓰다듬기', chin: '턱 밑 긁기', body: '등 쓰다듬기' } as const
 
+const slides = $('info-slides')
+const dots = $('info-dots')
+
+function fillGallery(p: PetProfile) {
+  const srcs = p.photos?.length ? p.photos.map(assetUrl) : p.photo ? [p.photo.src] : []
+  $('info-gallery').hidden = srcs.length === 0
+  // 사진이 있으면 이모지 아이콘은 뺀다
+  $('info-emoji').hidden = srcs.length > 0
+  slides.replaceChildren(
+    ...srcs.map((src, i) => {
+      const img = new Image()
+      img.src = src
+      img.alt = `${p.name} 사진 ${i + 1}`
+      img.decoding = 'async'
+      if (i > 0) img.loading = 'lazy'
+      return img
+    }),
+  )
+  dots.replaceChildren(...srcs.map(() => document.createElement('i')))
+  const many = srcs.length > 1
+  dots.hidden = !many
+  $('info-prev').hidden = !many
+  $('info-next').hidden = !many
+  slides.scrollLeft = 0
+  markSlide()
+}
+
+/** 지금 보이는 사진 번호를 점과 화살표에 반영한다 (스크롤할 때만) */
+function markSlide() {
+  const n = slides.children.length
+  const i = Math.round(slides.scrollLeft / Math.max(1, slides.clientWidth))
+  ;[...dots.children].forEach((d, k) => d.classList.toggle('on', k === i))
+  $<HTMLButtonElement>('info-prev').disabled = i <= 0
+  $<HTMLButtonElement>('info-next').disabled = i >= n - 1
+}
+slides.addEventListener('scroll', markSlide, { passive: true })
+const slideBy = (d: number) => slides.scrollBy({ left: d * slides.clientWidth, behavior: 'smooth' })
+$('info-prev').onclick = () => slideBy(-1)
+$('info-next').onclick = () => slideBy(1)
+slides.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault()
+    slideBy(e.key === 'ArrowLeft' ? -1 : 1)
+  }
+})
+
 function fillInfo(p: PetProfile) {
+  fillGallery(p)
   $('info-emoji').textContent = p.species === 'dog' ? '🐶' : '🐱'
   $('info-name').textContent = p.name
   $('info-meta').textContent = [p.breed, p.sex, p.age].filter(Boolean).join(' · ')
@@ -141,7 +188,6 @@ function fillInfo(p: PetProfile) {
 
   $('info-story-wrap').hidden = !p.story
   $('info-story').textContent = p.story
-  $('info-tip').textContent = p.tip
 
   const a = p.adoption
   $('info-shelter-wrap').hidden = !a

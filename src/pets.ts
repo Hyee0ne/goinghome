@@ -20,6 +20,8 @@ export interface PetProfile {
   belly: string
   eye: string
   pattern: 'none' | 'tabby' | 'patch'
+  /** 아이 정보 화면의 사진 슬라이드 (public/ 기준 경로 또는 전체 주소). 없으면 실사 얼굴 사진 한 장 */
+  photos?: string[]
   /** 아이 정보 화면의 성격 태그 */
   traits?: string[]
   /** 보호·입양 정보 (아이 정보 화면). 실제 공고와 연결되기 전에는 sample: true */
@@ -210,6 +212,7 @@ export const PETS: PetProfile[] = [
     favorite: 'head',
     shy: true,
     traits: ['낯을 가려요', '친해지면 애교쟁이', '산책 좋아해요'],
+    photos: ['gallery/choco/1.webp', 'gallery/choco/2.webp', 'gallery/choco/3.webp', 'gallery/choco/4.webp'],
     adoption: { shelter: '마포구 동물보호센터', region: '서울 마포구', noticeNo: '서울-마포-2026-00123', sample: true },
     fur: '#9a6a44',
     furDark: '#6e4a2e',
@@ -329,6 +332,11 @@ for (const g of Object.values(generated)) {
   const known = PETS.find((p) => p.id === g.profile.id)
   if (known) known.photo = withBase(g.rig)
   else PETS.push({ ...g.profile, photo: withBase(g.rig) })
+}
+
+/** 사진 경로에 BASE_URL을 붙인다 (전체 주소나 이미 /로 시작하면 그대로) */
+export function assetUrl(path: string) {
+  return /^(https?:)?\//.test(path) ? path : `${BASE}${path}`
 }
 
 /** 받침 유무에 따라 조사를 고른다: josa('초코', '이', '가') → '초코가' */

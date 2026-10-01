@@ -171,15 +171,127 @@ button {
   font-size: 14px;
 }
 
+.sheet-emoji[hidden] {
+  display: none;
+}
+
+/* 닫기는 사진 위 오른쪽 위에 떠 있다 */
 .sheet-close {
-  align-self: flex-start;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
   width: 36px;
   height: 36px;
   border: 0;
   border-radius: 50%;
-  background: var(--bg);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--ink-soft);
   font-size: 15px;
+  box-shadow: 0 2px 8px rgba(80, 50, 20, 0.12);
+}
+
+/* ── 사진 슬라이드 (가로 스크롤 스냅: 손가락으로 넘기기는 브라우저가 처리) ── */
+.gallery {
+  position: relative;
+  margin: -22px -22px 16px;
+  background: var(--bg);
+}
+
+.gallery[hidden] {
+  display: none;
+}
+
+.slides {
+  display: flex;
+  aspect-ratio: 1 / 1;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.slides::-webkit-scrollbar {
+  display: none;
+}
+
+.slides:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.slides img {
+  flex: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  scroll-snap-align: center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.slide-nav {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin-top: -18px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(80, 50, 20, 0.12);
+}
+
+.slide-nav.prev {
+  left: 12px;
+}
+
+.slide-nav.next {
+  right: 12px;
+}
+
+.slide-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slide-nav[hidden],
+.dots[hidden] {
+  display: none;
+}
+
+/* 손가락으로 넘기는 기기에서는 화살표를 숨긴다 */
+@media (hover: none) {
+  .slide-nav {
+    display: none;
+  }
+}
+
+.dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(74, 51, 34, 0.25);
+  transition: width 0.2s, background 0.2s;
+}
+
+.dots i.on {
+  width: 18px;
+  background: var(--accent);
 }
 
 .traits {

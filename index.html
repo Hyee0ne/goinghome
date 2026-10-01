@@ -17,6 +17,13 @@
       <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
       <dialog id="info" class="info-sheet" aria-labelledby="info-name">
         <div class="sheet-body">
+          <!-- 사진 슬라이드: 자주 보며 얼굴을 눈에 익히도록 맨 위에 크게 -->
+          <div id="info-gallery" class="gallery">
+            <div id="info-slides" class="slides" tabindex="0" aria-label="사진, 옆으로 넘겨 보기"></div>
+            <button id="info-prev" class="slide-nav prev" type="button" aria-label="이전 사진">‹</button>
+            <button id="info-next" class="slide-nav next" type="button" aria-label="다음 사진">›</button>
+            <div id="info-dots" class="dots" aria-hidden="true"></div>
+          </div>
           <header class="sheet-head">
             <span id="info-emoji" class="sheet-emoji" aria-hidden="true"></span>
             <div>
@@ -29,10 +36,6 @@
           <section id="info-story-wrap">
             <h3>이야기</h3>
             <p id="info-story"></p>
-          </section>
-          <section>
-            <h3>처음 만날 때</h3>
-            <p id="info-tip"></p>
           </section>
           <section id="info-shelter-wrap">
             <h3>보호 정보 <span id="info-sample" class="sample-badge">예시</span></h3>
