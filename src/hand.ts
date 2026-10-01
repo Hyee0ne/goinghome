@@ -185,6 +185,26 @@ async function createLandmarker() {
   }
 }
 
+/**
+ * '손 달라'고 내미는 손: 손바닥을 위로 해서 접시처럼 오므린 손 (하이파이브처럼 세운 손이 아니다).
+ * 손바닥이 위(또는 아래)를 향해 손이 수평이면, 손바닥 면의 법선이 위아래를 향한다 (깊이 z까지 써서 3D로 본다).
+ * 손가락은 살짝 굽어도 되지만 주먹은 아니어야 한다. aspect: 카메라 영상의 가로/세로 (x, z와 y의 단위를 맞춘다)
+ */
+export function isOfferingHand(lm: NormalizedLandmark[], aspect: number) {
+  const P = (i: number) => ({ x: lm[i].x * aspect, y: lm[i].y, z: lm[i].z * aspect })
+  const sub = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z })
+  const w = P(0)
+  const u = sub(P(5), w)
+  const v = sub(P(17), w)
+  const n = { x: u.y * v.z - u.z * v.y, y: u.z * v.x - u.x * v.z, z: u.x * v.y - u.y * v.x }
+  const len = Math.hypot(n.x, n.y, n.z) || 1
+  const flat = Math.abs(n.y / len) > 0.55
+  // 주먹이 아님: 손끝이 손가락 가운데 마디보다 손목에서 멀다 (3D 거리, 4개 중 2개 이상. 오므린 손도 통과)
+  const d = (i: number) => Math.hypot(...Object.values(sub(P(i), w)))
+  const notFist = [[8, 6], [12, 10], [16, 14], [20, 18]].filter(([tip, pip]) => d(tip) > d(pip) * 0.95).length >= 2
+  return flat && notFist
+}
+
 /** 손가락 4개 중 3개 이상 펴져 있으면 '손바닥을 편 상태'로 본다. */
 export function isOpenHand(lm: NormalizedLandmark[]) {
   const wrist = lm[0]

@@ -1,6 +1,7 @@
 import './style.css'
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
-import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOpenHand } from './hand'
+import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand } from './hand'
+import { Voice } from './voice'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PETS, type PetProfile } from './pets'
@@ -19,6 +20,8 @@ const tabs = $('pet-tabs')
 const hud = $('debug-hud')
 
 const tracker = new HandTracker(video)
+/** "손!" 하고 말하면 앞발을 준다 (지원하는 브라우저만. 시작 버튼을 누를 때 켠다) */
+const voice = new Voice(() => pet.commandPaw())
 
 /** 실사 털 셰이더. WebGL을 못 쓰거나 셰이더가 안 되는 기기에서는 null이고 캔버스 그림으로 그린다 */
 const fur = (() => {
@@ -73,6 +76,8 @@ interface HandView {
   id: string
   points: Pt[]
   open: boolean
+  /** 손바닥을 위로 해서 '손 달라'고 내민 손 */
+  offer: boolean
   palm: Pt
 }
 let handViews: HandView[] = []
@@ -136,6 +141,8 @@ function selectPet(p: PetProfile) {
 const startBtn = $<HTMLButtonElement>('start-camera')
 
 async function startCamera() {
+  // 사용자가 누른 순간에만 마이크를 켤 수 있어서 카메라를 기다리기 전에 켠다
+  voice.start()
   introError.hidden = true
   startBtn.disabled = true
   startBtn.textContent = '카메라 준비 중…'
@@ -167,12 +174,17 @@ startBtn.onclick = startCamera
 function currentInputs(now: number, dt: number): PetInput[] {
   const tracked = mouseSim
     ? simulatedHands()
-    : tracker.update(now).map((h) => ({ id: h.id, raw: h.landmarks.map(landmarkToStage), open: isOpenHand(h.landmarks) }))
+    : tracker.update(now).map((h) => ({
+        id: h.id,
+        raw: h.landmarks.map(landmarkToStage),
+        open: isOpenHand(h.landmarks),
+        offer: isOfferingHand(h.landmarks, (video.videoWidth || 4) / (video.videoHeight || 3)),
+      }))
 
   // 시상수 약 25ms: 인식 사이 프레임을 메우고 손 떨림을 줄이되, 지연은 거의 느껴지지 않게
   const a = 1 - Math.exp(-dt * 40)
   for (const id of smoothed.keys()) if (!tracked.some((t) => t.id === id)) smoothed.delete(id)
-  handViews = tracked.map(({ id, raw, open }) => {
+  handViews = tracked.map(({ id, raw, open, offer }) => {
     const prev = smoothed.get(id)
     const points = prev ? prev.map((q, i) => ({ x: q.x + (raw[i].x - q.x) * a, y: q.y + (raw[i].y - q.y) * a })) : raw
     smoothed.set(id, points)
@@ -180,7 +192,7 @@ function currentInputs(now: number, dt: number): PetInput[] {
       (acc, i) => ({ x: acc.x + points[i].x / PALM_POINTS.length, y: acc.y + points[i].y / PALM_POINTS.length }),
       { x: 0, y: 0 },
     )
-    return { id, points, open, palm }
+    return { id, points, open, offer, palm }
   })
 
   if (tracker.running || mouseSim) {
@@ -198,6 +210,7 @@ function currentInputs(now: number, dt: number): PetInput[] {
     id: h.id,
     ...toLocal(h.palm.x, h.palm.y),
     active: h.open,
+    offer: h.offer,
     points: h.points.map((q) => toLocal(q.x, q.y)),
   }))
 }
@@ -208,7 +221,7 @@ function currentInputs(now: number, dt: number): PetInput[] {
  * 일반 접속에서는 README대로 카메라 입력만 받는다.
  */
 const mouseSim = new URLSearchParams(location.search).get('debug') === 'mouse'
-let simPointer: { x: number; y: number; both: boolean } | null = null
+let simPointer: { x: number; y: number; both: boolean; offer: boolean } | null = null
 /** 손바닥 중심 기준 편 손 21개 점 (펫 로컬 단위, 손가락이 위) */
 const SIM_HAND: [number, number][] = [
   [0, 55], [-25, 40], [-45, 25], [-60, 10], [-72, -5],
@@ -224,6 +237,8 @@ function simulatedHands() {
     id,
     raw: SIM_HAND.map(([x, y]) => toStage(cx + x * flip, c.y + y)),
     open: true,
+    // Alt를 누르고 있으면 손바닥을 위로 해서 '손 달라'고 내민 손으로 흉내낸다
+    offer: simPointer!.offer,
   })
   const hands = [hand('Right', c.x, 1)]
   if (simPointer.both) hands.push(hand('Left', -c.x, -1))
@@ -233,7 +248,7 @@ if (mouseSim) {
   intro.hidden = true
   const at = (e: PointerEvent) => {
     const r = stage.getBoundingClientRect()
-    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey }
+    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey }
   }
   stage.addEventListener('pointerdown', at)
   stage.addEventListener('pointermove', (e) => e.buttons && at(e))
@@ -252,6 +267,7 @@ function frame(now: number) {
   const workStart = performance.now()
 
   const inputs = currentInputs(now, dt)
+  if (debug) (window as unknown as { __lastInputs: PetInput[] }).__lastInputs = inputs
   // 하트와 말풍선은 쓰지 않는다 (펫 로직이 내는 이벤트는 무시)
   pet.update(dt, inputs)
 
@@ -282,10 +298,12 @@ export function setPaused(on: boolean) {
   if (on) {
     cancelAnimationFrame(raf)
     tracker.pause()
+    voice.setActive(false)
     return
   }
   // 다시 시작: 멈추기 전 손 기록을 버려서, 순간이동한 손에 아이가 놀라지 않게 한다
   tracker.resume()
+  voice.setActive(true)
   pet.forgetHands()
   smoothed.clear()
   handViews = []
@@ -423,6 +441,7 @@ function renderQuality(frameMs: number, dt: number, workMs: number) {
       `${(1000 / frameEma).toFixed(0)} fps · 메인 스레드 ${workEma.toFixed(1)}ms`,
       `그리기 ${photoActive() ? `실사 셰이더 (배율 ${glDpr})` : fur ? '그림 (사진 없음/로딩 중)' : '그림 (WebGL 없음)'}`,
       st.mode ? `손 인식 ${st.mode === 'worker' ? '워커' : '메인 스레드'} · ${st.inferMs.toFixed(1)}ms · ${st.detectFps.toFixed(0)}회/초` : '손 인식 대기',
+      `손 모양 ${handViews.map((h) => (h.offer ? '내민 손' : h.open ? '편 손' : '오므림')).join(', ') || '-'} · 음성 ${voice.supported ? `"${voice.heard}"` : '지원 안 함'}`,
     ].join('\n')
   }
 }

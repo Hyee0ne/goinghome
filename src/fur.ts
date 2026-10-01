@@ -1300,11 +1300,13 @@ class PawLayer {
        varying vec2 vUv;
        void main() { vUv = aUv; gl_Position = vec4(uOrigin + aUv.x * uAxisX + aUv.y * uAxisY, 0.0, 1.0); }`,
       `precision mediump float;
-       uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha;
+       uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha; uniform float uLegUp;
        varying vec2 vUv;
        void main() {
          vec4 c = texture2D(uTex, vec2(mix(vUv.x, 1.0 - vUv.x, uFlip), vUv.y));
-         c *= (1.0 - smoothstep(0.5, 0.92, vUv.y)) * uAlpha;
+         // 다리가 이어지는 쪽(가슴 쪽)은 서서히 투명하게 해 몸에서 뻗어 나온 것처럼
+         float fade = uLegUp > 0.5 ? smoothstep(0.03, 0.45, vUv.y) : 1.0 - smoothstep(0.5, 0.92, vUv.y);
+         c *= fade * uAlpha;
          gl_FragColor = c;
        }`,
     )
@@ -1312,7 +1314,7 @@ class PawLayer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW)
     this.tex = makeTexture(gl)
-    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uFlip', 'uAlpha']) this.u[n] = gl.getUniformLocation(this.prog, n)
+    for (const n of ['uOrigin', 'uAxisX', 'uAxisY', 'uTex', 'uFlip', 'uAlpha', 'uLegUp']) this.u[n] = gl.getUniformLocation(this.prog, n)
   }
 
   async load(paw: PhotoRig['paw']) {
@@ -1338,17 +1340,22 @@ class PawLayer {
     // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
     const s = 1.4
     const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
-    // 손바닥이 오른쪽이면 오른쪽 앞발 (사진을 좌우로 뒤집는다)
+    // 손이 오른쪽이면 오른쪽 앞발 (사진을 좌우로 뒤집는다)
     const flip = p.pawX > 0 ? 1 : 0
-    const w = D * paw.width * view.scale
+    const legUp = !!paw.legUp
+    // 다리가 위(가슴)로 이어지는 앞발은 가슴에서 앞으로 나오며 커지는 느낌을 준다
+    const grow = legUp ? 0.82 + 0.18 * rise : 1
+    const w = D * paw.width * view.scale * grow
     const h = w * this.aspect
-    // 발바닥 가운데가 손바닥에 오게. 들어 올리는 동안은 화면 아래에서 올라온다
+    // 접촉점(발바닥 가운데 또는 발가락 끝)이 손바닥에 오게
     const tx = view.cx + p.pawX * view.scale
     const ty = view.cy + p.pawY * view.scale
-    const startY = view.H + h * 0.2
-    const ay = ty + (startY - ty) * (1 - rise)
-    // 다리가 아래쪽 몸통에서 뻗어 나오는 느낌으로 살짝 기울인다 (손에 얹은 동안은 아주 조금 흔들린다)
-    const ang = (flip ? 1 : -1) * (0.18 * (1 - e) + 0.05) + Math.sin(p.t * 2.1) * 0.015 * e
+    // 위로 든 다리: 가슴 쪽에서 내려와 손바닥에 톡 얹는다 / 아래에서 올라오는 다리: 화면 아래에서 올라온다
+    const startY = legUp ? ty - h * 0.35 : view.H + h * 0.2
+    const ay = ty + (startY - ty) * (1 - rise) + (legUp ? Math.sin(p.t * 2.4) * 1.2 * e : 0)
+    // 다리가 몸 가운데 쪽에서 뻗어 나오게 기울인다 (손에 얹은 동안은 아주 조금 흔들린다)
+    const lean = legUp ? (flip ? -1 : 1) * 0.14 : (flip ? 1 : -1) * (0.18 * (1 - e) + 0.05)
+    const ang = lean + Math.sin(p.t * 2.1) * 0.015 * e
     const ax = (flip ? 1 - paw.anchorX : paw.anchorX) * w
     const axY = paw.anchorY * h
     const cos = Math.cos(ang)
@@ -1368,6 +1375,7 @@ class PawLayer {
     gl.uniform1i(this.u.uTex, 0)
     gl.uniform1f(this.u.uFlip, flip)
     gl.uniform1f(this.u.uAlpha, Math.min(1, e * 3))
+    gl.uniform1f(this.u.uLegUp, legUp ? 1 : 0)
     gl.uniform2f(this.u.uOrigin, toClipX(ox), toClipY(oy))
     gl.uniform2f(this.u.uAxisX, (w * cos * 2) / view.W, (-w * sin * 2) / view.H)
     gl.uniform2f(this.u.uAxisY, (-h * sin * 2) / view.W, (-h * cos * 2) / view.H)
