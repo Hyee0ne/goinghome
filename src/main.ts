@@ -138,7 +138,12 @@ function renderHelp() {
   const steps: [string, string][] = [
     ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
     ...(p.shy
-      ? ([['👃', `${josa(p.name, '은', '는')} 겁이 많아요. 먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해 주세요.`]] as [string, string][])
+      ? ([
+          [
+            '👃',
+            `${josa(p.name, '은', '는')} 겁이 많아요. 먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해 주세요.${cat ? ' 간식을 받아먹어도 마음을 열어요.' : ''}`,
+          ],
+        ] as [string, string][])
       : []),
     ['🫳', '손끝 점이 주황색이 되면 몸에 닿은 거예요. 살살 쓰다듬어 주세요.'],
     ['💛', `${ZONE_LABEL[p.favorite]}${p.favorite === 'chin' ? '을 긁어' : '를 쓰다듬어'} 주면 가장 좋아해요.`],
@@ -152,14 +157,24 @@ function renderHelp() {
       return li
     }),
   )
+  // 아이마다 할 수 있는 특별한 교감: 강아지는 '손' 개인기(체크된 아이만), 고양이는 간식 주기 (Pet.canEatTreat와 같은 조건)
   const trick = $('help-trick')
-  trick.hidden = !canGivePaw(p)
-  if (canGivePaw(p)) {
+  const special: [string, string] | null = canGivePaw(p)
+    ? [
+        "🐾 개인기 '손'",
+        `턱 아래 왼쪽이나 오른쪽에 손바닥을 위로 펴고 1초쯤 가만히 내밀면, ${josa(p.name, '이', '가')} 그쪽 앞발을 올려요. 정가운데에서는 앞발을 주지 않아요. 양손을 내밀면 두 앞발을 모두 올려요. "손!" 하고 말해도 돼요.`,
+      ]
+    : cat
+      ? [
+          '🍤 간식 주기',
+          `엄지와 검지로 간식을 집듯이 손끝을 모아 입 앞에 가만히 대 보세요. 냄새를 맡고 세 입에 나눠 받아먹어요. 손끝을 뗐다가 다시 모으면 새 간식이에요.`,
+        ]
+      : null
+  trick.hidden = !special
+  if (special) {
     trick.replaceChildren(
-      Object.assign(document.createElement('b'), { textContent: "🐾 개인기 '손'" }),
-      Object.assign(document.createElement('p'), {
-        textContent: `턱 아래 왼쪽이나 오른쪽에 손바닥을 위로 펴고 1초쯤 가만히 내밀면, ${josa(p.name, '이', '가')} 그쪽 앞발을 올려요. 정가운데에서는 앞발을 주지 않아요. 양손을 내밀면 두 앞발을 모두 올려요. "손!" 하고 말해도 돼요.`,
-      }),
+      Object.assign(document.createElement('b'), { textContent: special[0] }),
+      Object.assign(document.createElement('p'), { textContent: special[1] }),
     )
   }
 }
