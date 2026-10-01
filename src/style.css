@@ -189,12 +189,14 @@ button {
   color: #fff;
 }
 
+/* 휴대폰은 아이가 폭을 다 채워서, 흐려지는 가슴 아래 왼쪽(배너 위)에 둔다 */
 @media (max-width: 720px) {
   .treat-tray {
-    left: 8px;
-    top: 46%;
-    transform: translateY(-50%) scale(0.85);
-    transform-origin: left center;
+    left: 10px;
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px);
+    transform: scale(0.85);
+    transform-origin: left bottom;
   }
 }
 
