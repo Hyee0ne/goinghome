@@ -356,6 +356,12 @@ export class Pet {
     return out
   }
 
+  /** 손 기록을 비운다 (일시정지 뒤 다시 시작할 때. 멈추기 전 손 위치에서 순간이동한 것으로 보고 놀라지 않게) */
+  forgetHands() {
+    this.hands.clear()
+    this.handTrack.clear()
+  }
+
   private blinkNow() {
     if (this.blinkClock > 0.25) this.blinkClock = 0
   }

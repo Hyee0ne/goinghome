@@ -34,7 +34,7 @@ let glDpr = Math.min(window.devicePixelRatio || 1, 1.5)
 const debug = new URLSearchParams(location.search).has('debug')
 hud.hidden = !debug
 if (debug) {
-  Object.assign(window, { __fur: fur })
+  Object.assign(window, { __fur: fur, __tracker: tracker, __setPaused: (on: boolean) => setPaused(on) })
   // 테스트용: 현재 펫의 상태를 콘솔에서 보고 바꿀 수 있게
   Object.defineProperty(window, '__pet', { get: () => pet })
 }
@@ -358,7 +358,38 @@ function frame(now: number) {
   draw()
   drawCameraOverlay()
   renderQuality(frameMs, dt, performance.now() - workStart)
-  requestAnimationFrame(frame)
+  raf = requestAnimationFrame(frame)
+}
+
+// ───────────────────────── 일시정지 ─────────────────────────
+
+let paused = false
+/** 예약된 다음 프레임 (멈출 때 취소해서, 빨리 껐다 켜도 루프가 두 개로 늘지 않게) */
+let raf = 0
+
+/**
+ * 화면 위에 시트 등을 띄워 동물이 가려질 때 부른다: setPaused(true)로 멈추고, 닫을 때 setPaused(false).
+ * 멈춘 동안은 그리기·셰이더·손 인식(워커 추론과 카메라 영상 디코딩)이 모두 쉬어 폰 배터리를 아낀다.
+ * 카메라 권한과 스트림은 유지하므로 다시 켜는 데 지연이 없다. 화면에는 멈추기 직전 모습이 남는다.
+ */
+export function setPaused(on: boolean) {
+  if (on === paused) return
+  paused = on
+  if (on) {
+    cancelAnimationFrame(raf)
+    tracker.pause()
+    return
+  }
+  // 다시 시작: 멈추기 전 손 기록을 버려서, 순간이동한 손에 아이가 놀라지 않게 한다
+  tracker.resume()
+  pet.forgetHands()
+  smoothed.clear()
+  handViews = []
+  lastHandPx.clear()
+  lastTipPx.clear()
+  tipTouch.clear()
+  last = performance.now()
+  raf = requestAnimationFrame(frame)
 }
 
 // ───────────────────────── 실사 털 ─────────────────────────
@@ -556,4 +587,4 @@ function drawCameraOverlay() {
 resize()
 renderTabs()
 loadPhoto(pet.p)
-requestAnimationFrame(frame)
+raf = requestAnimationFrame(frame)
