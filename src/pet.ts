@@ -470,11 +470,13 @@ export class Pet {
       // 다 먹고 나면 고양이는 천천히 눈을 깜빡여 고맙다고 하고, 강아지는 입맛을 다신다
       if (!this.behavior) this.startBehavior(this.p.species === 'cat' ? 'slowBlink' : 'lick')
     }
-    // 입 벌림: 무는 동안 한 입마다 벌렸다 다문다
+    // 입 벌림: 한 입마다 앞쪽 절반은 크게 벌리고 있다가 다문다.
+    // 사진(다문 입·벌린 입) 사이의 중간 모양은 이와 혀가 맞지 않아 구겨져 보이므로, 그 사이는 빠르게(약 0.07초) 넘긴다
     const biting = this.eatHand && this.eatPhase === 'bite'
-    const ph = biting ? (this.eatT / TREAT_BITE) % 1 : 0
-    this.chomp = approach(this.chomp, biting ? Math.sin(Math.PI * Math.min(1, ph / 0.6)) : 0, 18, dt)
-    this.chew = approach(this.chew, this.eatHand && this.eatPhase === 'chew' && this.eatT < TREAT_CHEW - 0.3 ? 1 : 0, 6, dt)
+    const ph = biting ? (this.eatT / TREAT_BITE) % 1 : 1
+    this.chomp = approach(this.chomp, biting && ph < 0.5 ? 1 : 0, 45, dt)
+    // 씹기 시작·끝도 사진 사이를 빠르게 넘긴다 (천천히 넘기면 그동안 입이 구겨져 보인다)
+    this.chew = approach(this.chew, this.eatHand && this.eatPhase === 'chew' && this.eatT < TREAT_CHEW - 0.3 ? 1 : 0, 40, dt)
     this.treatJoy = this.eatHand && this.eatPhase === 'chew' ? approach(this.treatJoy, 0.9, 3, dt) : Math.max(0, this.treatJoy - dt * 0.15)
   }
 
