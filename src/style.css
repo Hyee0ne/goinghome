@@ -80,21 +80,73 @@ button {
   min-width: 0;
 }
 
-/* 지금 아이 정보 열기 */
-.info-btn {
-  flex: none;
-  padding: 7px 12px;
+/* ── 아이 정보 열기 배너 (무대 아래쪽, 엄지가 닿는 자리) ── */
+.info-banner {
+  position: absolute;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(440px, calc(100% - 32px));
+  padding: 10px 14px 10px 10px;
   border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 14px;
-  white-space: nowrap;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(80, 50, 20, 0.18);
+  text-align: left;
+  transform: translateX(-50%);
+  transition: transform 0.15s;
 }
 
-.info-btn::after {
-  content: ' ›';
+.info-banner:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+.banner-thumb {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--bg);
+  object-fit: cover;
+  object-position: 50% 25%;
+}
+
+.banner-thumb[hidden] {
+  display: none;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.banner-text b {
+  font-size: 16px;
+}
+
+.banner-text span {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.banner-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
 }
 
 /* ── 아이 정보 시트 ──
@@ -570,7 +622,7 @@ button {
 .debug-hud {
   position: absolute;
   left: 12px;
-  bottom: 64px;
+  top: 12px;
   margin: 0;
   padding: 8px 10px;
   border-radius: 8px;

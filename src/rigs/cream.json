@@ -25,7 +25,11 @@
       "region": "경기 수원시",
       "noticeNo": "경기-수원-2026-00456",
       "sample": true
-    }
+    },
+    "photos": [
+      "gallery/cream/1.webp",
+      "pets/cream/face.webp"
+    ]
   },
   "rig": {
     "src": "pets/cream/face.webp",

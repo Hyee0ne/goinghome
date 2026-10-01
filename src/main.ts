@@ -120,11 +120,20 @@ function renderTabs() {
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
-  infoOpen.textContent = `${pet.p.name} 알아보기`
+  renderBanner()
+}
+
+function renderBanner() {
+  const p = pet.p
+  $('info-banner-title').textContent = `${josa(p.name, '이', '가')} 가족을 기다려요`
+  const thumb = $<HTMLImageElement>('info-thumb')
+  // 썸네일은 셰이더가 이미 불러온 얼굴 사진을 써서 따로 내려받지 않는다
+  const src = p.photo?.src ?? (p.photos?.length ? assetUrl(p.photos[0]) : undefined)
+  thumb.hidden = !src
+  if (src) thumb.src = src
 }
 
 // 아이 정보 → 입양 문의. 시트를 열 때만 DOM을 채워서 매 프레임 루프에는 영향이 없다
-const infoOpen = $<HTMLButtonElement>('info-open')
 const info = $<HTMLDialogElement>('info')
 const FAVORITE_LABEL = { head: '머리 쓰다듬기', chin: '턱 밑 긁기', body: '등 쓰다듬기' } as const
 
@@ -207,7 +216,7 @@ function fillInfo(p: PetProfile) {
     : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
 }
 
-infoOpen.onclick = () => {
+$('info-open').onclick = () => {
   fillInfo(pet.p)
   // 시트를 보는 동안은 손 인식과 셰이더를 멈춰 배터리를 아낀다 (닫히면 close 이벤트에서 다시 켠다)
   setPaused(true)

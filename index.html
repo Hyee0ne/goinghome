@@ -11,7 +11,6 @@
     <div id="app">
       <header class="topbar">
         <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
-        <button id="info-open" class="info-btn" type="button" aria-haspopup="dialog"></button>
       </header>
 
       <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
@@ -52,6 +51,16 @@
         <canvas id="pet-gl" aria-hidden="true"></canvas>
         <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
         <pre id="debug-hud" class="debug-hud" hidden></pre>
+
+        <!-- 아이 정보 열기 배너 (시작 화면이 떠 있는 동안은 그 아래에 가려진다) -->
+        <button id="info-open" class="info-banner" type="button" aria-haspopup="dialog">
+          <img id="info-thumb" class="banner-thumb" alt="" />
+          <span class="banner-text">
+            <b id="info-banner-title"></b>
+            <span>사진과 이야기 보고 입양 문의하기</span>
+          </span>
+          <span class="banner-go" aria-hidden="true">›</span>
+        </button>
 
         <!-- 카메라 영상은 손 인식에만 쓰고 화면에는 보이지 않는다 (display:none이면 일부 브라우저가 프레임을 멈춰서 투명하게 숨긴다) -->
         <div id="camera-box" class="camera-box camera-hidden">
