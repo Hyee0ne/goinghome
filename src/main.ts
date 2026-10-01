@@ -4,7 +4,7 @@ import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand 
 import { Voice } from './voice'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
-import { FLOOR_Y, PETS, type PetProfile } from './pets'
+import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -125,7 +125,116 @@ function renderTabs() {
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
+  renderBanner()
 }
+
+function renderBanner() {
+  const p = pet.p
+  $('info-banner-title').textContent = `${josa(p.name, '이', '가')} 가족을 기다려요`
+  const thumb = $<HTMLImageElement>('info-thumb')
+  // 썸네일은 셰이더가 이미 불러온 얼굴 사진을 써서 따로 내려받지 않는다
+  const src = p.photo?.src ?? (p.photos?.length ? assetUrl(p.photos[0]) : undefined)
+  thumb.hidden = !src
+  if (src) thumb.src = src
+}
+
+// 아이 정보 → 입양 문의. 시트를 열 때만 DOM을 채워서 매 프레임 루프에는 영향이 없다
+const info = $<HTMLDialogElement>('info')
+const FAVORITE_LABEL = { head: '머리 쓰다듬기', chin: '턱 밑 긁기', body: '등 쓰다듬기' } as const
+
+const slides = $('info-slides')
+const dots = $('info-dots')
+
+function fillGallery(p: PetProfile) {
+  const srcs = p.photos?.length ? p.photos.map(assetUrl) : p.photo ? [p.photo.src] : []
+  $('info-gallery').hidden = srcs.length === 0
+  // 사진이 있으면 이모지 아이콘은 뺀다
+  $('info-emoji').hidden = srcs.length > 0
+  slides.replaceChildren(
+    ...srcs.map((src, i) => {
+      const img = new Image()
+      img.src = src
+      img.alt = `${p.name} 사진 ${i + 1}`
+      img.decoding = 'async'
+      if (i > 0) img.loading = 'lazy'
+      return img
+    }),
+  )
+  dots.replaceChildren(...srcs.map(() => document.createElement('i')))
+  const many = srcs.length > 1
+  dots.hidden = !many
+  $('info-prev').hidden = !many
+  $('info-next').hidden = !many
+  slides.scrollLeft = 0
+  markSlide()
+}
+
+/** 지금 보이는 사진 번호를 점과 화살표에 반영한다 (스크롤할 때만) */
+function markSlide() {
+  const n = slides.children.length
+  const i = Math.round(slides.scrollLeft / Math.max(1, slides.clientWidth))
+  ;[...dots.children].forEach((d, k) => d.classList.toggle('on', k === i))
+  $<HTMLButtonElement>('info-prev').disabled = i <= 0
+  $<HTMLButtonElement>('info-next').disabled = i >= n - 1
+}
+slides.addEventListener('scroll', markSlide, { passive: true })
+const slideBy = (d: number) => slides.scrollBy({ left: d * slides.clientWidth, behavior: 'smooth' })
+$('info-prev').onclick = () => slideBy(-1)
+$('info-next').onclick = () => slideBy(1)
+slides.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault()
+    slideBy(e.key === 'ArrowLeft' ? -1 : 1)
+  }
+})
+
+function fillInfo(p: PetProfile) {
+  fillGallery(p)
+  $('info-emoji').textContent = p.species === 'dog' ? '🐶' : '🐱'
+  $('info-name').textContent = p.name
+  $('info-meta').textContent = [p.breed, p.sex, p.age].filter(Boolean).join(' · ')
+
+  const traits = [...(p.traits ?? []), `${FAVORITE_LABEL[p.favorite]} 좋아해요`]
+  if (canGivePaw(p)) traits.push("'손' 할 줄 알아요 🐾")
+  if (p.shy && !traits.some((t) => t.includes('낯'))) traits.unshift('겁이 많아요')
+  $('info-traits').replaceChildren(
+    ...traits.map((t) => Object.assign(document.createElement('li'), { textContent: t })),
+  )
+
+  $('info-story-wrap').hidden = !p.story
+  $('info-story').textContent = p.story
+
+  const a = p.adoption
+  $('info-shelter-wrap').hidden = !a
+  $('info-sample').hidden = !a?.sample
+  $('info-shelter').replaceChildren(
+    ...(a
+      ? ([['보호소', a.shelter], ['지역', a.region], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
+          v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
+        )
+      : []),
+  )
+
+  const adopt = $<HTMLAnchorElement>('info-adopt')
+  adopt.href = a?.url ?? PAWINHAND_URL
+  $('info-adopt-note').textContent = a?.url
+    ? `포인핸드에서 ${josa(p.name, '이의', '의')} 공고를 열어요.`
+    : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
+}
+
+$('info-open').onclick = () => {
+  fillInfo(pet.p)
+  // 시트를 보는 동안은 손 인식과 셰이더를 멈춰 배터리를 아낀다 (닫히면 close 이벤트에서 다시 켠다)
+  setPaused(true)
+  info.showModal()
+  info.querySelector('.sheet-body')!.scrollTop = 0
+}
+$('info-close').onclick = () => info.close()
+info.addEventListener('close', () => setPaused(false))
+// 시트 바깥(어두운 배경)을 누르면 닫는다
+info.addEventListener('click', (e) => {
+  if (e.target === info) info.close()
+})
 
 
 function selectPet(p: PetProfile) {

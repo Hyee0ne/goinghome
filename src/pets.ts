@@ -20,8 +20,33 @@ export interface PetProfile {
   belly: string
   eye: string
   pattern: 'none' | 'tabby' | 'patch'
+  /** 아이 정보 화면의 사진 슬라이드 (public/ 기준 경로 또는 전체 주소). 없으면 실사 얼굴 사진 한 장 */
+  photos?: string[]
+  /** '손' 개인기를 할 줄 아는지 (강아지만. 고양이는 이 값을 무시한다 → canGivePaw) */
+  canPaw?: boolean
+  /** 아이 정보 화면의 성격 태그 */
+  traits?: string[]
+  /** 보호·입양 정보 (아이 정보 화면). 실제 공고와 연결되기 전에는 sample: true */
+  adoption?: Adoption
   /** 실사 사진 리그. 있으면 WebGL 털 셰이더로 그리고, 없거나 WebGL을 못 쓰면 캔버스 그림으로 그린다 */
   photo?: PhotoRig
+}
+
+export interface Adoption {
+  shelter: string
+  region: string
+  noticeNo?: string
+  /** 포인핸드 공고 주소. 없으면 포인핸드 첫 화면으로 보낸다 */
+  url?: string
+  /** 가상의 아이라 실제 공고가 없다 */
+  sample?: boolean
+}
+
+export const PAWINHAND_URL = 'https://pawinhand.kr'
+
+/** '손' 개인기를 보여 줄 수 있는 아이: 체크된 강아지만 (고양이는 선택지 자체가 없다) */
+export function canGivePaw(p: PetProfile) {
+  return p.species === 'dog' && !!p.canPaw
 }
 
 interface Ellipse {
@@ -198,6 +223,10 @@ export const PETS: PetProfile[] = [
     tip: '먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해주세요.',
     favorite: 'head',
     shy: true,
+    canPaw: true,
+    traits: ['낯을 가려요', '친해지면 애교쟁이', '산책 좋아해요'],
+    photos: ['gallery/choco/1.webp', 'gallery/choco/2.webp', 'gallery/choco/3.webp', 'gallery/choco/4.webp'],
+    adoption: { shelter: '마포구 동물보호센터', region: '서울 마포구', noticeNo: '서울-마포-2026-00123', sample: true },
     fur: '#9a6a44',
     furDark: '#6e4a2e',
     belly: '#f1dcc3',
@@ -317,6 +346,11 @@ for (const g of Object.values(generated)) {
   const known = PETS.find((p) => p.id === g.profile.id)
   if (known) known.photo = withBase(g.rig)
   else PETS.push({ ...g.profile, photo: withBase(g.rig) })
+}
+
+/** 사진 경로에 BASE_URL을 붙인다 (전체 주소나 이미 /로 시작하면 그대로) */
+export function assetUrl(path: string) {
+  return /^(https?:)?\//.test(path) ? path : `${BASE}${path}`
 }
 
 /** 받침 유무에 따라 조사를 고른다: josa('초코', '이', '가') → '초코가' */

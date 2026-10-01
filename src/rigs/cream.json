@@ -4,9 +4,9 @@
     "name": "삼식",
     "species": "cat",
     "breed": "페르시안 믹스",
-    "age": "",
-    "sex": "",
-    "story": "",
+    "age": "5살 추정",
+    "sex": "여아",
+    "story": "이사 간 집에 홀로 남겨진 채 발견됐어요. 사람을 좋아해서 처음 보는 손에도 먼저 얼굴을 비벼요.",
     "tip": "턱 밑을 살살 긁어 주세요.",
     "favorite": "chin",
     "shy": false,
@@ -14,7 +14,22 @@
     "furDark": "#6e4a2e",
     "belly": "#f1dcc3",
     "eye": "#2b1d14",
-    "pattern": "none"
+    "pattern": "none",
+    "traits": [
+      "사람을 좋아해요",
+      "조용한 편이에요",
+      "중성화 완료"
+    ],
+    "adoption": {
+      "shelter": "수원시 동물보호센터",
+      "region": "경기 수원시",
+      "noticeNo": "경기-수원-2026-00456",
+      "sample": true
+    },
+    "photos": [
+      "gallery/cream/1.webp",
+      "pets/cream/face.webp"
+    ]
   },
   "rig": {
     "src": "pets/cream/face.webp",

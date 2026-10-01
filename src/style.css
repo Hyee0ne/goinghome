@@ -75,6 +75,385 @@ button {
   color: #fff;
 }
 
+.pet-tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── 아이 정보 열기 배너 (무대 아래쪽, 엄지가 닿는 자리) ── */
+.info-banner {
+  position: absolute;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(440px, calc(100% - 32px));
+  padding: 10px 14px 10px 10px;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(80, 50, 20, 0.18);
+  text-align: left;
+  transform: translateX(-50%);
+  transition: transform 0.15s;
+}
+
+.info-banner:active {
+  transform: translateX(-50%) scale(0.98);
+}
+
+.banner-thumb {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--bg);
+  object-fit: cover;
+  object-position: 50% 25%;
+}
+
+.banner-thumb[hidden] {
+  display: none;
+}
+
+.banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.banner-text b {
+  font-size: 16px;
+}
+
+.banner-text span {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.banner-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ── 아이 정보 시트 ──
+   뒤 무대는 계속 움직이는 WebGL이라 backdrop-filter(블러)는 쓰지 않는다 (매 프레임 다시 흐리게 계산해서 렉) */
+.info-sheet {
+  width: min(440px, 100%);
+  max-height: min(680px, 88dvh);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 20px 60px rgba(80, 50, 20, 0.2);
+  overflow: hidden;
+}
+
+.info-sheet[open] {
+  display: flex;
+  flex-direction: column;
+  animation: sheet-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.info-sheet::backdrop {
+  background: rgba(74, 51, 34, 0.35);
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 22px 8px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sheet-emoji {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--bg);
+  font-size: 28px;
+}
+
+.sheet-head > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.sheet-meta {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.sheet-emoji[hidden] {
+  display: none;
+}
+
+/* 닫기는 사진 위 오른쪽 위에 떠 있다 */
+.sheet-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink-soft);
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(80, 50, 20, 0.12);
+}
+
+/* ── 사진 슬라이드 (가로 스크롤 스냅: 손가락으로 넘기기는 브라우저가 처리) ── */
+.gallery {
+  position: relative;
+  margin: -22px -22px 16px;
+  background: var(--bg);
+}
+
+.gallery[hidden] {
+  display: none;
+}
+
+.slides {
+  display: flex;
+  aspect-ratio: 1 / 1;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.slides::-webkit-scrollbar {
+  display: none;
+}
+
+.slides:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.slides img {
+  flex: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  scroll-snap-align: center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.slide-nav {
+  position: absolute;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  margin-top: -18px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(80, 50, 20, 0.12);
+}
+
+.slide-nav.prev {
+  left: 12px;
+}
+
+.slide-nav.next {
+  right: 12px;
+}
+
+.slide-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.slide-nav[hidden],
+.dots[hidden] {
+  display: none;
+}
+
+/* 손가락으로 넘기는 기기에서는 화살표를 숨긴다 */
+@media (hover: none) {
+  .slide-nav {
+    display: none;
+  }
+}
+
+.dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(74, 51, 34, 0.25);
+  transition: width 0.2s, background 0.2s;
+}
+
+.dots i.on {
+  width: 18px;
+  background: var(--accent);
+}
+
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.traits li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sheet-body section {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-body section:last-child {
+  border-bottom: 0;
+}
+
+.sheet-body section[hidden] {
+  display: none;
+}
+
+.sheet-body h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.sheet-body section p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.sample-badge {
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  font-size: 11px;
+}
+
+.sample-badge[hidden] {
+  display: none;
+}
+
+.shelter {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.shelter dt {
+  color: var(--ink-soft);
+}
+
+.shelter dd {
+  margin: 0;
+}
+
+.sheet-foot {
+  padding: 12px 22px max(18px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.adopt {
+  display: block;
+  text-decoration: none;
+}
+
+.adopt::after {
+  content: ' ↗';
+}
+
+.sheet-foot .muted {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+/* 휴대폰: 아래에서 올라오는 시트 */
+@media (max-width: 520px) {
+  .info-sheet {
+    width: 100%;
+    max-width: none;
+    margin: auto 0 0;
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .info-sheet[open] {
+    animation: none;
+  }
+}
+
 /* ── 무대 ── */
 .stage-wrap {
   position: relative;
@@ -225,8 +604,6 @@ button {
 /* ── 모바일 ── */
 @media (max-width: 720px) {
   .topbar {
-    flex-direction: column;
-    align-items: stretch;
     gap: 8px;
   }
 
@@ -245,7 +622,7 @@ button {
 .debug-hud {
   position: absolute;
   left: 12px;
-  bottom: 64px;
+  top: 12px;
   margin: 0;
   padding: 8px 10px;
   border-radius: 8px;
