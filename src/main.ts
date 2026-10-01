@@ -470,7 +470,8 @@ if (mouseSim) {
 let last = performance.now()
 
 function frame(now: number) {
-  const dt = Math.min(0.05, (now - last) / 1000)
+  // 첫 프레임은 rAF 시각이 모듈을 읽은 시각(last)보다 이를 수 있어 음수가 된다. 음수 dt는 "손!" 명령 타이머 등을 거꾸로 돌려 엉뚱하게 켠다
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000))
   const frameMs = now - last
   last = now
   const workStart = performance.now()
@@ -478,6 +479,7 @@ function frame(now: number) {
   const inputs = currentInputs(now, dt)
   if (debug) (window as unknown as { __lastInputs: PetInput[] }).__lastInputs = inputs
   // 하트와 말풍선은 쓰지 않는다 (펫 로직이 내는 이벤트는 무시)
+  updateTray()
   pet.update(dt, inputs)
 
   // 마음의 거리는 화면에 보이지 않지만, 쓰다듬을수록 편안해지는 표정과 겁 많은 아이의 기억에 쓰여 저장해 둔다
@@ -702,6 +704,27 @@ function drawHands() {
     // 간식은 손끝 점 위에 (두 손끝이 간식을 집고 있는 것처럼)
     drawTreat(pet.treatOf(id), pts)
   }
+}
+
+/** 지난 프레임에 집고 있던 손 (집기가 시작되는 순간을 찾는다) */
+const wasPinching = new Set<string>()
+
+/**
+ * 간식 접시: 손끝을 모으기 시작한 자리가 접시 위면 간식 하나를 그 손에 쥐여 준다 (손끝을 떼면 간식은 사라진다).
+ * 간식을 들지 않은 손의 손끝(집는 손은 두 손끝 사이, 편 손은 검지 끝)이 접시 위에 오면 접시를 강조한다
+ */
+function updateTray() {
+  let hover = false
+  for (const h of handViews) {
+    const pts = h.points
+    const tip = h.pinch ? { x: (pts[4].x + pts[8].x) / 2, y: (pts[4].y + pts[8].y) / 2 } : pts[8]
+    const over = treatTray.hit(tip.x, tip.y)
+    if (h.pinch && !wasPinching.has(h.id) && over && treatTray.take()) pet.giveTreat(h.id)
+    if (over && pet.treatOf(h.id) === 0) hover = true
+  }
+  wasPinching.clear()
+  for (const h of handViews) if (h.pinch) wasPinching.add(h.id)
+  treatTray.setHover(hover)
 }
 
 /** 간식 그림과, 한 입씩 베어 먹은 모양 (남은 입 수마다 한 번만 만들어 둔다) */

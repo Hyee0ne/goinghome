@@ -9,6 +9,8 @@
 - 단계 사이의 움직임(전환용)은 scripts/prepare-morph.py가 따로 만든다
 - --eyes x,y,r ...를 주면 (잘라낸 원본 사진 좌표) 눈에 박힌 반사광을 지운다 (prepare-pet.py와 같게).
   --eyes-frames 0,1 로 지울 단계를 고른다 (기본은 전부). 눈을 감은 단계는 빼야 털이 뭉개지지 않는다
+- --match-color: 편집본은 바꾸지 않은 털도 색이 조금 달라져서, 섞을 때 그 부위 색이 바뀌어 보인다.
+  원본과 거의 같은 픽셀(바뀌지 않은 털)로 넓은 범위의 색 차이를 재서 편집본 색을 원본에 맞춘다 (벌린 입 안은 주변 값으로 메운다)
 편집본이 원본과 어긋나 있으면 부위가 겹쳐 보이므로, 편집하지 않은 가슴 부분으로 어긋남을 재서 맞춘다.
 """
 
@@ -23,6 +25,8 @@ MARGIN = 24  # prepare-pet.py와 같아야 한다
 import catchlight
 
 args = sys.argv[1:]
+match_color = '--match-color' in args
+args = [a for a in args if a != '--match-color']
 eyes = []
 eye_frames = None
 if '--eyes-frames' in args:
@@ -66,6 +70,24 @@ def misalignment(expr: np.ndarray) -> tuple[int, int]:
     return int(dx), int(dy)
 
 
+def match_colors(crop: np.ndarray, ref: np.ndarray) -> np.ndarray:
+    """바뀌지 않은 털(원본과 밝기가 거의 같은 곳)에서 채널별 색 비율을 넓게 재서 편집본 전체에 곱한다"""
+    from scipy.ndimage import gaussian_filter
+
+    same = (np.abs(lum(crop) - lum(ref)) < 14) & (crop[:, :, 3] > 200) & (ref[:, :, 3] > 200)
+    wgt = same.astype(np.float32)
+    sigma = max(crop.shape[:2]) / 12
+    den_w = gaussian_filter(wgt, sigma) + 1e-6
+    out = crop.copy()
+    for c in range(3):
+        a = gaussian_filter(ref[:, :, c] * wgt, sigma) / den_w
+        b = gaussian_filter(crop[:, :, c] * wgt, sigma) / den_w
+        gain = np.where(den_w > 0.02, a / np.maximum(b, 1), 1.0)
+        out[:, :, c] = np.clip(crop[:, :, c] * np.clip(gain, 0.8, 1.25), 0, 255)
+    print(f'색 맞춤: 바뀌지 않은 털 {same.mean() * 100:.0f}%로 맞췄습니다')
+    return out
+
+
 crops = []
 for k, src in enumerate(frame_srcs):
     expr = load(src)
@@ -81,6 +103,8 @@ for k, src in enumerate(frame_srcs):
         sys.exit(f'상자가 사진 밖으로 나갑니다: 요청 {bx1 - bx0}x{by1 - by0}, 실제 {crop.shape[1]}x{crop.shape[0]}')
     if eyes and (eye_frames is None or k in eye_frames):
         crop = catchlight.remove(crop, [(x - bx0, y - by0, r) for x, y, r in eyes])
+    if match_color:
+        crop = match_colors(crop, base[cy0 + by0 : cy0 + by1, cx0 + bx0 : cx0 + bx1])
     crops.append(crop)
 
 stacked = np.concatenate(crops, axis=0)

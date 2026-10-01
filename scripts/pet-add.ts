@@ -411,7 +411,7 @@ if (run('assets')) {
   const has = (...names: string[]) => names.every((n) => existsSync(f.expr(n)))
   // 표정 사진이 있는 부위만 만든다 (사용량 한도 등으로 빠진 부위는 앱이 표정 없이 그린다)
   for (const file of ['pant.webp', 'eyes.webp', 'ears.webp', 'morph.png', 'morph.json']) rmSync(join(PUB, file), { force: true })
-  if (has('pantMid', 'pant')) py('prepare-expression.py', f.base, join(PUB, 'pant'), ...box(b.pant), f.expr('pantMid'), f.expr('pant'))
+  if (has('pantMid', 'pant')) py('prepare-expression.py', f.base, join(PUB, 'pant'), ...box(b.pant), f.expr('pantMid'), f.expr('pant'), '--match-color')
   if (has('eyesHalf', 'eyesClosed'))
     py('prepare-expression.py', f.base, join(PUB, 'eyes'), ...box(b.eyes), f.expr('eyesHalf'), f.expr('eyesClosed'), '--eyes-frames', '0', '--eyes', ...eyes)
   if (has('earsMid', 'earsBack')) py('prepare-expression.py', f.base, join(PUB, 'ears'), ...box(b.ears), f.expr('earsMid'), f.expr('earsBack'))

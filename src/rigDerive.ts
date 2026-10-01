@@ -171,7 +171,12 @@ export function expressionLayers(
     pant: {
       src: srcs.pant,
       ...box(boxes.pant),
-      mask: [{ x: r(cx), y: r((lm.nose.y + lm.chin.y) / 2 + D * 0.03), rx: r(D * 0.8), ry: r(D * 0.65) }],
+      // 고양이 입은 간식 먹을 때만: 벌어지는 입 둘레만 섞는다 (넓게 잡으면 수염과 주둥이 털까지 출렁이고 색이 바뀐다)
+      mask: [
+        lm.species === 'cat'
+          ? { x: r(cx), y: r((lm.mouth.y + lm.chin.y) / 2 + D * 0.05), rx: r(D * 0.5), ry: r(D * 0.4) }
+          : { x: r(cx), y: r((lm.nose.y + lm.chin.y) / 2 + D * 0.03), rx: r(D * 0.8), ry: r(D * 0.65) },
+      ],
     },
     eyesClosed: {
       src: srcs.eyes,

@@ -279,7 +279,7 @@ export class Pet {
 
     // 2) 손 주기: 손바닥을 위로 해서 내밀거나 "손!" 하면 앞발을 준다. '손' 개인기가 있는 강아지만 (고양이는 하지 않는다)
     if (this.canPaw) this.updatePaw(dt, hands)
-    // 2-1) 간식 주기: 엄지·검지로 집은 간식을 입 앞에 가만히 대면 냄새 맡고 세 입에 나눠 먹는다 (고양이)
+    // 2-1) 간식 주기: 접시에서 엄지·검지로 집은 간식을 입 앞에 가만히 대면 냄새 맡고 세 입에 나눠 먹는다
     if (this.canEatTreat) this.updateTreat(dt, hands)
 
     // 3) 쓰다듬기: 손마다 따로 판정한다. 한 손이라도 거칠면 놀란다 (앞발을 올린 손은 빼고)
@@ -402,9 +402,14 @@ export class Pet {
     return this.pawSides.some((s) => s.handId === id || s.offerId === id) || this.treats.has(id)
   }
 
-  /** 간식을 먹는 아이인지 (지금은 고양이) */
+  /** 간식을 먹는 아이인지 (강아지·고양이 모두) */
   get canEatTreat() {
-    return this.p.species === 'cat'
+    return true
+  }
+
+  /** 접시에서 간식을 집은 손에 간식을 쥐여 준다 (main.ts가 집기 시작 자리가 접시 위일 때 부른다) */
+  giveTreat(id: string) {
+    if (this.canEatTreat) this.treats.set(id, TREAT_BITES)
   }
 
   /** 그 손이 든 간식의 남은 입 수 (3: 그대로, 0: 다 먹음). 간식을 들지 않았으면 0 */
@@ -418,9 +423,8 @@ export class Pet {
   }
 
   private updateTreat(dt: number, hands: { input: PetInput; speed: number }[]) {
-    // 손끝을 떼거나 손이 사라지면 간식도 없어진다. 새로 집으면 새 간식
+    // 손끝을 떼거나 손이 사라지면 간식도 없어진다. 간식은 접시에서 집어야 생긴다 (giveTreat)
     for (const id of [...this.treats.keys()]) if (!hands.some(({ input }) => input.id === id && input.pinch)) this.treats.delete(id)
-    for (const { input } of hands) if (input.pinch && !this.treats.has(input.id)) this.treats.set(input.id, TREAT_BITES)
     const tip = (input: PetInput) =>
       input.points.length === 21
         ? { x: (input.points[4].x + input.points[8].x) / 2, y: (input.points[4].y + input.points[8].y) / 2 }
@@ -463,14 +467,16 @@ export class Pet {
       }
     } else if (this.eatT > TREAT_CHEW) {
       this.eatHand = null
-      // 다 먹고 나면 천천히 눈을 깜빡여 고맙다고 한다
-      if (!this.behavior) this.startBehavior('slowBlink')
+      // 다 먹고 나면 고양이는 천천히 눈을 깜빡여 고맙다고 하고, 강아지는 입맛을 다신다
+      if (!this.behavior) this.startBehavior(this.p.species === 'cat' ? 'slowBlink' : 'lick')
     }
-    // 입 벌림: 무는 동안 한 입마다 벌렸다 다문다
+    // 입 벌림: 한 입마다 앞쪽 절반은 크게 벌리고 있다가 다문다.
+    // 사진(다문 입·벌린 입) 사이의 중간 모양은 이와 혀가 맞지 않아 구겨져 보이므로, 그 사이는 빠르게(약 0.07초) 넘긴다
     const biting = this.eatHand && this.eatPhase === 'bite'
-    const ph = biting ? (this.eatT / TREAT_BITE) % 1 : 0
-    this.chomp = approach(this.chomp, biting ? Math.sin(Math.PI * Math.min(1, ph / 0.6)) : 0, 18, dt)
-    this.chew = approach(this.chew, this.eatHand && this.eatPhase === 'chew' && this.eatT < TREAT_CHEW - 0.3 ? 1 : 0, 6, dt)
+    const ph = biting ? (this.eatT / TREAT_BITE) % 1 : 1
+    this.chomp = approach(this.chomp, biting && ph < 0.5 ? 1 : 0, 45, dt)
+    // 씹기 시작·끝도 사진 사이를 빠르게 넘긴다 (천천히 넘기면 그동안 입이 구겨져 보인다)
+    this.chew = approach(this.chew, this.eatHand && this.eatPhase === 'chew' && this.eatT < TREAT_CHEW - 0.3 ? 1 : 0, 40, dt)
     this.treatJoy = this.eatHand && this.eatPhase === 'chew' ? approach(this.treatJoy, 0.9, 3, dt) : Math.max(0, this.treatJoy - dt * 0.15)
   }
 
