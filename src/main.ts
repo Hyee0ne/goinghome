@@ -209,10 +209,13 @@ function fillInfo(p: PetProfile) {
 
 infoOpen.onclick = () => {
   fillInfo(pet.p)
+  // 시트를 보는 동안은 손 인식과 셰이더를 멈춰 배터리를 아낀다 (닫히면 close 이벤트에서 다시 켠다)
+  setPaused(true)
   info.showModal()
   info.querySelector('.sheet-body')!.scrollTop = 0
 }
 $('info-close').onclick = () => info.close()
+info.addEventListener('close', () => setPaused(false))
 // 시트 바깥(어두운 배경)을 누르면 닫는다
 info.addEventListener('click', (e) => {
   if (e.target === info) info.close()
