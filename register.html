@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4e6" />
+    <title>보호 동물 등록 · 손끝 교감</title>
+  </head>
+  <body class="reg-page">
+    <header class="reg-top">
+      <div>
+        <p class="reg-kicker">보호소용</p>
+        <h1>보호 동물 등록</h1>
+      </div>
+      <span class="sample-badge">가안</span>
+    </header>
+
+    <main class="reg-wrap">
+      <form id="reg-form" class="reg-form" novalidate>
+        <!-- 사진 -->
+        <section class="reg-card">
+          <h2>사진 <em>필수</em></h2>
+          <p class="reg-help">
+            첫 번째 사진으로 쓰다듬을 수 있는 실사 동물을 만들어요. <b>정면을 보는 얼굴이 잘 보이는 사진</b>이 좋아요.
+            나머지 사진은 입양 정보의 사진 슬라이드에 나와요. (최대 6장)
+          </p>
+          <div id="photo-list" class="photo-list">
+            <label class="photo-add">
+              <input id="photo-input" type="file" accept="image/*" multiple />
+              <span aria-hidden="true">＋</span>
+              사진 추가
+            </label>
+          </div>
+          <p class="reg-error" data-for="photos" hidden>사진을 한 장 이상 올려 주세요.</p>
+        </section>
+
+        <!-- 기본 정보 -->
+        <section class="reg-card">
+          <h2>기본 정보</h2>
+          <div class="field">
+            <label for="f-name">이름 <em>필수</em></label>
+            <input id="f-name" name="name" maxlength="12" autocomplete="off" placeholder="예: 초코" />
+            <p class="reg-error" data-for="name" hidden>이름을 적어 주세요.</p>
+          </div>
+          <div class="field">
+            <span class="label">종류 <em>필수</em></span>
+            <div class="seg" role="radiogroup" aria-label="종류">
+              <label><input type="radio" name="species" value="dog" checked /><span>🐶 강아지</span></label>
+              <label><input type="radio" name="species" value="cat" /><span>🐱 고양이</span></label>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-breed">품종</label>
+              <input id="f-breed" name="breed" placeholder="예: 믹스견" />
+            </div>
+            <div class="field">
+              <label for="f-age">나이</label>
+              <input id="f-age" name="age" placeholder="예: 3살 추정" />
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">성별</span>
+            <div class="seg" role="radiogroup" aria-label="성별">
+              <label><input type="radio" name="sex" value="남아" checked /><span>남아</span></label>
+              <label><input type="radio" name="sex" value="여아" /><span>여아</span></label>
+              <label><input type="radio" name="sex" value="" /><span>모름</span></label>
+            </div>
+            <label class="check"><input type="checkbox" name="neutered" /> 중성화 완료</label>
+          </div>
+        </section>
+
+        <!-- 성격과 교감 -->
+        <section class="reg-card">
+          <h2>성격과 교감</h2>
+          <div class="field">
+            <span class="label">성격 <small>여러 개 고를 수 있어요</small></span>
+            <div id="trait-chips" class="chips"></div>
+            <div class="chip-add">
+              <input id="trait-input" placeholder="직접 적기 (예: 공놀이 좋아해요)" maxlength="16" />
+              <button id="trait-add" class="btn small" type="button">추가</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">쓰다듬으면 가장 좋아하는 곳</span>
+            <div class="seg" role="radiogroup" aria-label="좋아하는 곳">
+              <label><input type="radio" name="favorite" value="head" checked /><span>머리</span></label>
+              <label><input type="radio" name="favorite" value="chin" /><span>턱 밑</span></label>
+              <label><input type="radio" name="favorite" value="body" /><span>등</span></label>
+            </div>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="shy" />
+            <span>겁이 많아요 <small>손 냄새를 먼저 맡게 해야 쓰다듬을 수 있어요</small></span>
+          </label>
+          <!-- '손' 개인기: 강아지만 (고양이를 고르면 숨긴다) -->
+          <label id="paw-field" class="check">
+            <input type="checkbox" name="canPaw" />
+            <span>'손' 개인기를 할 줄 알아요 🐾 <small>앱에서 손바닥을 내밀면 앞발을 올려 줘요</small></span>
+          </label>
+        </section>
+
+        <!-- 이야기 -->
+        <section class="reg-card">
+          <h2>이야기</h2>
+          <div class="field">
+            <label for="f-story" class="sr-only">이야기</label>
+            <textarea id="f-story" name="story" rows="4" maxlength="300" placeholder="구조된 사연, 지내는 모습, 바라는 가족 등을 적어 주세요."></textarea>
+            <p class="reg-count"><span id="story-count">0</span> / 300</p>
+          </div>
+        </section>
+
+        <!-- 보호·공고 -->
+        <section class="reg-card">
+          <h2>보호 정보</h2>
+          <div class="field">
+            <label for="f-shelter">보호소 <em>필수</em></label>
+            <input id="f-shelter" name="shelter" placeholder="예: 마포구 동물보호센터" />
+            <p class="reg-error" data-for="shelter" hidden>보호소 이름을 적어 주세요.</p>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-region">지역 <em>필수</em></label>
+              <input id="f-region" name="region" placeholder="예: 서울 마포구" />
+              <p class="reg-error" data-for="region" hidden>지역을 적어 주세요.</p>
+            </div>
+            <div class="field">
+              <label for="f-notice">공고번호</label>
+              <input id="f-notice" name="noticeNo" placeholder="예: 서울-마포-2026-00123" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-url">포인핸드 공고 주소</label>
+            <input id="f-url" name="url" type="url" inputmode="url" placeholder="https://pawinhand.kr/..." />
+            <p class="reg-help">입양 문의 버튼이 이 공고로 연결돼요. 비워 두면 포인핸드 첫 화면으로 연결돼요.</p>
+            <p class="reg-error" data-for="url" hidden>포인핸드 주소(https://pawinhand.kr/…)를 넣어 주세요.</p>
+          </div>
+        </section>
+
+        <div class="reg-submit">
+          <button class="btn primary" type="submit">등록하기</button>
+          <p class="muted">가안: 아직 서버가 없어서 이 브라우저에만 저장돼요.</p>
+        </div>
+      </form>
+
+      <!-- 등록한 아이들 -->
+      <section id="reg-done" class="reg-card reg-list" hidden>
+        <h2>등록한 아이</h2>
+        <ul id="reg-items"></ul>
+      </section>
+    </main>
+    <script type="module" src="/src/register.ts"></script>
+  </body>
+</html>
