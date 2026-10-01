@@ -756,7 +756,7 @@ button {
   font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
   white-space: pre;
   pointer-events: none;
-  z-index: 5;
+  z-index: 3; /* 도움말·배너 아래 */
 }
 
 /* 손 인식용 카메라 영상: 화면에는 보이지 않게 */
