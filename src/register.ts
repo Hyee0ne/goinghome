@@ -165,6 +165,12 @@ function save(list: Registration[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
 }
 
+// 고치기 시작하면 그 칸의 오류 문구를 지운다
+form.addEventListener('input', (e) => {
+  const name = (e.target as HTMLInputElement).name
+  if (name) showError(name, false)
+})
+
 function showError(key: string, on: boolean) {
   const el = form.querySelector<HTMLElement>(`.reg-error[data-for="${key}"]`)
   if (el) el.hidden = !on
@@ -263,7 +269,7 @@ function renderList() {
       text.append(
         Object.assign(document.createElement('b'), { textContent: `${p.species === 'dog' ? '🐶' : '🐱'} ${p.name}` }),
         Object.assign(document.createElement('span'), {
-          textContent: [p.breed, p.sex, p.age, p.canPaw ? "'손' 가능" : ''].filter(Boolean).join(' · '),
+          textContent: [p.breed, p.sex, p.age, p.canPaw ? "'손'\u00a0가능" : ''].filter(Boolean).join(' · '),
         }),
         Object.assign(document.createElement('span'), { className: 'status', textContent: STATUS_LABEL[r.status] }),
       )

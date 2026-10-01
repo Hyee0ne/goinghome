@@ -11,6 +11,9 @@
     <div id="app">
       <header class="topbar">
         <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
+        <button id="help-toggle" class="help-toggle" type="button" aria-controls="help" aria-expanded="false">
+          <span aria-hidden="true">?</span> 도움말
+        </button>
       </header>
 
       <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
@@ -51,6 +54,16 @@
         <canvas id="pet-gl" aria-hidden="true"></canvas>
         <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
         <pre id="debug-hud" class="debug-hud" hidden></pre>
+
+        <!-- 도움말: 어떻게 쓰다듬고 개인기를 보는지. 아이를 바꿀 때만 내용을 바꾼다 -->
+        <aside id="help" class="help-box" aria-labelledby="help-title" hidden>
+          <header>
+            <h2 id="help-title"></h2>
+            <button id="help-close" class="help-close" type="button" aria-label="도움말 닫기">✕</button>
+          </header>
+          <ol id="help-steps" class="help-steps"></ol>
+          <div id="help-trick" class="help-trick"></div>
+        </aside>
 
         <!-- 아이 정보 열기 배너 (시작 화면이 떠 있는 동안은 그 아래에 가려진다) -->
         <button id="info-open" class="info-banner" type="button" aria-haspopup="dialog">
