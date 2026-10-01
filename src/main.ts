@@ -379,7 +379,8 @@ if (mouseSim) {
 let last = performance.now()
 
 function frame(now: number) {
-  const dt = Math.min(0.05, (now - last) / 1000)
+  // 첫 프레임은 rAF 시각이 모듈을 읽은 시각(last)보다 이를 수 있어 음수가 된다. 음수 dt는 "손!" 명령 타이머 등을 거꾸로 돌려 엉뚱하게 켠다
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000))
   const frameMs = now - last
   last = now
   const workStart = performance.now()
