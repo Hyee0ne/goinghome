@@ -3,7 +3,7 @@ import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOpenHand } from './hand'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
-import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, josa, type PetProfile } from './pets'
+import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -190,6 +190,7 @@ function fillInfo(p: PetProfile) {
   $('info-meta').textContent = [p.breed, p.sex, p.age].filter(Boolean).join(' · ')
 
   const traits = [...(p.traits ?? []), `${FAVORITE_LABEL[p.favorite]} 좋아해요`]
+  if (canGivePaw(p)) traits.push("'손' 할 줄 알아요 🐾")
   if (p.shy && !traits.some((t) => t.includes('낯'))) traits.unshift('겁이 많아요')
   $('info-traits').replaceChildren(
     ...traits.map((t) => Object.assign(document.createElement('li'), { textContent: t })),

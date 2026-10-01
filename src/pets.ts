@@ -22,6 +22,8 @@ export interface PetProfile {
   pattern: 'none' | 'tabby' | 'patch'
   /** 아이 정보 화면의 사진 슬라이드 (public/ 기준 경로 또는 전체 주소). 없으면 실사 얼굴 사진 한 장 */
   photos?: string[]
+  /** '손' 개인기를 할 줄 아는지 (강아지만. 고양이는 이 값을 무시한다 → canGivePaw) */
+  canPaw?: boolean
   /** 아이 정보 화면의 성격 태그 */
   traits?: string[]
   /** 보호·입양 정보 (아이 정보 화면). 실제 공고와 연결되기 전에는 sample: true */
@@ -41,6 +43,11 @@ export interface Adoption {
 }
 
 export const PAWINHAND_URL = 'https://pawinhand.kr'
+
+/** '손' 개인기를 보여 줄 수 있는 아이: 체크된 강아지만 (고양이는 선택지 자체가 없다) */
+export function canGivePaw(p: PetProfile) {
+  return p.species === 'dog' && !!p.canPaw
+}
 
 interface Ellipse {
   x: number
@@ -211,6 +218,7 @@ export const PETS: PetProfile[] = [
     tip: '먼저 코 앞에 손바닥을 가만히 내밀어 냄새를 맡게 해주세요.',
     favorite: 'head',
     shy: true,
+    canPaw: true,
     traits: ['낯을 가려요', '친해지면 애교쟁이', '산책 좋아해요'],
     photos: ['gallery/choco/1.webp', 'gallery/choco/2.webp', 'gallery/choco/3.webp', 'gallery/choco/4.webp'],
     adoption: { shelter: '마포구 동물보호센터', region: '서울 마포구', noticeNo: '서울-마포-2026-00123', sample: true },
