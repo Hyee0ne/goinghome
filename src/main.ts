@@ -136,6 +136,7 @@ function renderTabs() {
 
 /** 무대 옆 간식 접시. 손 인식 쪽에서 hit/setHover/take로 쓴다 (treatTray.ts) */
 export const treatTray = new TreatTray($('treat-tray'), stage, assetUrl('pets/treat.webp'))
+if (debug) Object.assign(window, { __treatTray: treatTray })
 
 // ───────────────────────── 도움말 ─────────────────────────
 
