@@ -246,7 +246,7 @@ export const PETS: PetProfile[] = [
       neck: { x: 575, y: 840 },
       nose: { x: 575, y: 565, rx: 81, ry: 66 },
       catchlight: `${BASE}pets/choco-face-catch.png`,
-      paw: { src: `${BASE}pets/choco-paw.webp`, anchorX: 0.201, anchorY: 0.968, width: 1.36, legDir: -37.5 },
+      paw: { src: `${BASE}pets/choco-paw.webp`, anchorX: 0.175, anchorY: 0.954, width: 3.6, legDir: -24.3 },
       nostrils: [
         { x: 540, y: 567, r: 22 },
         { x: 610, y: 567, r: 22 },

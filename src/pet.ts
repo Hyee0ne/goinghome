@@ -1,4 +1,4 @@
-import { canGivePaw, josa, layoutOf, type Layout, type PetProfile, type Zone } from './pets'
+import { canGivePaw, FLOOR_Y, josa, layoutOf, type Layout, type PetProfile, type Zone } from './pets'
 
 /**
  * 좌표계: 펫 로컬 단위. 원점은 몸통 중심 근처이고, 머리 중심은 (0, L.headY)에 있다.
@@ -91,6 +91,9 @@ export interface Pose {
   paw: number
   pawX: number
   pawY: number
+  /** 앞다리가 시작되는 가슴 자리 (펫 로컬 좌표). 다리는 발에서 여기로 이어지고 여기서 사라진다 */
+  pawRootX: number
+  pawRootY: number
 }
 
 type Behavior = 'look' | 'earFlick' | 'lick' | 'tilt' | 'sigh' | 'slowBlink'
@@ -416,8 +419,8 @@ export class Pet {
     return {
       x: clamp(x, this.leanX - L.headRx * 0.7, this.leanX + L.headRx * 0.7),
       // 가슴 높이보다 아래로만 (위로 올리면 다리가 턱에서 자라난 것처럼 보인다)
-      // (아래로는 가슴 안쪽까지만: 더 내리면 다리가 몸 아래 빈 곳으로 삐져나온다)
-      y: clamp(y, L.headY + L.headRy * 1.3, L.headY + L.headRy * 1.95),
+      // 앞발은 카메라(손) 쪽으로 뻗으므로 가슴보다 아래, 화면 아래쪽까지 (다리는 가슴으로 이어진다)
+      y: clamp(y, L.headY + L.headRy * 2.0, FLOOR_Y + L.headRy * 0.35),
     }
   }
 
@@ -440,7 +443,7 @@ export class Pet {
         this.pawOfferId = null
         this.pawCommand = 0
         // 손이 없으면 가슴 앞에 든다 (입과 코를 가리지 않게)
-        const p = this.clampPaw(target?.x ?? this.leanX + this.L.headRx * 0.15, target?.y ?? this.L.headY + this.L.headRy * 1.75)
+        const p = this.clampPaw(target?.x ?? this.leanX + this.L.headRx * 0.15, target?.y ?? this.L.headY + this.L.headRy * 2.4)
         this.pawX = p.x
         this.pawY = p.y
         this.affection = Math.min(100, this.affection + 1.5)
@@ -670,6 +673,8 @@ export class Pet {
       paw: this.paw,
       pawX: this.pawX,
       pawY: this.pawY,
+      pawRootX: this.leanX + this.pawX * 0.25,
+      pawRootY: this.L.headY + this.L.headRy * 1.55,
     }
   }
 

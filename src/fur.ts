@@ -1303,7 +1303,7 @@ class PawLayer {
        uniform sampler2D uTex; uniform float uFlip; uniform float uAlpha;
        uniform vec2 uAnchor;   // 발끝 (사진 0~1)
        uniform vec2 uLegDir;   // 발 → 다리 끝 방향 (사진 좌표, 길이 1)
-       uniform float uLegLen;  // 발끝에서 사진 끝까지 다리 길이 (사진 좌표)
+       uniform float uLegLen;  // 발끝에서 가슴(다리가 사라지는 곳)까지 길이 (사진 좌표)
        uniform float uAspect;  // 사진 세로/가로
        varying vec2 vUv;
        void main() {
@@ -1312,7 +1312,7 @@ class PawLayer {
          // 다리 끝(몸 쪽)으로 갈수록 서서히 투명하게: 몸에서 뻗어 나온 것처럼
          vec2 d = (uv - uAnchor) * vec2(1.0, uAspect);
          float t = dot(d, uLegDir) / uLegLen;
-         c *= (1.0 - smoothstep(0.5, 0.95, t)) * uAlpha;
+         c *= (1.0 - smoothstep(0.7, 1.05, t)) * uAlpha;
          gl_FragColor = c;
        }`,
     )
@@ -1345,22 +1345,26 @@ class PawLayer {
     const gl = this.gl
     const e = p.paw
     // 살짝 넘쳤다 자리 잡는 모양 (ease-out-back)
-    const s = 1.3
+    const s = 1.2
     const rise = 1 + (s + 1) * Math.pow(e - 1, 3) + s * Math.pow(e - 1, 2)
     // 화면 왼쪽 손에는 사진 그대로, 오른쪽 손에는 좌우를 뒤집은 앞발 (오른발/왼발)
     const flip = p.pawX > 0 ? 1 : 0
-    const w = D * paw.width * view.scale
+    // 카메라(손) 쪽으로 뻗어 나오며 커진다
+    const grow = 0.7 + 0.3 * rise
+    const w = D * paw.width * view.scale * grow
     const h = w * this.aspect
-    // 손에 닿는 발끝 자리
+    // 손에 닿는 발끝 자리, 다리가 시작되는 가슴 자리
     const tx = view.cx + p.pawX * view.scale
     const ty = view.cy + p.pawY * view.scale
-    // 다리가 향할 몸 쪽: 발에서 가슴 가운데 쪽으로 비스듬히 아래 (화면 맨 아래로 향하면 다리가 몸 밖으로 삐져나온다)
-    const side = Math.max(-1, Math.min(1, p.pawX / (D * 1.2)))
-    const want = Math.atan2(1, -side * 0.75)
+    const rx = view.cx + p.pawRootX * view.scale
+    const ry = view.cy + p.pawRootY * view.scale
+    // 다리는 발에서 가슴 쪽으로 (위로) 이어진다
+    const want = Math.atan2(ry - ty, rx - tx)
+    const reach = Math.hypot(rx - tx, ry - ty)
     const leg = ((flip ? 180 - paw.legDir : paw.legDir) * Math.PI) / 180
-    const ang = want - leg + Math.sin(p.t * 2.1) * 0.02 * e
-    // 들어 올리는 동안은 몸 쪽에서 앞으로 뻗어 나온다
-    const back = (1 - rise) * h * 0.6
+    const ang = want - leg + Math.sin(p.t * 2.1) * 0.015 * e
+    // 들어 올리는 동안은 가슴 쪽에서 앞으로 뻗어 나온다
+    const back = (1 - rise) * reach * 0.55
     const ay = ty + Math.sin(want) * back
     const axs = tx + Math.cos(want) * back
     const ax = (flip ? 1 - paw.anchorX : paw.anchorX) * w
@@ -1384,13 +1388,14 @@ class PawLayer {
     // 다리 방향과 길이 (사진 좌표, 뒤집기 전 기준)
     const ld = (paw.legDir * Math.PI) / 180
     const dir = { x: Math.cos(ld), y: Math.sin(ld) }
+    // 다리는 가슴에 닿는 곳에서 사라진다 (사진 끝이 먼저면 거기서). 사진 좌표 = 화면 거리 / 사진 폭
     const toEdge = Math.min(
       dir.x > 0 ? (1 - paw.anchorX) / dir.x : dir.x < 0 ? -paw.anchorX / dir.x : 1e3,
       dir.y > 0 ? ((1 - paw.anchorY) * this.aspect) / dir.y : dir.y < 0 ? (-paw.anchorY * this.aspect) / dir.y : 1e3,
     )
     gl.uniform2f(this.u.uAnchor, paw.anchorX, paw.anchorY)
     gl.uniform2f(this.u.uLegDir, dir.x, dir.y)
-    gl.uniform1f(this.u.uLegLen, toEdge)
+    gl.uniform1f(this.u.uLegLen, Math.min(toEdge, Math.max(0.15, (reach - back) / w)))
     gl.uniform1f(this.u.uAspect, this.aspect)
     gl.uniform2f(this.u.uOrigin, toClipX(ox), toClipY(oy))
     gl.uniform2f(this.u.uAxisX, (w * cos * 2) / view.W, (-w * sin * 2) / view.H)
