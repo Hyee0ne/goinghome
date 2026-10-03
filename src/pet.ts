@@ -367,13 +367,13 @@ export class Pet {
     if (this.nextBlink <= 0) {
       this.blinkClock = 0
       this.nextBlink = Math.random() < 0.15 ? 0.28 : 1.2 + Math.random() ** 1.5 * 5.5
-      // 눈 감은 표정 사진이 없는 아이는 지그시 감는 대신, 기분이 좋을수록 빠른 깜빡임이 잦아진다 (그린 눈꺼풀은 멈춰 있으면 티가 난다)
-      // (고양이는 원래 개보다 훨씬 덜 깜빡여서, 표정 사진이 없는 고양이는 간격을 두 배 넘게 두고 기분이 좋아도 잦아지지 않는다)
-      if (!this.p.photo?.expressions?.eyesClosed) this.nextBlink *= this.p.species === 'cat' ? 2.2 : 1 - 0.6 * this.happy
+      // 눈 감은 표정 사진이 없는 아이는 그린 눈꺼풀이라, 덜 자주·더 빨리 깜빡인다 (개 1.5배, 고양이 2.2배 간격. 기분과 상관없이)
+      if (this.drawnLids) this.nextBlink *= this.p.species === 'cat' ? 2.2 : 1.5
     }
     this.blinkClock += dt
     const bc = this.blinkClock
-    this.blink = bc < BLINK_CLOSE ? bc / BLINK_CLOSE : Math.max(0, 1 - (bc - BLINK_CLOSE) / BLINK_OPEN)
+    const [close, open] = this.drawnLids ? [DRAWN_BLINK_CLOSE, DRAWN_BLINK_OPEN] : [BLINK_CLOSE, BLINK_OPEN]
+    this.blink = bc < close ? bc / close : Math.max(0, 1 - (bc - close) / open)
 
     // 마음의 거리 단계별 반응
     while (this.milestone < MILESTONES.length && this.affection >= MILESTONES[this.milestone]) {
@@ -484,6 +484,11 @@ export class Pet {
   }
 
   /** 손 주기를 하는 아이인지: '손' 개인기가 있는 강아지이고 앞발 사진이 있을 때 */
+  /** 눈 감은 표정 사진이 없어 눈꺼풀을 그리는 아이인지 */
+  get drawnLids() {
+    return !this.p.photo?.expressions?.eyesClosed
+  }
+
   get canPaw() {
     return canGivePaw(this.p) && !!this.p.photo?.paw
   }
@@ -1212,6 +1217,9 @@ export class Pet {
 
 const BLINK_CLOSE = 0.07
 const BLINK_OPEN = 0.13
+/** 그린 눈꺼풀(눈 감은 표정 사진이 없는 아이)은 더 빨리 깜빡인다 */
+const DRAWN_BLINK_CLOSE = 0.05
+const DRAWN_BLINK_OPEN = 0.09
 /** 손이 이보다 빨리(로컬 단위/초) 다가오면 움찔한다 */
 const FLINCH_SPEED = 1100
 /** 손 주기: 손바닥을 이 시간(초) 동안 이 속도(로컬 단위/초) 아래로 가만히 두면 앞발을 올린다 */

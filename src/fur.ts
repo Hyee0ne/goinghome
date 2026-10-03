@@ -1355,7 +1355,7 @@ export class FurRenderer {
     gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT * calm.face + pantBob + eatJaw) * toPx)
     gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx * calm.face : 0)
     gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx * calm.head, -soft(m.pitch, 1) * PITCH_SHIFT * toPx * calm.head)
-    gl.uniform2f(this.loc('uGaze'), clamp(p.lookX, -1, 1) * GAZE, clamp(p.lookY, -1, 1) * GAZE * 0.6)
+    gl.uniform2f(this.loc('uGaze'), clamp(p.lookX, -1, 1) * GAZE * calm.gaze, clamp(p.lookY, -1, 1) * GAZE * 0.6 * calm.gaze)
     const v = m.velocity
     const lag = Math.min(1, 2.5 / (Math.hypot(v.x, v.y) * 0.03 + 1e-6))
     gl.uniform2f(this.loc('uFurLag'), -v.x * 0.03 * lag * toPx * calm.drag, -v.y * 0.03 * lag * toPx * calm.drag)
@@ -1503,11 +1503,13 @@ const DRAWN_HOLD_S = 0.3
  * 보호소 사진은 정성 들여 찍은 사진이 아니라 부위 위치가 대충이고, 얼굴 전체가 계속 휘면 사진 한 장의 한계가 드러난다.
  * SAFE는 좁은 곳에서 짧게 일어나는 반응(털 눕기, 깜빡임, 코, 간식)만 남긴다
  */
-type Motion = Record<'field' | 'breeze' | 'drag' | 'head' | 'ear' | 'breath' | 'face' | 'nose' | 'startle', number>
+type Motion = Record<'field' | 'breeze' | 'drag' | 'head' | 'ear' | 'breath' | 'face' | 'nose' | 'startle' | 'gaze', number>
+// (gaze: 눈동자가 손을 따라가는 거리. 얼굴은 그대로이고 눈 안에서만 움직여 사진 한 장으로도 자연스럽다)
+// SAFE 털 눕기는 손이 닿은 자리만 얌전하게, 코는 아주 조금만 (사용자 확인 2026-10-03)
 const MOTION: Record<'full' | 'calm' | 'safe', Motion> = {
-  full: { field: 1, breeze: 1, drag: 1, head: 1, ear: 1, breath: 1, face: 1, nose: 1, startle: 1 },
-  calm: { field: 1, breeze: 1, drag: 0.6, head: 0.35, ear: 0.25, breath: 1, face: 0.5, nose: 0.5, startle: 1 },
-  safe: { field: 1, breeze: 0, drag: 0, head: 0, ear: 0, breath: 0, face: 0, nose: 1, startle: 0.3 },
+  full: { field: 1, breeze: 1, drag: 1, head: 1, ear: 1, breath: 1, face: 1, nose: 1, startle: 1, gaze: 1 },
+  calm: { field: 1, breeze: 1, drag: 0.6, head: 0.35, ear: 0.25, breath: 1, face: 0.5, nose: 0.5, startle: 1, gaze: 1 },
+  safe: { field: 0.35, breeze: 0, drag: 0, head: 0, ear: 0, breath: 0, face: 0, nose: 0.3, startle: 0.3, gaze: 2.2 },
 }
 /** 자동 기준점 아이의 기본 움직임 묶음 */
 const AUTO_MOTION: keyof typeof MOTION = 'safe'
