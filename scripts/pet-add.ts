@@ -46,6 +46,8 @@ type Stage = (typeof STAGES)[number]
 /** 얼굴 위주로 잘라 맞추는 크기. 이미지 편집 결과가 이 크기로 나와 표정 사진과 픽셀 위치가 맞는다 */
 const BASE_W = 1086
 const BASE_H = 1448
+/** 표정 편집에 보내는 얼굴 정사각형의 여백 배율 (1이면 귀 끝~턱이 꽉 찬다) */
+const EXPR_PAD = 1.3
 
 const ROOT = resolve(import.meta.dirname, '..')
 // API 키는 .env.local에서 읽는다 (저장소에 올라가지 않는 파일). 키 값은 어디에도 출력하지 않는다
@@ -354,7 +356,11 @@ if (run('expressions')) {
   // (기준점만 고쳐 다시 돌릴 때 정사각형이 바뀌면 전에 만든 표정 사진이 어긋난다)
   const sqFile = join(SRC, 'face-square.json')
   const reuse = args.regen !== 'true' && existsSync(sqFile)
-  const side = reuse ? readJson(sqFile).side : Math.round(Math.max(bottom - top, right - left))
+  // 얼굴 둘레에 여백을 두고 보낸다. 얼굴이 정사각형을 꽉 채우면 AI가 구도를 다시 잡아 얼굴을 작게·아래로 옮겨 그린다
+  // (삼식 검증: 꽉 채웠을 때 크기 x0.86, 아래로 171px). 예전에 여백 없이 만든 표정 사진이 남아 있으면 그때 크기 그대로
+  const legacy = ['mid-square', 'final-square', 'eat-square', 'eatmid-square'].some((n) => existsSync(join(SRC, `expr-${n}.png`)))
+  const pad = args.regen === 'true' || !legacy ? EXPR_PAD : 1
+  const side = reuse ? readJson(sqFile).side : Math.round(Math.max(bottom - top, right - left) * pad)
   const sq = reuse
     ? { x0: readJson(sqFile).x0, y0: readJson(sqFile).y0 }
     : { x0: Math.round((left + right) / 2 - side / 2 + face.offsetX), y0: Math.round((top + bottom) / 2 - side / 2 + face.offsetY) }
