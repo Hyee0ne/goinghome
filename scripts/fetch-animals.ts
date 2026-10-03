@@ -95,9 +95,8 @@ async function main() {
   mkdirSync(dirname(OUT), { recursive: true })
   const key = serviceKey()
   if (!key) {
-    console.warn('DATA_GO_KR_SERVICE_KEY가 없어 빈 목록을 씁니다')
-    writeFileSync(OUT, JSON.stringify({ updated: null, animals: [] }))
-    return
+    console.warn('DATA_GO_KR_SERVICE_KEY가 없어요')
+    return fallback()
   }
   const first = await page(key, 1)
   const raws = [...first.items]
@@ -107,12 +106,35 @@ async function main() {
     .filter((a) => a.id && a.photos.length)
     // 공고가 곧 끝나는 아이부터
     .sort((a, b) => a.end.localeCompare(b.end))
+  if (!animals.length) throw new Error('받은 공고가 0마리예요')
   writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), animals }))
   console.log(`공고 중 ${first.total}마리 → 사진 있는 ${animals.length}마리를 ${OUT}에 썼어요`)
 }
 
-main().catch((e) => {
-  // 받아 오지 못해도 빌드는 계속한다 (지난번 파일이 있으면 그대로)
-  console.error('유기동물 데이터를 받지 못했어요:', e instanceof Error ? e.message : e)
+/**
+ * 받아 오지 못했을 때: 지금 배포된 사이트의 목록(ANIMALS_FALLBACK_URL)을 그대로 쓴다.
+ * 매시간 배포라, 한 번 실패했다고 다음 정시까지 공고가 사라지면 안 된다. 그것도 안 되면 빈 목록
+ */
+async function fallback() {
+  const url = process.env.ANIMALS_FALLBACK_URL
+  if (url) {
+    try {
+      const res = await fetch(url)
+      const d = res.ok ? await res.json() : null
+      if (d?.animals?.length) {
+        writeFileSync(OUT, JSON.stringify(d))
+        console.warn(`배포된 목록(${d.animals.length}마리, ${d.updated} 기준)을 그대로 씁니다`)
+        return
+      }
+    } catch {
+      /* 아래에서 빈 목록 */
+    }
+  }
   if (!existsSync(OUT)) writeFileSync(OUT, JSON.stringify({ updated: null, animals: [] }))
+}
+
+main().catch(async (e) => {
+  // 받아 오지 못해도 빌드는 계속한다
+  console.error('유기동물 데이터를 받지 못했어요:', e instanceof Error ? e.message : e)
+  await fallback()
 })
