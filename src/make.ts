@@ -72,7 +72,6 @@ fileInput.addEventListener('change', async () => {
     prev.hidden = false
     $('mk-pick-label').innerHTML = '<b>↺</b>다른 사진'
     $('mk-info').hidden = false
-    engine.loadSegmenter()
     updatePhotoNext()
     nameInput.focus()
   } catch {
@@ -162,7 +161,7 @@ let segmentedOnce = false
 async function segmentAt(p: Pt) {
   $('mk-busy').hidden = false
   // 첫 탭은 모델을 받고 준비하느라 오래 걸릴 수 있다 (다음부터는 1초 안쪽)
-  $('mk-busy-text').textContent = segmentedOnce ? '' : '처음 한 번은 준비하는 데 시간이 걸려요'
+  $('mk-busy-text').textContent = segmentedOnce || segmenterReady ? '' : '배경 지우기를 준비하고 있어요…'
   try {
     state.mask = await engine.segment(state.img!, p)
     segmentedOnce = true
@@ -407,4 +406,7 @@ $('mk-again').onclick = () => {
   go('photo')
 }
 
+// 배경 지우기 모델은 들어오자마자 준비한다 (사진을 고르는 동안 끝난다)
+let segmenterReady = false
+engine.loadSegmenter().then(() => (segmenterReady = true))
 go('photo')
