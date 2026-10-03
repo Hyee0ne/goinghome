@@ -16,10 +16,13 @@ const CANDIDATES = join(import.meta.dirname, '..', 'public', 'data', 'candidates
 const SHELTER_MANIFEST = join(import.meta.dirname, '..', 'public', 'shelter', 'manifest.json')
 /** 앱이 읽는 작은 파일: 실사화한 아이 중 아직 공고 중인 아이 + 프로필 */
 const SHELTER_LIVE = join(import.meta.dirname, '..', 'public', 'data', 'shelter-live.json')
-/** 실사화 후보 수 */
-const CANDIDATE_COUNT = 10
-/** 한 시도에서 고르는 최대 수 (지역을 고르게) */
-const PER_SIDO = 2
+/**
+ * 실사화 후보 수. 사진 판정 통과율이 10~20%라 공개 목표(최대 20마리)보다 넉넉히 뽑는다 (2026-10-03).
+ * 판정은 무료(Apple Vision)라 후보가 늘어도 비용은 없고 시간만 는다
+ */
+const CANDIDATES_PER_SPECIES = { dog: 100, cat: 50 } as const
+/** 한 시도에서 고르는 최대 비율 (지역을 고르게): 후보 수의 15% */
+const PER_SIDO_RATIO = 0.15
 const API = 'https://apis.data.go.kr/1543061/abandonmentPublicService_v2/abandonmentPublic_v2'
 const PAGE = 1000
 
@@ -163,8 +166,9 @@ function catScore(a: Animal, y: number, left: number): Candidate {
   return { id: a.id, score: s, reasons }
 }
 
-/** 점수순으로 고르되 한 시도에서 PER_SIDO마리까지 (개·고양이 따로 CANDIDATE_COUNT마리씩) */
-function pickCandidates(animals: Animal[]) {
+/** 점수순으로 고르되 한 시도에서 count의 PER_SIDO_RATIO까지 (개·고양이 따로) */
+function pickCandidates(animals: Animal[], count: number) {
+  const perSido = Math.max(2, Math.ceil(count * PER_SIDO_RATIO))
   const bySido = new Map<string, number>()
   const byId = new Map(animals.map((a) => [a.id, a]))
   return animals
@@ -174,11 +178,11 @@ function pickCandidates(animals: Animal[]) {
     .filter((c) => {
       const sido = byId.get(c.id)!.sido
       const n = bySido.get(sido) ?? 0
-      if (n >= PER_SIDO) return false
+      if (n >= perSido) return false
       bySido.set(sido, n + 1)
       return true
     })
-    .slice(0, CANDIDATE_COUNT)
+    .slice(0, count)
 }
 
 // ───────────────────────── 실사화한 공고 아이 → 앱용 ─────────────────────────
@@ -228,8 +232,8 @@ async function main() {
   const updated = new Date().toISOString()
   writeFileSync(OUT, JSON.stringify({ updated, animals }))
   writeShelterLive(animals)
-  const dogs = pickCandidates(animals.filter((a) => a.sp === 'dog'))
-  const cats = pickCandidates(animals.filter((a) => a.sp === 'cat'))
+  const dogs = pickCandidates(animals.filter((a) => a.sp === 'dog'), CANDIDATES_PER_SPECIES.dog)
+  const cats = pickCandidates(animals.filter((a) => a.sp === 'cat'), CANDIDATES_PER_SPECIES.cat)
   writeFileSync(CANDIDATES, JSON.stringify({ updated, dogs, cats }, null, 1))
   console.log(`실사화 후보: 강아지 ${dogs.length}마리, 고양이 ${cats.length}마리`)
   console.log(`공고 중 ${first.total}마리 → 사진 있는 ${animals.length}마리를 ${OUT}에 썼어요`)
