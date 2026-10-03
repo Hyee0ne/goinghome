@@ -116,8 +116,12 @@ const WARM = /사람|온순|순함|순해|애교|친화|얌전|착함|착해|좋
 function score(a: Animal): Candidate | null {
   const y = years(a)
   const left = daysLeft(a)
-  // 강아지 성견만, 공고가 만드는 동안 남아 있게 3일 이상
-  if (a.sp !== 'dog' || y < 1 || left < 3) return null
+  // 성견·성묘만, 공고가 만드는 동안 남아 있게 3일 이상
+  if (a.sp === 'etc' || y < 1 || left < 3) return null
+  return a.sp === 'dog' ? dogScore(a, y, left) : catScore(a, y, left)
+}
+
+function dogScore(a: Animal, y: number, left: number): Candidate {
   const reasons: string[] = []
   let s = 0
   const add = (n: number, why: string) => {
@@ -135,7 +139,27 @@ function score(a: Animal): Candidate | null {
   return { id: a.id, score: s, reasons }
 }
 
-/** 점수순으로 고르되 한 시도에서 PER_SIDO마리까지 */
+/**
+ * 고양이: 보호소 고양이는 대부분 새끼라 성묘 자체가 드물다(2026-10 기준 746마리 중 110마리).
+ * 몸무게는 입양 어려움과 상관이 적어 빼고, 3살 이상에 더 무게를 둔다. 한국 고양이·믹스묘는 믹스견처럼 +1
+ */
+function catScore(a: Animal, y: number, left: number): Candidate {
+  const reasons: string[] = []
+  let s = 0
+  const add = (n: number, why: string) => {
+    s += n
+    reasons.push(why)
+  }
+  if (y >= 7) add(3, `${y}살 노묘`)
+  else if (y >= 3) add(2, `${y}살`)
+  if (/한국 고양이|믹스/.test(a.kind)) add(1, a.kind)
+  if (a.note.length >= 20 && WARM.test(a.note)) add(1, '성격 이야기')
+  if (a.photos.length >= 3) add(1, `사진 ${a.photos.length}장`)
+  if (left <= 9) add(1, `공고 D-${left}`)
+  return { id: a.id, score: s, reasons }
+}
+
+/** 점수순으로 고르되 한 시도에서 PER_SIDO마리까지 (개·고양이 따로 CANDIDATE_COUNT마리씩) */
 function pickCandidates(animals: Animal[]) {
   const bySido = new Map<string, number>()
   const byId = new Map(animals.map((a) => [a.id, a]))
@@ -180,9 +204,10 @@ async function main() {
   if (!animals.length) throw new Error('받은 공고가 0마리예요')
   const updated = new Date().toISOString()
   writeFileSync(OUT, JSON.stringify({ updated, animals }))
-  const candidates = pickCandidates(animals)
-  writeFileSync(CANDIDATES, JSON.stringify({ updated, candidates }, null, 1))
-  console.log(`실사화 후보 ${candidates.length}마리 (점수 ${candidates[0]?.score}~${candidates.at(-1)?.score})`)
+  const dogs = pickCandidates(animals.filter((a) => a.sp === 'dog'))
+  const cats = pickCandidates(animals.filter((a) => a.sp === 'cat'))
+  writeFileSync(CANDIDATES, JSON.stringify({ updated, dogs, cats }, null, 1))
+  console.log(`실사화 후보: 강아지 ${dogs.length}마리, 고양이 ${cats.length}마리`)
   console.log(`공고 중 ${first.total}마리 → 사진 있는 ${animals.length}마리를 ${OUT}에 썼어요`)
 }
 
