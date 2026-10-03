@@ -38,6 +38,10 @@ const DRY = args['dry-run'] === 'true'
 const MIN_EYE_GAP = 80 // 두 눈 사이(원본 픽셀). 이보다 작으면 털이 뭉개져 보인다
 const MAX_YAW = 0.18 // 코가 두 눈 가운데에서 옆으로 비껴난 정도 (두 눈 사이 거리 비율)
 const MIN_JOINT = 0.5 // 눈·코 관절 확신도
+/** 한 번에 공개하는 최대 수 */
+const MAX_PUBLISH = 20
+/** 공공데이터 서버에서 사진을 받는 간격 (한 번에 하나씩) */
+const DOWNLOAD_GAP_MS = 300
 /** 자른 뒤 앱 화면 배치 (펫 로컬 좌표, FLOOR_Y 250 기준). 폰 세로 화면에서 보이는 위쪽 끝이 약 -370 */
 const MIN_HEAD_TOP = -360 // 머리 위 끝이 이보다 위로 가면 화면 위에서 잘린다 (초코·삼식 약 -320)
 const MAX_BELOW_CHIN = 2.6 // 턱 아래로 보이는 몸 길이 (두 눈 사이 거리 배). 길면 가슴 대신 다리·몸통이 크게 보인다 (보통 2.2~2.4)
@@ -132,7 +136,9 @@ async function make() {
   writePreview(verdicts, animals)
   const ok = verdicts.filter((v) => v.ok)
   log(`\n완료: ${ok.length}/${verdicts.length}마리 통과. 미리보기: ${join(STAGE, 'preview.html')}`)
-  log(`고른 뒤: npm run shelter:make -- --publish ${ok.map((v) => v.id).join(',') || '<공고번호,...>'}`)
+  // 정면도 높은 순으로 공개 최대 수만큼 (미리보기에서 바꿔 고를 수 있다)
+  const top = [...ok].sort((a, b) => (b.frontal ?? 0) - (a.frontal ?? 0)).slice(0, MAX_PUBLISH)
+  log(`고른 뒤 (정면도 순 ${top.length}마리, 미리보기에서 바꿀 수 있어요): npm run shelter:make -- --publish ${top.map((v) => v.id).join(',') || '<공고번호,...>'}`)
 }
 
 /** 정면 후보 사진 한 장 */
@@ -154,7 +160,7 @@ async function judge(a: Animal): Promise<{ options: Option[]; why: string[]; tot
   for (let i = 0; i < a.photos.length; i++) {
     const file = join(dir, `src-${i}.jpg`)
     if (!existsSync(file)) {
-      const res = await fetch(a.photos[i]).catch(() => null)
+      const res = await download(a.photos[i])
       if (!res?.ok) {
         why.push(`사진 ${i + 1}: 받지 못함`)
         continue
@@ -181,9 +187,38 @@ async function judge(a: Animal): Promise<{ options: Option[]; why: string[]; tot
   return { options, why, total: a.photos.length }
 }
 
+/**
+ * 공고 사진 받기: 공공데이터 서버에 부담을 주지 않게 한 번에 하나씩, 요청 사이에 쉬고, 실패하면 한 번만 다시 받는다.
+ * 받은 사진은 pets-src에 남겨 다음 실행 때는 받지 않는다
+ */
+let lastDownload = 0
+async function download(url: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const wait = lastDownload + DOWNLOAD_GAP_MS * (attempt + 1) - Date.now()
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+    lastDownload = Date.now()
+    const res = await fetch(url, { signal: AbortSignal.timeout(20_000) }).catch(() => null)
+    if (res?.ok || res?.status === 404) return res
+  }
+  return null
+}
+
+/** Apple Vision 판정 프로그램은 한 번 컴파일해 두고 쓴다 (swift 스크립트를 사진마다 실행하면 사진당 1~2초씩 컴파일한다) */
+function detectorBin() {
+  const src = join(ROOT, 'scripts', 'animal-detect.swift')
+  const bin = join(ROOT, 'pets-src', '.bin', 'animal-detect')
+  const { statSync } = process.getBuiltinModule('node:fs')
+  if (!existsSync(bin) || statSync(bin).mtimeMs < statSync(src).mtimeMs) {
+    mkdirSync(join(ROOT, 'pets-src', '.bin'), { recursive: true })
+    const r = spawnSync('swiftc', ['-O', src, '-o', bin], { encoding: 'utf8' })
+    if (r.status !== 0) fail(`animal-detect.swift 컴파일 실패: ${r.stderr}`)
+  }
+  return bin
+}
+
 function detectFree(photo: string, cache: string): Detect | null {
   if (existsSync(cache)) return readJson(cache)
-  const r = spawnSync('swift', [join(ROOT, 'scripts', 'animal-detect.swift'), photo], { encoding: 'utf8', timeout: 120_000 })
+  const r = spawnSync(detectorBin(), [photo], { encoding: 'utf8', timeout: 120_000 })
   if (r.status !== 0) return null
   writeFileSync(cache, r.stdout)
   return JSON.parse(r.stdout)
@@ -354,12 +389,15 @@ function build(a: Animal, photo: number) {
 // ───────────────────────── 미리보기 ─────────────────────────
 
 function writePreview(verdicts: Verdict[], animals: Map<string, Animal>) {
+  // 통과한 아이를 앞에, 정면도 높은 순으로. 처음에는 앞에서 ${MAX_PUBLISH}마리만 체크해 둔다
+  const sorted = [...verdicts].sort((a, b) => Number(b.ok) - Number(a.ok) || (b.frontal ?? 0) - (a.frontal ?? 0))
+  const preChecked = new Set(sorted.filter((v) => v.ok).slice(0, MAX_PUBLISH).map((v) => v.id))
   const card = (v: Verdict) => {
     const a = animals.get(v.id)
     const src = v.photo !== undefined ? `../shelter-${v.id}/src-${v.photo}.jpg` : a?.photos[0] ?? ''
     return `<label class="card ${v.ok ? 'ok' : 'no'}">
   <div class="imgs"><img src="${src}" loading="lazy">${v.made ? `<img class="face" src="${v.id}/face.webp" loading="lazy">` : ''}</div>
-  <div class="meta">${v.ok ? `<input type="checkbox" value="${v.id}" checked> ` : ''}<b>${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}</b>
+  <div class="meta">${v.ok ? `<input type="checkbox" value="${v.id}"${preChecked.has(v.id) ? ' checked' : ''}> ` : ''}<b>${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}</b>
   ${v.ok ? `<div class="pick">정면도 ${Math.round((v.frontal ?? 0) * 100)}% · ${v.total}장 중 ${(v.photo ?? 0) + 1}번째 (통과 ${v.passed}장)</div>` : ''}
   <small>${v.why.join('<br>')}</small></div>
 </label>`
@@ -377,9 +415,9 @@ small{display:block;color:#7a6556;margin-top:4px}pre{background:#fff;padding:10p
 <h2>공고 아이 실사 미리보기 (판정: ${JUDGE === 'apple' ? 'Apple Vision, 무료' : '비전 모델'})</h2>
 <p>철창·목줄·손이 얼굴을 가리는지, 배경이 남았는지 보고 공개할 아이만 체크하세요. 아래 명령을 터미널에 붙여 넣으면 로컬 ${BRANCH} 브랜치로 확정돼요 (push는 따로).</p>
 <pre id="cmd"></pre>
-<div class="grid">${verdicts.map(card).join('\n')}</div>
+<div class="grid">${sorted.map(card).join('\n')}</div>
 <script>
-const upd=()=>{document.getElementById('cmd').textContent='npm run shelter:make -- --publish '+[...document.querySelectorAll('input:checked')].map(i=>i.value).join(',')}
+const upd=()=>{const ids=[...document.querySelectorAll('input:checked')].map(i=>i.value);document.getElementById('cmd').textContent=ids.length>${MAX_PUBLISH}?'${MAX_PUBLISH}마리까지 고를 수 있어요 (지금 '+ids.length+'마리)':'npm run shelter:make -- --publish '+ids.join(',')}
 document.addEventListener('change',upd);upd()
 </script>`
   writeFileSync(join(STAGE, 'preview.html'), html)
@@ -388,6 +426,7 @@ document.addEventListener('change',upd);upd()
 // ───────────────────────── 확정 (로컬 브랜치) ─────────────────────────
 
 function publish(ids: string[]) {
+  if (ids.length > MAX_PUBLISH) fail(`한 번에 ${MAX_PUBLISH}마리까지 공개해요 (${ids.length}마리를 골랐어요)`)
   const v = existsSync(join(STAGE, 'verdicts.json')) ? (readJson(join(STAGE, 'verdicts.json')).verdicts as Verdict[]) : fail('먼저 npm run shelter:make')
   const pick = v.filter((x) => ids.includes(x.id) && x.ok && x.rig && existsSync(join(STAGE, x.id, 'face.webp')))
   const missing = ids.filter((id) => !pick.some((p) => p.id === id))
