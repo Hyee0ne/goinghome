@@ -266,6 +266,8 @@ async function buildRig(img: ImageBitmap, m: Mask, taps: Taps, species: Species)
   const files: Record<string, Blob> = {
     'face.webp': await toBlob(prep.canvas, 'image/webp', 0.86),
     'flow.png': await toBlob(flow, 'image/png'),
+    // 기준점 (face.webp 좌표). 나중에 AI 표정 업그레이드(scripts/pet-upgrade.ts)가 이 점으로 표정 부위를 자른다
+    'landmarks.json': new Blob([JSON.stringify(lm)], { type: 'application/json' }),
   }
   const photo: PhotoRig = {
     ...deriveRig(lm, { src: 'face.webp', flow: 'flow.png', width: prep.canvas.width, height: prep.canvas.height, bottom: prep.bottom }),
@@ -308,13 +310,15 @@ function landmarksFromTaps(t: { eyeL: Pt; eyeR: Pt; nose: Pt; chin: Pt; earL?: P
   for (let y = eyesY; y > Math.max(0, eyesY - D * 2.5); y--) if (alphaAt(cx, y) > 128) topY = y
   // 한쪽 귀: 머리 높이 띠에서 바깥으로 가장 멀리 나간 동물 픽셀(outer), 고양이는 그쪽에서 가장 높은 점이 끝(tip)
   const ear = (side: -1 | 1, eye: Pt, tapped?: Pt): EarPts => {
-    let outer = { x: eye.x + side * D * 0.9, y: eyesY }
     const yTop = Math.max(0, topY - D * 0.8)
-    // 고양이 귀는 눈보다 위에만 있다 (눈 높이까지 보면 볼 털이 가장 바깥으로 잡혀 귀가 너무 커진다)
-    const yBottom = cat ? eyesY - D * 0.35 : t.chin.y
+    // 바깥 끝은 귀 높이에서만 찾는다. 고양이 귀는 정수리 언저리에 있고(눈 높이까지 보면 볼 털이 잡혀 귀가 너무 커진다),
+    // 늘어진 개 귀는 턱 높이까지 내려온다
+    const yBottom = cat ? topY + D * 0.35 : t.chin.y
+    let outer: Pt | null = null
     for (let y = yTop; y < yBottom; y += 2)
       for (let x = eye.x + side * D * 0.4; side < 0 ? x > Math.max(0, eye.x - D * 2.2) : x < Math.min(W, eye.x + D * 2.2); x += side * 2)
-        if (alphaAt(x, y) > 128 && (x - outer.x) * side > 0) outer = { x, y }
+        if (alphaAt(x, y) > 128 && (!outer || (x - outer.x) * side > 0)) outer = { x, y }
+    outer ??= { x: eye.x + side * D * 0.7, y: cat ? topY : eyesY }
     let tip = tapped
     if (!tip) {
       if (cat) {
