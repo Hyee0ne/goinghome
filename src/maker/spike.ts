@@ -83,3 +83,27 @@ if (q.get('src')) {
     ;(window as unknown as { __done: boolean }).__done = true
   }
 }
+
+// ?full=1&taps=… : 실제 엔진으로 배경 지우기 → 리그 → '우리 아이'로 저장까지 (헤드리스 검증용)
+if (q.get('full')) {
+  const { engine } = await import('./engine')
+  const { myPets } = await import('../myPets')
+  const t = JSON.parse(q.get('taps')!)
+  const blob = await (await fetch(q.get('src')!)).blob()
+  const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' })
+  const t0 = performance.now()
+  await engine.loadSegmenter()
+  const t1 = performance.now()
+  const mask = await engine.segment(bmp, t.body)
+  const t2 = performance.now()
+  const r = await engine.rigFromTaps(bmp, mask, t, (q.get('species') ?? 'cat') as 'cat' | 'dog')
+  const t3 = performance.now()
+  const id = q.get('id') ?? 'mine-test'
+  await myPets.put({ id, name: '테스트', species: (q.get('species') ?? 'cat') as 'cat' | 'dog', createdAt: new Date().toISOString(), photo: blob, taps: t, rig: r.photo, files: r.files })
+  const prev = engine.maskPreview(bmp, mask)
+  view.width = prev.width / 4
+  view.height = prev.height / 4
+  g.drawImage(prev, 0, 0, view.width, view.height)
+  const sizes = Object.fromEntries(Object.entries(r.files).map(([k, b]) => [k, `${b.type} ${(b.size / 1024).toFixed(0)}KB`]))
+  ;(window as unknown as { __full: unknown }).__full = { loadMs: t1 - t0, segmentMs: t2 - t1, rigMs: t3 - t2, quality: r.quality, sizes, rig: { width: r.photo.width, height: r.photo.height, scale: r.photo.scale, eyes: r.photo.eyes, ears: r.photo.ears, fadeSides: r.photo.fadeSides } }
+}

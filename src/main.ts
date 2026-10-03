@@ -10,6 +10,7 @@ import { renderAdoptLinks } from './adoptLinks'
 import { setClipRecorder, sharePet, toast } from './share'
 import { ClipRecorder, clipSupport } from './recorder'
 import { clipOverlay } from './clipOverlay'
+import { myPets, type MyPet } from './myPets'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -854,3 +855,48 @@ resize()
 renderTabs()
 loadPhoto(pet.p)
 raf = requestAnimationFrame(frame)
+loadMyPets()
+
+/**
+ * 이 기기에 저장된 '우리 아이'(make.html에서 만든)를 탭 목록에 넣고, ?pet=mine-… 로 들어왔으면 바로 연다.
+ * 사진은 IndexedDB에만 있고, 리그의 파일 경로(files의 키)를 objectURL로 바꿔 셰이더가 읽게 한다
+ */
+async function loadMyPets() {
+  let list: MyPet[] = []
+  try {
+    list = await myPets.list()
+  } catch {
+    return // IndexedDB를 못 쓰는 환경 (사생활 보호 모드 등)
+  }
+  for (const m of list) if (m.rig && m.files && !PETS.some((p) => p.id === m.id)) PETS.push(myPetProfile(m))
+  renderTabs()
+  const want = new URLSearchParams(location.search).get('pet')
+  const target = want && PETS.find((p) => p.id === want)
+  if (target && target !== pet.p) selectPet(target)
+}
+
+function myPetProfile(m: MyPet): PetProfile {
+  const files = m.files!
+  const url = (key: string) => (files[key] ? URL.createObjectURL(files[key]) : key)
+  const rig = m.rig!
+  const cat = m.species === 'cat'
+  return {
+    id: m.id,
+    name: m.name,
+    species: m.species,
+    breed: '',
+    age: '',
+    sex: '',
+    story: '',
+    tip: '손바닥으로 머리를 살살 쓰다듬어 보세요.',
+    favorite: 'head',
+    shy: false,
+    fur: cat ? '#e8d6c2' : '#9a6a44',
+    furDark: cat ? '#c9b29a' : '#6e4a2e',
+    belly: '#f1dcc3',
+    eye: '#3b2a1e',
+    pattern: 'none',
+    // 표정 사진·앞발 사진은 없다 (기기 안에서 AI 없이 만든 아이). 손 주기는 앞발 사진이 없어 자동으로 꺼진다
+    photo: { ...rig, src: url(rig.src), flow: url(rig.flow), catchlight: rig.catchlight && url(rig.catchlight) },
+  }
+}

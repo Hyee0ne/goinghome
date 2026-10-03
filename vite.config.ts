@@ -4,6 +4,8 @@ import { join } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 
+const DEV_ONLY_PAGES = ['rig.html', 'maker-spike.html']
+
 // 휴대폰·태블릿에서 카메라를 쓰려면 HTTPS가 필요하다: `npm run dev:mobile`
 export default defineConfig({
   // 깃허브 페이지는 https://<계정>.github.io/sonkkeut-pet/ 아래에서 열린다 (배포 워크플로가 GITHUB_PAGES=1로 빌드)
@@ -11,13 +13,15 @@ export default defineConfig({
   plugins: [...(process.env.HTTPS ? [basicSsl()] : []), petEditorApi()],
   // 손 인식 워커는 MediaPipe의 ES 모듈판 wasm 로더를 동적 import하므로 모듈 워커로 빌드한다
   worker: { format: 'es' },
-  // 배포에 넣을 화면: 앱, 보호소용 등록 화면(있으면). 기준점 편집 화면(rig.html)은 개발 서버 전용이라 넣지 않는다
+  // 배포에 넣을 화면: 루트의 *.html 전부 (앱, 우리 아이 만들기, 보호소 등록 …).
+  // 개발 서버 전용 화면(기준점 편집 rig.html, 측정용 maker-spike.html)은 넣지 않는다
   build: {
     rollupOptions: {
-      input: {
-        main: join(import.meta.dirname, 'index.html'),
-        ...(existsSync(join(import.meta.dirname, 'register.html')) && { register: join(import.meta.dirname, 'register.html') }),
-      },
+      input: Object.fromEntries(
+        readdirSync(import.meta.dirname)
+          .filter((f) => f.endsWith('.html') && !DEV_ONLY_PAGES.includes(f))
+          .map((f) => [f === 'index.html' ? 'main' : f.replace(/\.html$/, ''), join(import.meta.dirname, f)]),
+      ),
     },
   },
 })

@@ -3,6 +3,7 @@ import './register.css'
 import './make.css'
 import type { MakerEngine, MaskHandle } from './maker/engineTypes'
 import { mockEngine } from './maker/mockEngine'
+import { engine as realEngine } from './maker/engine'
 import { myPets, newPetId, type Pt, type Taps } from './myPets'
 import { josa, type Species } from './pets'
 import { renderAdoptLinks } from './adoptLinks'
@@ -12,7 +13,8 @@ import { renderAdoptLinks } from './adoptLinks'
  * 사진은 기기 안에서만 처리하고 IndexedDB에 저장한다.
  * 엔진은 기술 쪽 실제 엔진이 나오면 바꿔 끼운다 (지금은 가짜 엔진).
  */
-const engine: MakerEngine = mockEngine
+// 실제 엔진(기기 안 배경 지우기·리그). 화면 흐름만 볼 때는 ?mock=1로 가짜 엔진
+const engine: MakerEngine = new URLSearchParams(location.search).has('mock') ? mockEngine : realEngine
 
 /** 처리할 사진의 긴 변 (크면 배경 지우기·털 결 계산이 느려진다) */
 const MAX_EDGE = 1600
