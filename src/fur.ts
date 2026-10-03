@@ -971,6 +971,8 @@ export class FurRenderer {
   private breathDepth = 1
   /** 눈 감은 표정 사진이 있는지 (없으면 눈꺼풀을 흉내 낸다) */
   private hasEyesPhoto = false
+  /** 자동 기준점 아이(표정 사진이 하나도 없음)는 차분한 움직임 */
+  private calmMotion = false
   private rig: PhotoRig | null = null
   private loading: string | null = null
   private cache = new Map<
@@ -1113,6 +1115,7 @@ export class FurRenderer {
       }
       gl.uniform1f(this.loc('uHasCatch'), assets.catch ? 1 : 0)
       this.hasEyesPhoto = !!rig.expressions?.eyesClosed && !!assets.expr[1]
+      this.calmMotion = !rig.expressions
       this.paw.load(rig.paw)
       this.setRigUniforms(rig, assets.expr.map((im) => !!im), !!assets.morph)
     } finally {
@@ -1239,8 +1242,9 @@ export class FurRenderer {
     // 사진은 크게 비틀면 티가 나므로 몸짓(pose)은 작게, 손에 끌려가는 움직임(motion)은 한계를 두고 더한다
     // 고양이 부비부비: 손 쪽으로 기울며 천천히 좌우로 비빈다
     const rub = p.bunt * p.buntSide * (0.045 + 0.02 * Math.sin(p.t * 2.6))
-    // 표정 사진이 없는 고양이(자동으로 잡은 기준점)는 얼굴이 납작하고 둥글어, 개만큼 기울이고 끌면 이마·볼이 접혀 보인다 → 움직임을 줄인다
-    const sway = p.species === 'cat' && !this.hasEyesPhoto ? CAT_DRAWN_MOTION : 1
+    // 자동 기준점 아이(보호소 사진·기기에서 만든 아이)는 차분한 움직임: 부위 위치가 대충이라 크게 움직일수록 티가 난다 (CALM)
+    const calm = this.calmMotion ? CALM : FULL_MOTION
+    const sway = calm.head
     gl.uniform1f(this.loc('uTilt'), (p.tilt * 0.55 + soft(m.rot, ROT_MAX) + p.cock + rub) * sway)
     gl.uniform2f(
       this.loc('uLean'),
@@ -1256,8 +1260,8 @@ export class FurRenderer {
     // 갸웃할 때는 기울이는 쪽 반대 귀가 쫑긋, 움찔하면 귀를 젖힌다
     const perkL = p.curious * (p.cockSide > 0 ? 0.1 : 0.03)
     const perkR = p.curious * (p.cockSide < 0 ? 0.1 : 0.03)
-    gl.uniform1f(this.loc('uEarRotL'), ear + m.earL + tuck + perkL - p.flinch * 0.1)
-    gl.uniform1f(this.loc('uEarRotR'), ear + m.earR + tuck + perkR - p.flinch * 0.1)
+    gl.uniform1f(this.loc('uEarRotL'), (ear + m.earL + tuck + perkL - p.flinch * 0.1) * calm.ear)
+    gl.uniform1f(this.loc('uEarRotR'), (ear + m.earR + tuck + perkR - p.flinch * 0.1) * calm.ear)
     const dt = Math.min(0.05, Math.max(0, p.t - this.lastT))
     this.lastT = p.t
     // 헥헥댈 때는 숨이 빨라진다
@@ -1327,13 +1331,13 @@ export class FurRenderer {
       // 깜빡임은 원래 빠르다 (감기 0.07초·뜨기 0.13초, pet.ts)
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[0])), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[1])))
     }
-    gl.uniform2f(this.loc('uNoseOff'), m.noseX * toPx, m.noseY * toPx)
+    gl.uniform2f(this.loc('uNoseOff'), m.noseX * toPx * calm.face, m.noseY * toPx * calm.face)
     gl.uniform1f(this.loc('uNoseSquash'), m.noseSquash)
     gl.uniform1f(this.loc('uFlare'), m.flare)
     gl.uniform1f(this.loc('uNoseGloss'), p.species === 'dog' ? 1 : 0)
     gl.uniform1f(this.loc('uCatEye'), p.species === 'cat' ? 1 : 0)
 
-    gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx, m.browR * BROW_LIFT * toPx)
+    gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx * calm.face, m.browR * BROW_LIFT * toPx * calm.face)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
     const pantBob = this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
     // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다
@@ -1341,13 +1345,13 @@ export class FurRenderer {
     const chewBob = p.chew * (0.5 + 0.5 * Math.sin(p.t * 9)) * CHEW_OPEN
     // 입 사진이 있으면 턱은 그대로 둔다 (턱 부위만 끌어내리면 아랫입술 선이 어긋나 구겨져 보인다)
     const eatJaw = rig.expressions?.pant ? 0 : -(p.chomp * CHOMP_OPEN + chewBob)
-    gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT + pantBob + eatJaw) * toPx)
+    gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT * calm.face + pantBob + eatJaw) * toPx)
     gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx : 0)
-    gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx, -soft(m.pitch, 1) * PITCH_SHIFT * toPx)
+    gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx * calm.head, -soft(m.pitch, 1) * PITCH_SHIFT * toPx * calm.head)
     gl.uniform2f(this.loc('uGaze'), clamp(p.lookX, -1, 1) * GAZE, clamp(p.lookY, -1, 1) * GAZE * 0.6)
     const v = m.velocity
     const lag = Math.min(1, 2.5 / (Math.hypot(v.x, v.y) * 0.03 + 1e-6))
-    gl.uniform2f(this.loc('uFurLag'), -v.x * 0.03 * lag * toPx, -v.y * 0.03 * lag * toPx)
+    gl.uniform2f(this.loc('uFurLag'), -v.x * 0.03 * lag * toPx * calm.drag, -v.y * 0.03 * lag * toPx * calm.drag)
     gl.uniform1f(this.loc('uBreeze'), 0.7 + Math.min(0.6, Math.hypot(v.x, v.y) / 60))
 
     this.uploadField()
@@ -1481,8 +1485,14 @@ const DRAWN_OPEN_S = 0.15
 const DRAWN_SNAP = 0.3
 /** 다 감은 채로 있는 최대 시간(초). 그 뒤로는 바로 뜬다 */
 const DRAWN_HOLD_S = 0.3
-/** 표정 사진이 없는 고양이의 고개 기울이기·끌림 배율 */
-const CAT_DRAWN_MOTION = 0.65
+/**
+ * 움직임 배율 묶음. 손으로 기준점을 맞춘 아이(초코·삼식, 표정 사진 있음)는 FULL, 자동 기준점 아이는 CALM.
+ *   ear  귀 따로 까딱이기·젖히기   head  고개 기울이기·따라오기·돌리기   drag  손에 끌리는 털·얼굴   face  눈썹·턱·코 움직임
+ * 보호소 사진은 정성 들여 찍은 사진이 아니라 부위 위치가 대충이므로, 위치에 기대는 움직임(귀·고개)을 크게 줄인다.
+ * 털 눕기·쓰다듬기 반응·숨쉬기·깜빡임은 부위 위치와 상관없어 그대로다
+ */
+const FULL_MOTION = { ear: 1, head: 1, drag: 1, face: 1 }
+const CALM = { ear: 0.25, head: 0.35, drag: 0.6, face: 0.5 }
 /** 감았다 뜬 뒤 다시 감기까지 쉬는 시간(초) */
 const DRAWN_REARM_S = 1.5
 

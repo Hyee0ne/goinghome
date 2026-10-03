@@ -285,9 +285,14 @@ function rawFromPose(d: Detect, sp: 'dog' | 'cat') {
   const nx = (v: number) => Math.round((v / d.width) * 1000)
   const ny = (v: number) => Math.round((v / d.height) * 1000)
   // 귀: 사진 왼쪽 귀 = 사진 왼쪽 눈 쪽 관절. 위(끝)·아래(붙은 곳)·셋 중 얼굴 가운데에서 가장 먼 점(바깥)
+  // Apple Vision 귀 관절은 위·가운데·아래라, 선 귀는 아래가 붙은 곳이지만 늘어진 귀는 위가 붙은 곳이다.
+  // 그래서 얼굴 가운데에 더 가까운 끝을 붙은 곳(base), 먼 끝을 귀 끝(tip)으로 잡아 [끝, 가운데, 붙은 곳] 순서로 둔다
+  // (거꾸로 잡으면 늘어진 귀가 가운데를 축으로 돌아 꿀렁거린다)
   const ear = (side: 'left' | 'right') => {
     const pts = (['top', 'middle', 'bottom'] as const).map((k) => J(d, `${side}_ear_${k}`)).map((p) => p && { x: p.x * d.width, y: p.y * d.height })
-    return pts.every(Boolean) ? (pts as Pt[]) : null
+    if (!pts.every(Boolean)) return null
+    const [top, middle, bottom] = pts as Pt[]
+    return dist(top, mid) < dist(bottom, mid) ? [bottom, middle, top] : [top, middle, bottom]
   }
   const ears = [ear('left'), ear('right')].filter(Boolean) as Pt[][]
   const sideOf = (pts: Pt[]) => (pts[1].x < mid.x ? 'L' : 'R')
