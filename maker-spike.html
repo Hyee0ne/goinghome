@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>배경 지우기 시험판</title>
+    <style>
+      body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #fdf1e4; color: #3b2a1e; }
+      header { padding: 10px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+      canvas { display: block; max-width: 100%; touch-action: none; background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 16px 16px; }
+      pre { margin: 0; padding: 8px 12px; white-space: pre-wrap; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <input id="file" type="file" accept="image/*" />
+      <label><input type="radio" name="m" value="v1" /> v1 (6MB)</label>
+      <label><input type="radio" name="m" value="v2" checked /> v2 (30MB)</label>
+      <span>사진을 탭하세요 (길게 누르면 '이건 아니에요')</span>
+    </header>
+    <canvas id="view"></canvas>
+    <pre id="log"></pre>
+    <script type="module" src="/src/maker/spike.ts"></script>
+  </body>
+</html>

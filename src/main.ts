@@ -6,6 +6,7 @@ import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
+import { ClipRecorder } from './recorder'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -36,9 +37,11 @@ const fur = (() => {
 /** 셰이더 캔버스 배율. 프레임이 밀리면 낮춘다 (renderQuality) */
 let glDpr = Math.min(window.devicePixelRatio || 1, 1.5)
 const debug = new URLSearchParams(location.search).has('debug')
+/** 공유용 짧은 영상 녹화: 털 셰이더 캔버스 위에 손끝·간식 캔버스를 겹쳐 담는다 (recorder.ts) */
+export const recorder = new ClipRecorder([$<HTMLCanvasElement>('pet-gl'), stage])
 hud.hidden = !debug
 if (debug) {
-  Object.assign(window, { __fur: fur, __tracker: tracker, __setPaused: (on: boolean) => setPaused(on) })
+  Object.assign(window, { __fur: fur, __tracker: tracker, __setPaused: (on: boolean) => setPaused(on), __recorder: recorder })
   // 테스트용: 현재 펫의 상태를 콘솔에서 보고 바꿀 수 있게
   Object.defineProperty(window, '__pet', { get: () => pet })
 }
@@ -487,6 +490,8 @@ function frame(now: number) {
 
   updateFur(dt, inputs)
   draw()
+  // 녹화 중이면 방금 그린 화면을 녹화 캔버스에 합친다 (WebGL 내용은 같은 프레임 안에서만 남아 있다)
+  recorder.captureFrame()
   drawCameraOverlay()
   renderQuality(frameMs, dt, performance.now() - workStart)
   raf = requestAnimationFrame(frame)
