@@ -1283,7 +1283,9 @@ export class FurRenderer {
     const slow = this.hasEyesPhoto ? p.slowBlink : p.slowBlink * 0.6
     // 눈가를 만지면 그쪽 눈을 감는다 (반대쪽도 반쯤 따라 감는다)
     const lid = Math.max(p.blink * 1.1, squint, p.sigh * 0.35, slow)
-    gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(lid, m.eyeTouchL)), Math.min(1, Math.max(lid, m.eyeTouchR)))
+    // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는데, 끝까지 감으면 둘레에 옅은 타원이 보여서 반쯤까지만 감는다 (깜빡임도)
+    const lidMax = this.hasEyesPhoto ? 1 : DRAWN_LID_MAX
+    gl.uniform2f(this.loc('uLid'), Math.min(lidMax, Math.max(lid, m.eyeTouchL)), Math.min(lidMax, Math.max(lid, m.eyeTouchR)))
     gl.uniform2f(this.loc('uNoseOff'), m.noseX * toPx, m.noseY * toPx)
     gl.uniform1f(this.loc('uNoseSquash'), m.noseSquash)
     gl.uniform1f(this.loc('uFlare'), m.flare)
@@ -1430,6 +1432,9 @@ class PawLayer {
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }
 }
+
+/** 눈 감은 표정 사진이 없는 아이가 눈을 감는 최대 정도 (0~1) */
+const DRAWN_LID_MAX = 0.55
 
 /** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
 const CHOMP_OPEN = 5
