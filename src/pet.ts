@@ -367,6 +367,8 @@ export class Pet {
     if (this.nextBlink <= 0) {
       this.blinkClock = 0
       this.nextBlink = Math.random() < 0.15 ? 0.28 : 1.2 + Math.random() ** 1.5 * 5.5
+      // 눈 감은 표정 사진이 없는 아이는 지그시 감는 대신, 기분이 좋을수록 빠른 깜빡임이 잦아진다 (그린 눈꺼풀은 멈춰 있으면 티가 난다)
+      if (!this.p.photo?.expressions?.eyesClosed) this.nextBlink *= 1 - 0.6 * this.happy
     }
     this.blinkClock += dt
     const bc = this.blinkClock
