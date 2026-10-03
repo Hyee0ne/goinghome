@@ -238,6 +238,17 @@
   display: none;
 }
 
+.mk-busy {
+  align-content: center;
+  gap: 12px;
+}
+
+.mk-busy p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
 .mk-busy span,
 .mk-spinner {
   width: 36px;

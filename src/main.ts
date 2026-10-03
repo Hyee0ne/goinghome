@@ -131,7 +131,8 @@ function renderTabs() {
     const b = document.createElement('button')
     b.type = 'button'
     b.className = 'pet-tab' + (p.id === pet.p.id ? ' active' : '')
-    b.innerHTML = `<span>${p.species === 'dog' ? '🐶' : '🐱'}</span>${p.name}`
+    // 우리 아이는 하트로 구분한다 (보호소 아이와 이름이 같아도 헷갈리지 않게)
+    b.innerHTML = `<span>${isMine(p) ? '💛' : p.species === 'dog' ? '🐶' : '🐱'}</span>${p.name}`
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
@@ -153,7 +154,7 @@ if (debug) Object.assign(window, { __treatTray: treatTray })
 // 녹화가 되는 브라우저는 짧은 영상(끝 장면 포함)으로 공유한다 (길이는 share.ts)
 if (clipSupport().ok) {
   setClipRecorder(async (seconds) => {
-    const mine = pet.p.id.startsWith('mine-')
+    const mine = isMine(pet.p)
     const host = new URL(import.meta.env.BASE_URL, location.origin).host + import.meta.env.BASE_URL.replace(/\/$/, '')
     // 버튼을 누른 손을 들어 쓰다듬을 시간: 3초 세고 녹화한다
     for (let n = 3; n > 0; n--) {
@@ -171,7 +172,7 @@ const shareBtn = $<HTMLButtonElement>('share-btn')
 shareBtn.onclick = async () => {
   shareBtn.disabled = true
   try {
-    const r = await sharePet(pet.p, pet.p.id.startsWith('mine-'), (on) => {
+    const r = await sharePet(pet.p, isMine(pet.p), (on) => {
       shareBtn.classList.toggle('recording', on)
       if (!on) shareBtn.querySelector('b')!.textContent = '공유'
     })
@@ -274,9 +275,18 @@ setHelp(
   })(),
 )
 
+/** 사용자가 만든 '우리 아이' (기기 안에만 있는 아이) */
+function isMine(p: PetProfile) {
+  return p.id.startsWith('mine-')
+}
+
 function renderBanner() {
   const p = pet.p
-  $('info-banner-title').textContent = `${josa(p.name, '이', '가')} 가족을 기다려요`
+  // 우리 아이는 입양 대신 자랑하기(공유)로
+  const mine = isMine(p)
+  $('info-banner-title').textContent = mine ? `우리 ${p.name}` : `${josa(p.name, '이', '가')} 가족을 기다려요`
+  $('info-banner-sub').textContent = mine ? '쓰다듬는 모습을 영상으로 찍어 자랑하기' : '사진과 이야기 보고 입양 문의하기'
+  $('info-open').setAttribute('aria-haspopup', mine ? 'false' : 'dialog')
   const thumb = $<HTMLImageElement>('info-thumb')
   // 썸네일은 셰이더가 이미 불러온 얼굴 사진을 써서 따로 내려받지 않는다
   const src = p.photo?.src ?? (p.photos?.length ? assetUrl(p.photos[0]) : undefined)
@@ -369,6 +379,7 @@ function fillInfo(p: PetProfile) {
 }
 
 $('info-open').onclick = () => {
+  if (isMine(pet.p)) return void shareBtn.click()
   fillInfo(pet.p)
   // 시트를 보는 동안은 손 인식과 셰이더를 멈춰 배터리를 아낀다 (닫히면 close 이벤트에서 다시 켠다)
   setPaused(true)

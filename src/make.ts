@@ -158,14 +158,18 @@ cutView.draw = () => {
   v.image(state.preview)
 }
 
+let segmentedOnce = false
 async function segmentAt(p: Pt) {
   $('mk-busy').hidden = false
+  // 첫 탭은 모델을 받고 준비하느라 오래 걸릴 수 있다 (다음부터는 1초 안쪽)
+  $('mk-busy-text').textContent = segmentedOnce ? '' : '처음 한 번은 준비하는 데 시간이 걸려요'
   try {
     state.mask = await engine.segment(state.img!, p)
+    segmentedOnce = true
     state.preview = engine.maskPreview(state.img!, state.mask)
     $('mk-tools').hidden = false
     $<HTMLButtonElement>('mk-cut-next').disabled = false
-    $('mk-cut-hint').innerHTML = '빠진 곳은 <b>되살리기</b>, 남은 배경은 <b>지우개</b>로 고쳐요'
+    $('mk-cut-hint').innerHTML = '배경이 남았으면 <b>지우개</b>로 꼭 지워 주세요<br><small>남은 배경은 아이와 함께 움직여요. 빠진 곳은 <b>되살리기</b></small>'
   } finally {
     $('mk-busy').hidden = true
     cutView.draw()
@@ -219,7 +223,7 @@ const POINTS: { key: Key; label: string; hint: string; optional?: boolean }[] = 
   { key: 'eyeR', label: '오른쪽 눈', hint: '이번엔 <b>오른쪽 눈</b> 가운데를 눌러 주세요' },
   { key: 'nose', label: '코끝', hint: '<b>코끝</b>을 눌러 주세요' },
   { key: 'chin', label: '턱 끝', hint: '<b>턱 끝</b>(아래턱 가장 아래)을 눌러 주세요' },
-  { key: 'earL', label: '왼쪽 귀 끝', hint: '<b>왼쪽 귀 끝</b>을 눌러 주세요 (선택: 귀가 더 자연스럽게 움직여요)', optional: true },
+  { key: 'earL', label: '왼쪽 귀 끝', hint: '<b>왼쪽 귀 끝</b>을 눌러 주세요<br><small>선택이지만, 찍으면 귀가 훨씬 자연스럽게 움직여요</small>', optional: true },
   { key: 'earR', label: '오른쪽 귀 끝', hint: '<b>오른쪽 귀 끝</b>을 눌러 주세요 (선택)', optional: true },
 ]
 const faceView = new PhotoView($<HTMLCanvasElement>('mk-face-canvas'))
