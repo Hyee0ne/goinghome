@@ -52,8 +52,8 @@ function toProfile(l: LivePet): PetProfile {
   const cat = l.sp === 'cat'
   return {
     id: `shelter-${l.id}`,
-    // 공고에는 이름이 없어서 품종으로 부른다
-    name: a.kind,
+    // 공고에는 이름이 없어서 품종으로 부른다 (품종이 '기타'면 강아지·고양이로)
+    name: a.kind && a.kind !== '기타' ? a.kind : cat ? '고양이' : '강아지',
     species: l.sp,
     breed: a.kind,
     age: a.age,
