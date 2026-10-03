@@ -836,12 +836,12 @@ void main() {
           // 눈 감은 사진이 없으면 눈꺼풀을 그린다: 위·아래 눈꺼풀이 눈 둘레 털 색으로 덮고, 둥글게 휜 속눈썹 선에서 만난다.
           // (예전처럼 눈 위 한 곳의 털을 끌어내리면 밝은 눈썹 털이 늘어나 하얀 딱지처럼 보였다)
           float r = length(vec2(e.x * 0.85, e.y));
-          if (r < 1.35) {
+          if (r < 1.65) {
             // 눈꺼풀 색: 눈 바깥 둘레 8곳의 평균 (눈 바로 옆의 어두운 테두리는 피해 조금 바깥에서)
             vec3 ring = vec3(0.0);
             for (int i = 0; i < 8; i++) {
               float a = float(i) * 0.7853982;
-              ring += img(eye.xy + vec2(cos(a) * 1.9, sin(a) * 1.7) * eye.z).rgb;
+              ring += img(eye.xy + vec2(cos(a) * 2.2, sin(a) * 1.9) * eye.z).rgb;
             }
             ring /= 8.0;
             // 털 무늬: 같은 모양 그대로 위쪽(눈 지름 하나 반 위) 털을 가져와, 그 자리 평균 색을 빼고 무늬만 얹는다 (늘이지 않아 줄무늬가 생기지 않는다)
@@ -849,7 +849,7 @@ void main() {
             vec3 patch = img(eye.xy + e * eye.z + up).rgb;
             vec3 patchMean = (img(eye.xy + up + vec2(-0.8, 0.0) * eye.z).rgb + img(eye.xy + up + vec2(0.8, 0.0) * eye.z).rgb + img(eye.xy + up).rgb) / 3.0;
             // (둘레 평균은 밝은 털이 섞여 눈꺼풀보다 조금 밝다)
-            vec3 skin = ring * 0.93 + (patch - patchMean) * 0.6;
+            vec3 skin = ring * 0.98 + (patch - patchMean) * 0.6;
             // 위 눈꺼풀 끝: 감을수록 내려와 눈 아래쪽 1/3쯤에서 멈추고, 가운데가 아래로 둥글게 휜다
             float upper = mix(-1.1, 0.3, lid) - 0.2 * e.x * e.x;
             // 아래 눈꺼풀: 거의 다 감을 때만 조금 올라와 위 눈꺼풀과 만난다
@@ -857,7 +857,9 @@ void main() {
             float inUpper = smoothstep(upper + 0.07, upper - 0.07, e.y);
             float inLower = smoothstep(lower - 0.07, lower + 0.07, e.y);
             // 가장자리는 넓게 풀어 둘레 털에 녹아들게
-            float m = max(inUpper, inLower) * smoothstep(1.35, 1.05, r);
+            // 다 감을수록 눈 둘레의 어두운 테두리까지 덮도록 넓히고, 가장자리를 더 길게 풀어 둘레 털에 녹인다
+            float full = smoothstep(0.7, 1.0, lid);
+            float m = max(inUpper, inLower) * smoothstep(mix(1.35, 1.65, full), mix(1.05, 1.15, full), r);
             // 위 눈꺼풀은 끝으로 갈수록 살짝 어둡게 (둥근 눈꺼풀의 그늘)
             float shade = 1.0 - 0.12 * smoothstep(upper - 0.6, upper, e.y) * inUpper;
             col.rgb = mix(col.rgb, skin * shade, m);
@@ -946,6 +948,8 @@ export class FurRenderer {
   private pant = 0
   /** 씹기: 살짝 벌린 입 사진으로 넘어간 정도 (0~1) */
   private chewW = 0
+  /** 그린 눈꺼풀이 감긴 정도 (눈마다, 표정 사진이 없는 아이) */
+  private drawnLid = [0, 0]
   private earsBack = 0
   private panting = false
   private wary = false
@@ -1274,19 +1278,30 @@ export class FurRenderer {
     gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42, eatW) : eatW)
     gl.uniform1f(this.loc('uEarsW'), this.earsBack)
 
-    // 눈 감은 사진이 없으면 눈꺼풀을 털을 끌어내려 흉내 낸다. 오래 유지하면 늘어진 게 보이므로 지그시 감기는 얕게
     // 기분 좋은 눈: 개는 지그시 감고, 고양이는 게슴츠레 반쯤 뜬 채로 있다 (반쯤 감은 표정 사진이 딱 그 모양)
     const squint =
       p.startle >= 0.2 ? 0
       : p.species === 'cat' ? Math.min(0.5 + m.chinLift * 0.2, Math.max(0, p.happy - 0.2) * 1.2 + m.chinLift * 0.3)
       : Math.max(0, p.happy - 0.4) * 0.9
-    // (표정 사진이 없는 아이도 같은 만큼 감되, 아래 lidMax로 반쯤에서 멈춘다. 예전에는 그린 눈꺼풀이 어색해 0.35배로 약하게 해서 거의 안 감겼다)
     const slow = p.slowBlink
     // 눈가를 만지면 그쪽 눈을 감는다 (반대쪽도 반쯤 따라 감는다)
     const lid = Math.max(p.blink * 1.1, squint, p.sigh * 0.35, slow)
-    // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는데, 끝까지 감으면 둘레에 옅은 타원이 보여서 반쯤까지만 감는다 (깜빡임도)
-    const lidMax = this.hasEyesPhoto ? 1 : DRAWN_LID_MAX
-    gl.uniform2f(this.loc('uLid'), Math.min(lidMax, Math.max(lid, m.eyeTouchL)), Math.min(lidMax, Math.max(lid, m.eyeTouchR)))
+    if (this.hasEyesPhoto) {
+      gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(lid, m.eyeTouchL)), Math.min(1, Math.max(lid, m.eyeTouchR)))
+    } else {
+      // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는다. 그린 눈꺼풀은 천천히 내려오는 중간 모습이 어색해서,
+      // 감을 때는 짧게(감기 0.08초·뜨기 0.15초) 끝까지 감고 뜬다. 고양이의 기분 좋은 눈은 감지 않고 반쯤 게슴츠레 그대로
+      const snap = (v: number) => (v > DRAWN_SNAP ? 1 : 0)
+      const held = (touch: number) =>
+        // 개의 지그시 감기는 쓰다듬는 동안만 (손을 떼면 바로 뜬다. 오래 감고 있으면 그린 눈꺼풀이 티가 난다)
+        Math.max(p.species === 'cat' ? Math.min(squint, DRAWN_CAT_SQUINT) : p.petting > 0.3 ? snap(squint) : 0, snap(slow), snap(touch), p.sigh * 0.35)
+      const step = (cur: number, target: number) =>
+        target > cur ? Math.min(target, cur + dt / DRAWN_CLOSE_S) : Math.max(target, cur - dt / DRAWN_OPEN_S)
+      this.drawnLid[0] = step(this.drawnLid[0], held(m.eyeTouchL))
+      this.drawnLid[1] = step(this.drawnLid[1], held(m.eyeTouchR))
+      // 깜빡임은 원래 빠르다 (감기 0.07초·뜨기 0.13초, pet.ts)
+      gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[0])), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[1])))
+    }
     gl.uniform2f(this.loc('uNoseOff'), m.noseX * toPx, m.noseY * toPx)
     gl.uniform1f(this.loc('uNoseSquash'), m.noseSquash)
     gl.uniform1f(this.loc('uFlare'), m.flare)
@@ -1434,8 +1449,11 @@ class PawLayer {
   }
 }
 
-/** 눈 감은 표정 사진이 없는 아이가 눈을 감는 최대 정도 (0~1) */
-const DRAWN_LID_MAX = 0.55
+/** 눈 감은 표정 사진이 없는 아이의 그린 눈꺼풀: 감기·뜨기 시간(초), 감기 시작하는 기준, 고양이 게슴츠레 정도 */
+const DRAWN_CLOSE_S = 0.08
+const DRAWN_OPEN_S = 0.15
+const DRAWN_SNAP = 0.3
+const DRAWN_CAT_SQUINT = 0.55
 
 /** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
 const CHOMP_OPEN = 5
