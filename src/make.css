@@ -489,3 +489,162 @@
 .mk-undo[hidden] {
   display: none;
 }
+
+/* ── 만들기 방식 ── */
+.mk-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mk-mode input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mk-mode > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  height: 100%;
+  padding: 14px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.mk-mode input:checked + span {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(255, 138, 61, 0.18);
+}
+
+.mk-mode input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mk-mode b {
+  font-size: 15px;
+}
+
+.mk-mode small {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.mk-mode .mk-mode-feat {
+  margin-top: 4px;
+  color: var(--ink);
+}
+
+.mk-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: #e3f4e9;
+  color: #2f7a4c;
+  font-size: 11px;
+  font-style: normal;
+  vertical-align: 2px;
+}
+
+.mk-tag.ai {
+  background: #fff0e4;
+  color: var(--accent);
+}
+
+@media (max-width: 380px) {
+  .mk-modes {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 참고 사진 ── */
+.mk-sub {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.mk-sub small {
+  margin-left: 4px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.mk-refs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.mk-ref,
+.mk-ref-add {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.mk-ref img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mk-ref-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed rgba(120, 80, 40, 0.3);
+  color: var(--ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mk-ref-add[hidden] {
+  display: none;
+}
+
+.mk-ref-add b {
+  color: var(--accent);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.mk-ref-add input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mk-ai-status {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff4ea;
+  text-align: left;
+}
+
+.mk-ai-status[hidden] {
+  display: none;
+}
+
+.mk-ai-status p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+#mk-ai-extra .check:first-child {
+  margin-top: 0;
+}
+
+#mk-ai-extra .check[hidden] {
+  display: none;
+}

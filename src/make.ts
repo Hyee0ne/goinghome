@@ -52,18 +52,24 @@ const fileInput = $<HTMLInputElement>('mk-file')
 const nameInput = $<HTMLInputElement>('mk-name')
 const species = () => (document.querySelector('input[name=mk-species]:checked') as HTMLInputElement).value as Species
 
+/** 사진을 줄여 다시 그린다. 위치 같은 사진 메타데이터도 함께 사라진다 */
+async function shrinkPhoto(f: File) {
+  const src = await createImageBitmap(f, { imageOrientation: 'from-image' })
+  const k = Math.min(1, MAX_EDGE / Math.max(src.width, src.height))
+  const c = Object.assign(document.createElement('canvas'), { width: Math.round(src.width * k), height: Math.round(src.height * k) })
+  c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height)
+  src.close()
+  const blob = await new Promise<Blob>((r, j) => c.toBlob((b) => (b ? r(b) : j(new Error('toBlob'))), 'image/jpeg', 0.9))
+  return { c, blob }
+}
+
 fileInput.addEventListener('change', async () => {
   const f = fileInput.files?.[0]
   if (!f) return
   try {
-    const src = await createImageBitmap(f, { imageOrientation: 'from-image' })
-    const k = Math.min(1, MAX_EDGE / Math.max(src.width, src.height))
-    // 줄여서 다시 그리면 위치 같은 사진 메타데이터도 사라진다
-    const c = Object.assign(document.createElement('canvas'), { width: Math.round(src.width * k), height: Math.round(src.height * k) })
-    c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height)
-    src.close()
+    const { c, blob } = await shrinkPhoto(f)
     state.img = await createImageBitmap(c)
-    state.blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.9))
+    state.blob = blob
     state.mask = null
     state.preview = null
     state.taps = {}
@@ -83,7 +89,63 @@ fileInput.addEventListener('change', async () => {
 })
 nameInput.addEventListener('input', updatePhotoNext)
 function updatePhotoNext() {
-  $<HTMLButtonElement>('mk-photo-next').disabled = !state.img || !nameInput.value.trim()
+  const ai = mode() === 'ai'
+  const ready = !!state.img && !!nameInput.value.trim() && (!ai || (refs.length > 0 && consent.checked))
+  $<HTMLButtonElement>('mk-photo-next').disabled = !ready
+  $('mk-refs-error').hidden = !(ai && state.img && refs.length === 0)
+}
+
+// ── 만들기 방식: AI면 참고 사진 1~2장과 서버 전송 동의를 더 받는다
+const mode = () => (document.querySelector('input[name=mk-mode]:checked') as HTMLInputElement).value as 'free' | 'ai'
+const consent = $<HTMLInputElement>('mk-consent')
+const refs: { blob: Blob; url: string }[] = []
+const MAX_REFS = 2
+function onMode() {
+  const ai = mode() === 'ai'
+  $('mk-refs-wrap').hidden = !ai
+  $('mk-ai-extra').hidden = !ai
+  $('mk-paw-field').hidden = species() !== 'dog'
+  $('mk-privacy').textContent = ai
+    ? '🔒 배경 지우기와 얼굴 점은 이 기기 안에서 하고, 표정을 만들 때만 사진을 보내요.'
+    : '🔒 사진은 이 기기 안에서만 처리돼요. 어디로도 보내지 않아요.'
+  updatePhotoNext()
+}
+document.querySelectorAll('input[name=mk-mode]').forEach((r) => r.addEventListener('change', onMode))
+document.querySelectorAll('input[name=mk-species]').forEach((r) => r.addEventListener('change', onMode))
+consent.addEventListener('change', updatePhotoNext)
+
+$<HTMLInputElement>('mk-ref-file').addEventListener('change', async (e) => {
+  const input = e.target as HTMLInputElement
+  for (const f of [...(input.files ?? [])].slice(0, MAX_REFS - refs.length)) {
+    try {
+      const { blob } = await shrinkPhoto(f)
+      refs.push({ blob, url: URL.createObjectURL(blob) })
+    } catch {
+      alert(`${f.name}은(는) 열 수 없는 사진이에요.`)
+    }
+  }
+  input.value = ''
+  renderRefs()
+})
+function renderRefs() {
+  const box = $('mk-refs')
+  const add = box.querySelector('.mk-ref-add') as HTMLElement
+  box.querySelectorAll('.mk-ref').forEach((n) => n.remove())
+  refs.forEach((r, i) => {
+    const fig = Object.assign(document.createElement('figure'), { className: 'mk-ref' })
+    const img = Object.assign(new Image(), { src: r.url, alt: `참고 사진 ${i + 1}` })
+    const del = Object.assign(document.createElement('button'), { type: 'button', className: 'photo-del', textContent: '✕' })
+    del.setAttribute('aria-label', `참고 사진 ${i + 1} 빼기`)
+    del.onclick = () => {
+      URL.revokeObjectURL(r.url)
+      refs.splice(i, 1)
+      renderRefs()
+    }
+    fig.append(img, del)
+    box.insertBefore(fig, add)
+  })
+  add.hidden = refs.length >= MAX_REFS
+  updatePhotoNext()
 }
 $('mk-photo-next').onclick = () => go('cut')
 
@@ -408,7 +470,11 @@ $('mk-face-next').onclick = async () => {
     taps,
     rig: result.photo ?? undefined,
     files: result.files,
+    ...(mode() === 'ai' && {
+      ai: { status: 'waiting' as const, requestedAt: new Date().toISOString(), refs: refs.map((r) => r.blob), canPaw: sp === 'dog' && $<HTMLInputElement>('mk-paw').checked },
+    }),
   })
+  $('mk-ai-status').hidden = mode() !== 'ai'
 
   $<HTMLImageElement>('mk-result-img').src = (state.preview ?? document.createElement('canvas')).toDataURL('image/png')
   $('mk-result-title').textContent = `${josa(name, '이', '가')} 준비됐어요!`
@@ -456,6 +522,8 @@ $('mk-again').onclick = () => {
   updatePhotoNext()
   go('photo')
 }
+
+onMode()
 
 // 배경 지우기 모델은 들어오자마자 준비한다 (사진을 고르는 동안 끝난다)
 let segmenterReady = false

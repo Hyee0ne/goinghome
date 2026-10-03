@@ -32,6 +32,13 @@ export interface MyPet {
   files?: Record<string, Blob>
   /** 표정 업그레이드(선택, 서버 AI)를 했는지 */
   upgraded?: boolean
+  /** AI 표정 업그레이드 신청 (참고 사진은 서버에 보낼 때까지 기기에만) */
+  ai?: {
+    status: 'waiting' | 'making' | 'done' | 'failed'
+    requestedAt: string
+    refs: Blob[]
+    canPaw: boolean
+  }
 }
 
 const DB = 'sonkkeut'
