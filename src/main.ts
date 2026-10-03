@@ -6,6 +6,8 @@ import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
+import { renderAdoptLinks } from './adoptLinks'
+import { sharePet, toast } from './share'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -128,6 +130,9 @@ function renderTabs() {
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
+  // 우리 아이 만들기 (바이럴 입구)
+  const make = Object.assign(document.createElement('a'), { href: 'make.html', className: 'pet-tab make-tab', textContent: '＋ 우리 아이' })
+  tabs.append(make)
   renderBanner()
   renderHelp()
 }
@@ -137,6 +142,32 @@ function renderTabs() {
 /** 무대 옆 간식 접시. 손 인식 쪽에서 hit/setHover/take로 쓴다 (treatTray.ts) */
 export const treatTray = new TreatTray($('treat-tray'), stage, assetUrl('pets/treat.webp'))
 if (debug) Object.assign(window, { __treatTray: treatTray })
+
+// ───────────────────────── 공유 · 공유로 들어온 사람 ─────────────────────────
+
+const shareBtn = $<HTMLButtonElement>('share-btn')
+shareBtn.onclick = async () => {
+  shareBtn.disabled = true
+  try {
+    const r = await sharePet(pet.p, pet.p.id.startsWith('mine-'), (on) => {
+      shareBtn.classList.toggle('recording', on)
+      shareBtn.querySelector('b')!.textContent = on ? '녹화 중' : '공유'
+    })
+    if (r === 'copied') toast('링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요')
+    if (r === 'downloaded') toast('영상을 저장하고 링크를 복사했어요')
+  } finally {
+    shareBtn.disabled = false
+  }
+}
+
+// 공유 링크(?from=share)로 들어온 사람: 만들기와 입양 사이트를 먼저 보여 준다
+if (new URLSearchParams(location.search).get('from') === 'share') {
+  intro.querySelector('h1')!.textContent = '친구가 손끝 교감을 보냈어요'
+  intro.querySelector('.card-emoji')!.textContent = '💌'
+  const adopt = $('intro-adopt')
+  adopt.hidden = false
+  renderAdoptLinks(adopt)
+}
 
 // ───────────────────────── 도움말 ─────────────────────────
 

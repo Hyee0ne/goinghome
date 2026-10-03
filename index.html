@@ -71,7 +71,14 @@
           </header>
           <ol id="help-steps" class="help-steps"></ol>
           <div id="help-trick" class="help-trick"></div>
+          <p class="help-shelter"><a href="register.html">보호소이신가요? 보호 동물 등록 ›</a></p>
         </aside>
+
+        <!-- 공유: 녹화 엔진이 있으면 짧은 영상, 없으면 링크 -->
+        <button id="share-btn" class="share-btn" type="button" aria-label="공유하기">
+          <span aria-hidden="true">↗</span><b>공유</b>
+        </button>
+
 
         <!-- 아이 정보 열기 배너 (시작 화면이 떠 있는 동안은 그 아래에 가려진다) -->
         <button id="info-open" class="info-banner" type="button" aria-haspopup="dialog">
@@ -102,8 +109,11 @@
             <p class="muted">"손!" 같은 말을 알아듣도록 마이크도 함께 켜요. 크롬 등 일부 브라우저는 음성 인식을 위해 소리를 브라우저 회사 서버로 보내요.</p>
             <div class="actions">
               <button id="start-camera" class="btn primary" type="button">카메라로 시작하기</button>
+              <a class="btn make-link" href="make.html">📸 우리 아이 사진으로 만들기</a>
             </div>
             <p id="intro-error" class="error" hidden></p>
+            <!-- 공유 링크로 들어온 사람에게만: 입양 사이트 -->
+            <div id="intro-adopt" class="intro-adopt" hidden></div>
           </div>
         </section>
 

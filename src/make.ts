@@ -5,6 +5,7 @@ import type { MakerEngine, MaskHandle } from './maker/engineTypes'
 import { mockEngine } from './maker/mockEngine'
 import { myPets, newPetId, type Pt, type Taps } from './myPets'
 import { josa, type Species } from './pets'
+import { renderAdoptLinks } from './adoptLinks'
 
 /**
  * '우리 아이 만들기': 사진 → 배경 지우기(탭 한 번 + 붓) → 얼굴 점 찍기 → 완성.
@@ -379,6 +380,9 @@ $('mk-face-next').onclick = async () => {
   }
   $('mk-making').hidden = true
   $('mk-made').hidden = false
+  const adopt = $('mk-adopt')
+  adopt.hidden = false
+  renderAdoptLinks(adopt, `${name}처럼 사랑받을 가족을 기다리는 아이들`)
 }
 
 $('mk-again').onclick = () => {

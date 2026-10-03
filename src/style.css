@@ -926,3 +926,196 @@ button {
   pointer-events: none;
   overflow: hidden;
 }
+
+/* ── 입양 사이트 연결 (adoptLinks.ts) ── */
+.adopt-links h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.adopt-links ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adopt-links a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--bg);
+  color: inherit;
+  text-decoration: none;
+  text-align: left;
+}
+
+.adopt-links a:hover {
+  background: var(--bg-2);
+}
+
+.adopt-icon {
+  flex: none;
+  font-size: 20px;
+}
+
+.adopt-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.adopt-text b {
+  font-size: 15px;
+}
+
+.adopt-text small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.adopt-go {
+  flex: none;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── 바이럴: 우리 아이 탭, 시작 화면 만들기 버튼, 공유 버튼, 알림 ── */
+.make-tab {
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.make-link {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  text-align: center;
+}
+
+/* 휴대폰 상단 바는 '우리 아이' 탭이 보이게 보호소 등록 링크를 도움말 안으로 옮긴다 */
+.help-shelter {
+  display: none;
+  margin: 12px 0 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+.help-shelter a {
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .topbar .shelter-link {
+    display: none;
+  }
+
+  .help-shelter {
+    display: block;
+  }
+}
+
+.intro-adopt {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.intro-adopt[hidden] {
+  display: none;
+}
+
+/* 공유 버튼: 무대 오른쪽 (간식 접시와 마주 보게) */
+.share-btn {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 64px;
+  padding: 10px 0 8px;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(80, 50, 20, 0.16);
+  transform: translateY(-50%);
+}
+
+.share-btn span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.share-btn b {
+  font-size: 12px;
+}
+
+.share-btn.recording span {
+  background: #e5484d;
+  animation: rec 1s ease-in-out infinite;
+}
+
+@keyframes rec {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (min-width: 721px) {
+  /* PC: 오른쪽 아래 (도움말 상자와 겹치지 않게) */
+  .share-btn {
+    top: auto;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    transform: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .share-btn {
+    right: 10px;
+    top: auto;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 92px);
+    transform: scale(0.9);
+    transform-origin: right bottom;
+  }
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 96px);
+  z-index: 20;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(74, 51, 34, 0.92);
+  color: #fff;
+  font-size: 14px;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  word-break: keep-all;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}

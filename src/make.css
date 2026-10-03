@@ -437,3 +437,14 @@
     animation-duration: 2s;
   }
 }
+
+.mk-adopt {
+  margin-top: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.mk-adopt[hidden] {
+  display: none;
+}
