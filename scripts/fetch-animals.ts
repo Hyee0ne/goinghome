@@ -12,10 +12,10 @@ import { dirname, join } from 'node:path'
 
 const OUT = join(import.meta.dirname, '..', 'public', 'data', 'animals.json')
 const CANDIDATES = join(import.meta.dirname, '..', 'public', 'data', 'candidates.json')
-/** 실사화 후보 수 (사진 판정을 거쳐 시범 10마리를 고른다) */
-const CANDIDATE_COUNT = 40
+/** 실사화 후보 수 */
+const CANDIDATE_COUNT = 10
 /** 한 시도에서 고르는 최대 수 (지역을 고르게) */
-const PER_SIDO = 4
+const PER_SIDO = 2
 const API = 'https://apis.data.go.kr/1543061/abandonmentPublicService_v2/abandonmentPublic_v2'
 const PAGE = 1000
 
