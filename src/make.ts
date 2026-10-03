@@ -5,9 +5,11 @@ import type { MakerEngine, MaskHandle } from './maker/engineTypes'
 import { mockEngine } from './maker/mockEngine'
 import { engine as realEngine } from './maker/engine'
 import { myPets, newPetId, type Pt, type Taps } from './myPets'
-import { josa, type Species } from './pets'
+import { josa, type PetProfile, type Species } from './pets'
 import { renderAdoptLinks } from './adoptLinks'
-import { showRewardedAd } from './rewardedAd'
+import { unlockAi } from './rewardedAd'
+import { aiCredits } from './credits'
+import { sharePet, toast } from './share'
 
 /**
  * '우리 아이 만들기': 사진 → 배경 지우기(탭 한 번 + 붓) → 얼굴 점 찍기 → 완성.
@@ -103,6 +105,8 @@ const refs: { blob: Blob; url: string }[] = []
 const MAX_REFS = 2
 function onMode() {
   const ai = mode() === 'ai'
+  const n = aiCredits.count
+  $('mk-ai-credit').textContent = n > 0 ? `공유 기회 ${n}번 · 광고 없이` : '공유하면 광고 없이 1번 더'
   $('mk-refs-wrap').hidden = !ai
   $('mk-ai-extra').hidden = !ai
   $('mk-paw-field').hidden = species() !== 'dog'
@@ -462,7 +466,7 @@ $('mk-face-next').onclick = async () => {
   const taps = state.taps as Taps
   // 무료 버전을 만드는 동안 (AI를 골랐으면) 보상형 광고를 보여 준다. 끝까지 봐야 AI 신청이 된다
   const making = engine.rigFromTaps(state.img!, state.mask!, taps, sp)
-  const wantAi = mode() === 'ai' && (await showRewardedAd())
+  const wantAi = mode() === 'ai' && (await unlockAi())
   const result = await making
   const id = newPetId()
   await myPets.put({
@@ -503,6 +507,13 @@ $('mk-face-next').onclick = async () => {
   }
   $('mk-making').hidden = true
   $('mk-made').hidden = false
+  // 공유하면 AI로 만들 기회 +1
+  $('mk-share').onclick = async () => {
+    const r = await sharePet({ id, name, species: sp } as PetProfile, true)
+    if (r === 'cancelled') return
+    const bonus = aiCredits.rewardShare()
+    toast(bonus ? '공유 고마워요! AI로 만들 기회가 1번 생겼어요 ✨' : r === 'copied' ? '링크를 복사했어요' : '공유했어요')
+  }
   const adopt = $('mk-adopt')
   adopt.hidden = false
   renderAdoptLinks(adopt, `${name}처럼 사랑받을 가족을 기다리는 아이들`)
@@ -523,7 +534,7 @@ $('mk-again').onclick = () => {
   $('mk-tools').hidden = true
   $<HTMLButtonElement>('mk-cut-next').disabled = true
   $('mk-cut-hint').innerHTML = '아이 몸을 <b>한 번 톡</b> 눌러 주세요'
-  updatePhotoNext()
+  onMode()
   go('photo')
 }
 

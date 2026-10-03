@@ -705,3 +705,20 @@
   padding: 12px 10px;
   font-size: 15px;
 }
+
+.mk-credit {
+  margin-top: 6px;
+  color: var(--accent) !important;
+  font-weight: 700;
+}
+
+.mk-share small {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.ad-dialog.ask .ask-body {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
