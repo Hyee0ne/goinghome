@@ -1,0 +1,439 @@
+/* '우리 아이 만들기' (style.css·register.css의 색·입력 모양을 같이 쓴다) */
+
+.mk-page {
+  height: auto;
+  min-height: 100%;
+  word-break: keep-all;
+}
+
+.mk-top {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.mk-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.mk-title h1 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.mk-steps {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mk-steps li {
+  flex: 1;
+  padding-top: 6px;
+  border-top: 3px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mk-steps li.past {
+  border-color: rgba(255, 138, 61, 0.45);
+}
+
+.mk-steps li.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mk-wrap {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: 16px 16px max(28px, env(safe-area-inset-bottom));
+}
+
+.mk-step[hidden] {
+  display: none;
+}
+
+.mk-step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── 1. 사진 ── */
+.mk-guide {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.mk-guide h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.mk-tips {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.mk-tips li::before {
+  display: inline-block;
+  width: 22px;
+  font-weight: 800;
+}
+
+.mk-tips .ok::before {
+  content: '✓';
+  color: #2f9e5b;
+}
+
+.mk-tips .no {
+  color: var(--ink-soft);
+}
+
+.mk-tips .no::before {
+  content: '✕';
+  color: #c43d3d;
+}
+
+.mk-pick {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border: 2px dashed rgba(120, 80, 40, 0.3);
+  border-radius: 20px;
+  background: #fff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.mk-pick input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mk-pick img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--bg);
+}
+
+.mk-pick img[hidden] {
+  display: none;
+}
+
+.mk-pick span {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.mk-pick span b {
+  font-size: 30px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+/* 사진을 고른 뒤에는 '다른 사진' 표시를 아래 귀퉁이에 */
+.mk-pick img:not([hidden]) + span {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  flex-direction: row;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+}
+
+.mk-pick img:not([hidden]) + span b {
+  font-size: 15px;
+}
+
+.mk-info {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.mk-info[hidden] {
+  display: none;
+}
+
+.mk-privacy {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-align: center;
+}
+
+.mk-next {
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+}
+
+.mk-next[aria-disabled='true'] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── 캔버스 ── */
+.mk-hint {
+  margin: 0;
+  font-size: 16px;
+  text-align: center;
+}
+
+.mk-canvas-wrap {
+  position: relative;
+}
+
+.mk-canvas {
+  display: block;
+  width: 100%;
+  height: min(62dvh, 560px);
+  border-radius: 18px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.mk-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.mk-busy[hidden] {
+  display: none;
+}
+
+.mk-busy span,
+.mk-spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid rgba(255, 138, 61, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: mk-spin 0.8s linear infinite;
+}
+
+@keyframes mk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mk-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mk-tools[hidden] {
+  display: none;
+}
+
+.mk-size {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.mk-size[hidden] {
+  display: none;
+}
+
+.mk-size input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+/* ── 3. 얼굴 점 ── */
+.mk-points {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mk-points li {
+  padding: 4px 10px;
+  border: 1px solid rgba(120, 80, 40, 0.2);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.mk-points li.opt {
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+
+.mk-points li.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mk-points li.done {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.mk-points li.done::before {
+  content: '✓ ';
+}
+
+.mk-loupe {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  box-shadow: 0 6px 20px rgba(80, 50, 20, 0.25);
+  pointer-events: none;
+}
+
+.mk-loupe[hidden] {
+  display: none;
+}
+
+.mk-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mk-row .mk-next {
+  flex: 1;
+}
+
+/* ── 4. 완성 ── */
+.mk-result {
+  padding: 22px 18px;
+  border-radius: 20px;
+  background: #fff;
+  text-align: center;
+}
+
+.mk-making {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 40px 0;
+  color: var(--ink-soft);
+}
+
+.mk-making[hidden],
+#mk-made[hidden] {
+  display: none;
+}
+
+#mk-made {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mk-result-img {
+  width: 100%;
+  max-height: 46dvh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.mk-result h2 {
+  margin: 4px 0 0;
+  font-size: 21px;
+}
+
+.mk-quality {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.mk-meter {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+
+.mk-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #2f9e5b;
+}
+
+.mk-meter i.ok {
+  background: var(--accent);
+}
+
+.mk-meter i.bad {
+  background: #c43d3d;
+}
+
+.mk-warnings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #a5522a;
+  font-size: 14px;
+  text-align: left;
+}
+
+.mk-warnings li::before {
+  content: '⚠︎ ';
+}
+
+#mk-made .muted {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-busy span,
+  .mk-spinner {
+    animation-duration: 2s;
+  }
+}

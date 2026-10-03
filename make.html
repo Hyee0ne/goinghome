@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4e6" />
+    <title>우리 아이 만들기 · 손끝 교감</title>
+  </head>
+  <body class="mk-page">
+    <header class="mk-top">
+      <a class="reg-back" href="./" aria-label="손끝 교감으로 돌아가기">‹</a>
+      <div class="mk-title">
+        <h1>우리 아이 만들기</h1>
+        <ol id="mk-steps" class="mk-steps" aria-label="단계">
+          <li data-step="photo">사진</li>
+          <li data-step="cut">배경</li>
+          <li data-step="face">얼굴</li>
+          <li data-step="done">완성</li>
+        </ol>
+      </div>
+    </header>
+
+    <main class="mk-wrap">
+      <!-- 1. 사진 고르기 -->
+      <section id="step-photo" class="mk-step">
+        <div class="mk-guide">
+          <h2>이런 사진이 좋아요</h2>
+          <ul class="mk-tips">
+            <li class="ok"><b>정면</b>을 바라보는 얼굴</li>
+            <li class="ok"><b>밝고 선명한</b> 사진</li>
+            <li class="ok">얼굴이 <b>크게</b> 나온 사진</li>
+            <li class="no">옆모습, 흐리거나 어두운 사진</li>
+          </ul>
+        </div>
+        <label class="mk-pick">
+          <input id="mk-file" type="file" accept="image/*" />
+          <img id="mk-photo-preview" alt="" hidden />
+          <span id="mk-pick-label"><b>＋</b>사진 고르기</span>
+        </label>
+        <div id="mk-info" class="mk-info" hidden>
+          <div class="field">
+            <label for="mk-name">이름</label>
+            <input id="mk-name" maxlength="10" autocomplete="off" placeholder="예: 보리" />
+          </div>
+          <div class="field">
+            <span class="label">종류</span>
+            <div class="seg" role="radiogroup" aria-label="종류">
+              <label><input type="radio" name="mk-species" value="dog" checked /><span>🐶 강아지</span></label>
+              <label><input type="radio" name="mk-species" value="cat" /><span>🐱 고양이</span></label>
+            </div>
+          </div>
+        </div>
+        <p class="mk-privacy">🔒 사진은 이 기기 안에서만 처리돼요. 어디로도 보내지 않아요.</p>
+        <button id="mk-photo-next" class="btn primary mk-next" type="button" disabled>다음</button>
+      </section>
+
+      <!-- 2. 배경 지우기 -->
+      <section id="step-cut" class="mk-step" hidden>
+        <p id="mk-cut-hint" class="mk-hint">아이 몸을 <b>한 번 톡</b> 눌러 주세요</p>
+        <div class="mk-canvas-wrap">
+          <canvas id="mk-cut-canvas" class="mk-canvas"></canvas>
+          <div id="mk-busy" class="mk-busy" hidden><span></span></div>
+        </div>
+        <div id="mk-tools" class="mk-tools" hidden>
+          <div class="seg" role="radiogroup" aria-label="고치기">
+            <label><input type="radio" name="mk-tool" value="tap" checked /><span>다시 톡</span></label>
+            <label><input type="radio" name="mk-tool" value="erase" /><span>지우개</span></label>
+            <label><input type="radio" name="mk-tool" value="restore" /><span>되살리기</span></label>
+          </div>
+          <label class="mk-size" id="mk-size-wrap" hidden>
+            붓 크기 <input id="mk-size" type="range" min="6" max="60" value="24" />
+          </label>
+        </div>
+        <button id="mk-cut-next" class="btn primary mk-next" type="button" disabled>다음</button>
+      </section>
+
+      <!-- 3. 얼굴 점 찍기 -->
+      <section id="step-face" class="mk-step" hidden>
+        <p id="mk-face-hint" class="mk-hint"></p>
+        <ul id="mk-points" class="mk-points"></ul>
+        <div class="mk-canvas-wrap">
+          <canvas id="mk-face-canvas" class="mk-canvas"></canvas>
+          <canvas id="mk-loupe" class="mk-loupe" width="240" height="240" hidden></canvas>
+        </div>
+        <div class="mk-row">
+          <button id="mk-skip" class="btn ghost" type="button" hidden>귀는 건너뛰기</button>
+          <button id="mk-face-next" class="btn primary mk-next" type="button" disabled>만들기</button>
+        </div>
+      </section>
+
+      <!-- 4. 완성 -->
+      <section id="step-done" class="mk-step" hidden>
+        <div class="mk-result">
+          <div id="mk-making" class="mk-making">
+            <div class="mk-spinner"></div>
+            <p>털 결을 읽고 있어요…</p>
+          </div>
+          <div id="mk-made" hidden>
+            <img id="mk-result-img" class="mk-result-img" alt="" />
+            <h2 id="mk-result-title"></h2>
+            <div class="mk-quality">
+              <span>정면도</span>
+              <div class="mk-meter"><i id="mk-meter-bar"></i></div>
+              <b id="mk-meter-text"></b>
+            </div>
+            <ul id="mk-warnings" class="mk-warnings"></ul>
+            <a id="mk-go" class="btn primary mk-next" href="./">쓰다듬으러 가기</a>
+            <p id="mk-go-note" class="muted"></p>
+            <button id="mk-again" class="btn ghost" type="button">다른 사진으로 다시 만들기</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/make.ts"></script>
+  </body>
+</html>
