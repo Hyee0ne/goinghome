@@ -1278,9 +1278,10 @@ export class FurRenderer {
     // 기분 좋은 눈: 개는 지그시 감고, 고양이는 게슴츠레 반쯤 뜬 채로 있다 (반쯤 감은 표정 사진이 딱 그 모양)
     const squint =
       p.startle >= 0.2 ? 0
-      : p.species === 'cat' ? Math.min(0.5 + m.chinLift * 0.2, Math.max(0, p.happy - 0.2) * 1.2 + m.chinLift * 0.3) * (this.hasEyesPhoto ? 1 : 0.7)
-      : Math.max(0, p.happy - 0.4) * (this.hasEyesPhoto ? 0.9 : 0.35)
-    const slow = this.hasEyesPhoto ? p.slowBlink : p.slowBlink * 0.6
+      : p.species === 'cat' ? Math.min(0.5 + m.chinLift * 0.2, Math.max(0, p.happy - 0.2) * 1.2 + m.chinLift * 0.3)
+      : Math.max(0, p.happy - 0.4) * 0.9
+    // (표정 사진이 없는 아이도 같은 만큼 감되, 아래 lidMax로 반쯤에서 멈춘다. 예전에는 그린 눈꺼풀이 어색해 0.35배로 약하게 해서 거의 안 감겼다)
+    const slow = p.slowBlink
     // 눈가를 만지면 그쪽 눈을 감는다 (반대쪽도 반쯤 따라 감는다)
     const lid = Math.max(p.blink * 1.1, squint, p.sigh * 0.35, slow)
     // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는데, 끝까지 감으면 둘레에 옅은 타원이 보여서 반쯤까지만 감는다 (깜빡임도)
