@@ -7,6 +7,7 @@ import { engine as realEngine } from './maker/engine'
 import { myPets, newPetId, type Pt, type Taps } from './myPets'
 import { josa, type Species } from './pets'
 import { renderAdoptLinks } from './adoptLinks'
+import { showRewardedAd } from './rewardedAd'
 
 /**
  * '우리 아이 만들기': 사진 → 배경 지우기(탭 한 번 + 붓) → 얼굴 점 찍기 → 완성.
@@ -459,7 +460,10 @@ $('mk-face-next').onclick = async () => {
   const name = nameInput.value.trim()
   const sp = species()
   const taps = state.taps as Taps
-  const result = await engine.rigFromTaps(state.img!, state.mask!, taps, sp)
+  // 무료 버전을 만드는 동안 (AI를 골랐으면) 보상형 광고를 보여 준다. 끝까지 봐야 AI 신청이 된다
+  const making = engine.rigFromTaps(state.img!, state.mask!, taps, sp)
+  const wantAi = mode() === 'ai' && (await showRewardedAd())
+  const result = await making
   const id = newPetId()
   await myPets.put({
     id,
@@ -470,11 +474,11 @@ $('mk-face-next').onclick = async () => {
     taps,
     rig: result.photo ?? undefined,
     files: result.files,
-    ...(mode() === 'ai' && {
+    ...(wantAi && {
       ai: { status: 'waiting' as const, requestedAt: new Date().toISOString(), refs: refs.map((r) => r.blob), canPaw: sp === 'dog' && $<HTMLInputElement>('mk-paw').checked },
     }),
   })
-  $('mk-ai-status').hidden = mode() !== 'ai'
+  $('mk-ai-status').hidden = !wantAi
 
   $<HTMLImageElement>('mk-result-img').src = (state.preview ?? document.createElement('canvas')).toDataURL('image/png')
   $('mk-result-title').textContent = `${josa(name, '이', '가')} 준비됐어요!`

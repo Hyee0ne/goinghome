@@ -648,3 +648,60 @@
 #mk-ai-extra .check[hidden] {
   display: none;
 }
+
+/* ── 보상형 광고 (가안) ── */
+.ad-dialog {
+  width: min(420px, calc(100% - 32px));
+  padding: 18px;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.ad-dialog::backdrop {
+  background: rgba(40, 28, 18, 0.6);
+}
+
+.ad-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  word-break: keep-all;
+}
+
+.ad-timer {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ad-slot {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 9 / 12;
+  max-height: 52dvh;
+  width: 100%;
+  border-radius: 14px;
+  background: repeating-linear-gradient(45deg, #f4ebe1 0 14px, #efe3d6 14px 28px);
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.ad-foot {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ad-foot .btn {
+  flex: 1;
+  padding: 12px 10px;
+  font-size: 15px;
+}
