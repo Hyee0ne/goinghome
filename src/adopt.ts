@@ -34,6 +34,8 @@ const sidoSel = $<HTMLSelectElement>('ad-sido')
 let all: Animal[] = []
 /** 실사화해서 쓰다듬을 수 있는 아이 (public/data/shelter-live.json) */
 let pettable = new Set<string>()
+/** 쓰다듬을 수 있는 아이의 가장 정면인 사진 (카드 사진으로 쓴다) */
+const frontal = new Map<string, string>()
 let list: Animal[] = []
 let shown = 0
 
@@ -53,7 +55,7 @@ function dday(end: string) {
 function card(a: Animal) {
   const li = document.createElement('li')
   const b = Object.assign(document.createElement('button'), { type: 'button', className: 'ad-card' })
-  const img = Object.assign(new Image(), { src: a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
+  const img = Object.assign(new Image(), { src: frontal.get(a.id) ?? a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
   img.referrerPolicy = 'no-referrer'
   const d = dday(a.end)
   const badge = Object.assign(document.createElement('span'), {
@@ -150,7 +152,10 @@ detail.addEventListener('click', (e) => {
 const shelterLive = fetch(`${import.meta.env.BASE_URL}data/shelter-live.json`)
   .then((r) => (r.ok ? r.json() : { pets: [] }))
   .catch(() => ({ pets: [] }))
-  .then((d: { pets: { id: string }[] }) => (pettable = new Set(d.pets.map((p) => p.id))))
+  .then((d: { pets: { id: string; photo?: string }[] }) => {
+    pettable = new Set(d.pets.map((p) => p.id))
+    for (const p of d.pets) if (p.photo) frontal.set(p.id, `${import.meta.env.BASE_URL}${p.photo}`)
+  })
 
 fetch(`${import.meta.env.BASE_URL}data/animals.json`)
   .then((r) => (r.ok ? r.json() : { animals: [], updated: null }))
