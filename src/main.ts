@@ -264,11 +264,18 @@ function renderHelp() {
           ],
         ] as [string, string][])
       : []),
-    ['🫳', '손끝 점이 주황색이 되면 몸에 닿은 거예요. 살살 쓰다듬어 주세요.'],
-    ['💛', `${ZONE_LABEL[p.favorite]}${p.favorite === 'chin' ? '을 긁어' : '를 쓰다듬어'} 주면 가장 좋아해요.`],
-    ['⚡', '너무 빨리 움직이면 깜짝 놀라요. 양손으로 쓰다듬어도 돼요.'],
+    ['🫳', '손끝 점이 주황색이 되면 몸에 닿은 거예요. 살살 쓰다듬으면 털이 손길을 따라 누워요.'],
   ]
-  if (cat) steps.push(['😌', '고양이는 기분이 좋으면 눈을 지그시 감아요.'])
+  // 사진 한 장으로 만든 아이(보호소·우리 아이)는 얼굴을 크게 움직이지 않는 대신 코·눈 반응이 있다
+  const photoOnly = !p.photo?.expressions
+  if (photoOnly) {
+    steps.push(['👃', '코앞에 손바닥을 가만히 대면 킁킁 냄새를 맡아요.'])
+    steps.push(['👀', '손을 천천히 움직이면 눈으로 따라와요.'])
+  } else {
+    steps.push(['💛', `${ZONE_LABEL[p.favorite]}${p.favorite === 'chin' ? '을 긁어' : '를 쓰다듬어'} 주면 가장 좋아해요.`])
+    if (cat) steps.push(['😌', '고양이는 기분이 좋으면 눈을 지그시 감아요.'])
+  }
+  steps.push(['⚡', '너무 빨리 움직이면 깜짝 놀라요. 양손으로 쓰다듬어도 돼요.'])
   $('help-steps').replaceChildren(
     ...steps.map(([icon, text]) => {
       const li = document.createElement('li')
