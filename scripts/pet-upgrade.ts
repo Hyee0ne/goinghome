@@ -63,7 +63,7 @@ writeFileSync(join(SRC, 'frame.json'), JSON.stringify({ box: { x0: 0, y0: 0, x1:
 writeFileSync(join(PUB, 'face.json'), JSON.stringify({ offsetX: 0, offsetY: 0, ...info }))
 
 const t0 = Date.now()
-const r = spawnSync('node', [join(ROOT, 'scripts', 'pet-add.ts'), '--id', id, '--from', 'expressions', '--until', 'assets', ...(args.refs ? ['--refs', args.refs] : []), ...(args.regen ? ['--regen', 'true'] : [])], {
+const r = spawnSync('node', [join(ROOT, 'scripts', 'pet-add.ts'), '--id', id, '--from', 'expressions', '--until', 'assets', ...(args.refs ? ['--refs', args.refs] : []), ...(args.regen ? ['--regen', 'true'] : []), ...(args.jobs ? ['--jobs', args.jobs] : [])], {
   cwd: ROOT,
   stdio: 'inherit',
 })

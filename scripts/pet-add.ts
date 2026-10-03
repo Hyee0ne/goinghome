@@ -381,8 +381,11 @@ if (run('expressions')) {
       : prompt
   const refJob = refs.length ? { refs: refs.join('|') } : {}
   // 이미 만든 표정은 다시 만들지 않는다 (기준점만 고쳤을 때). 새로 만들려면 --regen
+  // --jobs mid,final: 이 편집만 돌린다 (검증 등으로 일부만 다시 만들 때 비용을 아낀다)
+  const only = args.jobs ? String(args.jobs).split(',') : null
+  const allowed = (name: string) => !only || only.includes(name)
   const jobs = (['mid', 'final'] as const)
-    .filter((k) => args.regen === 'true' || !existsSync(out[k]))
+    .filter((k) => allowed(k) && (args.regen === 'true' || !existsSync(out[k])))
     .map((k) => ({ id: k, mode: 'edit', edit_target: faceSq, prompt: withRefs(P[k]), background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: out[k], ...refJob }))
   const failed = jobs.length ? await gptImage(jobs) : []
   if (!jobs.length) console.log('   이미 있는 표정 사진을 씁니다 (새로 만들려면 --regen)')
@@ -412,7 +415,7 @@ if (run('expressions')) {
   if (cat) {
     const eatOut = { pantMid: join(SRC, 'expr-eatmid-square.png'), pant: join(SRC, 'expr-eat-square.png') }
     const eatJobs = (['pantMid', 'pant'] as const)
-      .filter((k) => args.regen === 'true' || !existsSync(eatOut[k]))
+      .filter((k) => allowed(k === 'pant' ? 'eat' : 'eatMid') && (args.regen === 'true' || !existsSync(eatOut[k])))
       .map((k) => ({ id: `eat-${k}`, mode: 'edit', edit_target: faceSq, prompt: withRefs(k === 'pant' ? P.eat : P.eatMid), background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: eatOut[k], ...refJob }))
     const eatFailed = eatJobs.length ? await gptImage(eatJobs) : []
     if (eatFailed.length) warn(`간식 먹는 입 사진을 만들지 못했어요: ${eatFailed.join(', ')}. 입은 턱만 조금 움직입니다`)
