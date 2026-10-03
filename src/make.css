@@ -459,3 +459,33 @@
 .mk-adopt[hidden] {
   display: none;
 }
+
+/* 실행 취소 (캔버스 왼쪽 위) */
+.mk-undo {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px 7px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 10px rgba(80, 50, 20, 0.15);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mk-undo span {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.mk-undo:disabled {
+  opacity: 0.4;
+}
+
+.mk-undo[hidden] {
+  display: none;
+}

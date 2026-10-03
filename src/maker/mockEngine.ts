@@ -48,6 +48,13 @@ export const mockEngine: MakerEngine = {
     g.restore()
   },
 
+  cloneMask(m: MaskHandle) {
+    const src = m as MockMask
+    const c = new MockMask(src.width, src.height)
+    c.canvas.getContext('2d')!.drawImage(src.canvas, 0, 0)
+    return c
+  },
+
   maskPreview(img: ImageBitmap, m: MaskHandle) {
     const c = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height })
     const g = c.getContext('2d')!

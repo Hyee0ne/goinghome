@@ -67,6 +67,9 @@ fileInput.addEventListener('change', async () => {
     state.mask = null
     state.preview = null
     state.taps = {}
+    resetCutHistory()
+    faceHistory.length = 0
+    faceUndoBtn.disabled = true
     const prev = $<HTMLImageElement>('mk-photo-preview')
     prev.src = c.toDataURL('image/jpeg', 0.8)
     prev.hidden = false
@@ -157,8 +160,34 @@ cutView.draw = () => {
   v.image(state.preview)
 }
 
+// 실행 취소: 다시 톡·붓질 직전의 마스크 사본 (엔진이 cloneMask를 줄 때만). 메모리 때문에 8단계까지
+const UNDO_MAX = 8
+const cutHistory: (MaskHandle | null)[] = []
+const cutUndoBtn = $<HTMLButtonElement>('mk-cut-undo')
+cutUndoBtn.hidden = !engine.cloneMask
+function pushCut() {
+  if (!engine.cloneMask) return
+  cutHistory.push(state.mask && engine.cloneMask(state.mask))
+  if (cutHistory.length > UNDO_MAX) cutHistory.shift()
+  cutUndoBtn.disabled = false
+}
+cutUndoBtn.onclick = () => {
+  if (!cutHistory.length) return
+  state.mask = cutHistory.pop()!
+  state.preview = state.mask && engine.maskPreview(state.img!, state.mask)
+  cutUndoBtn.disabled = cutHistory.length === 0
+  $<HTMLButtonElement>('mk-cut-next').disabled = !state.mask
+  $('mk-tools').hidden = !state.mask
+  cutView.draw()
+}
+function resetCutHistory() {
+  cutHistory.length = 0
+  cutUndoBtn.disabled = true
+}
+
 let segmentedOnce = false
 async function segmentAt(p: Pt) {
+  pushCut()
   $('mk-busy').hidden = false
   // 첫 탭은 모델을 받고 준비하느라 오래 걸릴 수 있다 (다음부터는 1초 안쪽)
   $('mk-busy-text').textContent = segmentedOnce || segmenterReady ? '' : '배경 지우기를 준비하고 있어요…'
@@ -182,6 +211,7 @@ cutView.canvas.addEventListener('pointerdown', (e) => {
   const p = cutView.toImg(e)
   if (tool() === 'tap' || !state.mask) return void segmentAt(p)
   cutView.canvas.setPointerCapture(e.pointerId)
+  pushCut()
   stroke = [p]
   applyStroke()
 })
@@ -304,6 +334,22 @@ function showLoupe(e: PointerEvent, p: Pt) {
   g.stroke()
 }
 
+const faceHistory: { taps: Partial<Taps>; skipped: boolean }[] = []
+const faceUndoBtn = $<HTMLButtonElement>('mk-face-undo')
+function pushFace() {
+  faceHistory.push({ taps: { ...state.taps }, skipped: skippedEars })
+  if (faceHistory.length > 30) faceHistory.shift()
+  faceUndoBtn.disabled = false
+}
+faceUndoBtn.onclick = () => {
+  const prev = faceHistory.pop()
+  if (!prev) return
+  state.taps = prev.taps
+  skippedEars = prev.skipped
+  faceUndoBtn.disabled = faceHistory.length === 0
+  renderPoints()
+}
+
 let drag: { key: Key } | null = null
 faceView.canvas.addEventListener('pointerdown', (e) => {
   if (!state.img) return
@@ -316,6 +362,7 @@ faceView.canvas.addEventListener('pointerdown', (e) => {
   const key = near?.key ?? current()?.key
   if (!key) return
   faceView.canvas.setPointerCapture(e.pointerId)
+  pushFace()
   drag = { key }
   state.taps[key] = p
   showLoupe(e, p)
@@ -336,6 +383,7 @@ const endDrag = () => {
 faceView.canvas.addEventListener('pointerup', endDrag)
 faceView.canvas.addEventListener('pointercancel', endDrag)
 $('mk-skip').onclick = () => {
+  pushFace()
   skippedEars = true
   renderPoints()
 }
@@ -397,6 +445,9 @@ $('mk-again').onclick = () => {
   state.mask = null
   state.taps = {}
   skippedEars = false
+  resetCutHistory()
+  faceHistory.length = 0
+  faceUndoBtn.disabled = true
   $<HTMLImageElement>('mk-photo-preview').hidden = true
   $('mk-pick-label').innerHTML = '<b>＋</b>사진 고르기'
   $('mk-tools').hidden = true

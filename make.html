@@ -60,6 +60,7 @@
         <p id="mk-cut-hint" class="mk-hint">아이 몸을 <b>한 번 톡</b> 눌러 주세요</p>
         <div class="mk-canvas-wrap">
           <canvas id="mk-cut-canvas" class="mk-canvas"></canvas>
+          <button id="mk-cut-undo" class="mk-undo" type="button" disabled><span aria-hidden="true">↶</span>실행 취소</button>
           <div id="mk-busy" class="mk-busy" hidden><span></span><p id="mk-busy-text"></p></div>
         </div>
         <div id="mk-tools" class="mk-tools" hidden>
@@ -81,6 +82,7 @@
         <ul id="mk-points" class="mk-points"></ul>
         <div class="mk-canvas-wrap">
           <canvas id="mk-face-canvas" class="mk-canvas"></canvas>
+          <button id="mk-face-undo" class="mk-undo" type="button" disabled><span aria-hidden="true">↶</span>되돌리기</button>
           <canvas id="mk-loupe" class="mk-loupe" width="240" height="240" hidden></canvas>
         </div>
         <div class="mk-row">
