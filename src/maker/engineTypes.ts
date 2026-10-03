@@ -33,6 +33,8 @@ export interface MakerEngine {
   segment(img: ImageBitmap, tap: Pt): Promise<MaskHandle>
   /** 지우개·복원 붓 */
   editMask(m: MaskHandle, stroke: MaskStroke): void
+  /** 실행 취소용 사본 (붓질·다시 톡 전에 떠 둔다). 엔진이 아직 없으면 실행 취소 버튼을 숨긴다 */
+  cloneMask?(m: MaskHandle): MaskHandle
   /** 배경을 지운 사진 미리보기 (원본 크기) */
   maskPreview(img: ImageBitmap, m: MaskHandle): HTMLCanvasElement
   /** 탭한 점으로 앱용 리그와 파일을 만든다 */

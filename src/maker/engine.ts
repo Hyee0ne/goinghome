@@ -170,6 +170,12 @@ export const engine: MakerEngine = {
     })
   },
 
+  /** 실행 취소용 사본 (작업 크기 Float32, 1024×1024면 약 4MB) */
+  cloneMask(handle) {
+    const m = handle as Mask
+    return new Mask(m.width, m.height, m.w, m.h, m.data.slice())
+  },
+
   maskPreview(img, handle) {
     const m = handle as Mask
     const c = canvas(img.width, img.height)
