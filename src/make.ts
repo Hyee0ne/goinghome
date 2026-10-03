@@ -1,5 +1,5 @@
 import './style.css'
-import './register.css'
+import './form.css'
 import './make.css'
 import type { MakerEngine, MaskHandle } from './maker/engineTypes'
 import { mockEngine } from './maker/mockEngine'

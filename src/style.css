@@ -222,22 +222,6 @@ button {
   white-space: nowrap;
 }
 
-/* 보호소용 등록 화면으로 가는 링크 (한켠에 작게) */
-.shelter-link {
-  flex: none;
-  padding: 7px 12px;
-  border-radius: 999px;
-  color: var(--ink-soft);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.shelter-link:hover {
-  color: var(--ink);
-}
-
 .help-toggle span:first-child {
   display: grid;
   place-items: center;
@@ -349,10 +333,6 @@ button {
     padding: 7px;
   }
 
-  .shelter-link {
-    padding: 7px 4px;
-    font-size: 13px;
-  }
 
   .help-box {
     top: 10px;
@@ -1000,27 +980,6 @@ button {
   text-align: center;
 }
 
-/* 휴대폰 상단 바는 '우리 아이' 탭이 보이게 보호소 등록 링크를 도움말 안으로 옮긴다 */
-.help-shelter {
-  display: none;
-  margin: 12px 0 0;
-  font-size: 13px;
-  text-align: center;
-}
-
-.help-shelter a {
-  color: var(--ink-soft);
-}
-
-@media (max-width: 720px) {
-  .topbar .shelter-link {
-    display: none;
-  }
-
-  .help-shelter {
-    display: block;
-  }
-}
 
 .intro-adopt {
   margin-top: 20px;

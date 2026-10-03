@@ -1,5 +1,5 @@
 import './style.css'
-import './register.css'
+import './form.css'
 import './adopt.css'
 
 /**
