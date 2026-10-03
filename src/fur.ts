@@ -950,6 +950,8 @@ export class FurRenderer {
   private chewW = 0
   /** 그린 눈꺼풀이 감긴 정도 (눈마다, 표정 사진이 없는 아이) */
   private drawnLid = [0, 0]
+  /** 그린 눈꺼풀이 다 감은 채로 있은 시간 (눈마다) */
+  private drawnFullFor = [0, 0]
   private earsBack = 0
   private panting = false
   private wary = false
@@ -1289,16 +1291,24 @@ export class FurRenderer {
     if (this.hasEyesPhoto) {
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(lid, m.eyeTouchL)), Math.min(1, Math.max(lid, m.eyeTouchR)))
     } else {
-      // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는다. 그린 눈꺼풀은 천천히 내려오는 중간 모습이 어색해서,
-      // 감을 때는 짧게(감기 0.08초·뜨기 0.15초) 끝까지 감고 뜬다. 고양이의 기분 좋은 눈은 감지 않고 반쯤 게슴츠레 그대로
+      // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는다. 그린 눈꺼풀은 천천히 내려오는 중간 모습과
+      // 다 감은 채로 오래 있는 모습이 티가 나서:
+      //  - 천천히 깜빡임·눈가 만지기는 짧게(0.08초) 끝까지 감고, 다 감은 채로는 DRAWN_HOLD_S까지만 있다가 반쯤으로 풀린다
+      //  - 기분 좋은 눈(쓰다듬는 동안)은 개·고양이 모두 반쯤 게슴츠레
       const snap = (v: number) => (v > DRAWN_SNAP ? 1 : 0)
-      const held = (touch: number) =>
-        // 개의 지그시 감기는 쓰다듬는 동안만 (손을 떼면 바로 뜬다. 오래 감고 있으면 그린 눈꺼풀이 티가 난다)
-        Math.max(p.species === 'cat' ? Math.min(squint, DRAWN_CAT_SQUINT) : p.petting > 0.3 ? snap(squint) : 0, snap(slow), snap(touch), p.sigh * 0.35)
+      const squintHeld = p.species === 'cat' ? Math.min(squint, DRAWN_RELAX) : p.petting > 0.3 && squint > DRAWN_SNAP ? DRAWN_RELAX : 0
+      const held = (k: 0 | 1, touch: number) => {
+        let full = 0
+        if (Math.max(snap(slow), snap(touch))) {
+          this.drawnFullFor[k] += dt
+          full = this.drawnFullFor[k] < DRAWN_CLOSE_S + DRAWN_HOLD_S ? 1 : DRAWN_RELAX
+        } else this.drawnFullFor[k] = 0
+        return Math.max(squintHeld, full, p.sigh * 0.35)
+      }
       const step = (cur: number, target: number) =>
         target > cur ? Math.min(target, cur + dt / DRAWN_CLOSE_S) : Math.max(target, cur - dt / DRAWN_OPEN_S)
-      this.drawnLid[0] = step(this.drawnLid[0], held(m.eyeTouchL))
-      this.drawnLid[1] = step(this.drawnLid[1], held(m.eyeTouchR))
+      this.drawnLid[0] = step(this.drawnLid[0], held(0, m.eyeTouchL))
+      this.drawnLid[1] = step(this.drawnLid[1], held(1, m.eyeTouchR))
       // 깜빡임은 원래 빠르다 (감기 0.07초·뜨기 0.13초, pet.ts)
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[0])), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[1])))
     }
@@ -1453,7 +1463,9 @@ class PawLayer {
 const DRAWN_CLOSE_S = 0.08
 const DRAWN_OPEN_S = 0.15
 const DRAWN_SNAP = 0.3
-const DRAWN_CAT_SQUINT = 0.55
+/** 다 감은 채로 있는 최대 시간(초)과, 그 뒤·기분 좋을 때 머무는 반쯤 감은 정도 */
+const DRAWN_HOLD_S = 0.3
+const DRAWN_RELAX = 0.55
 
 /** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
 const CHOMP_OPEN = 5
