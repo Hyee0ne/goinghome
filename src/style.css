@@ -1133,3 +1133,56 @@ button {
 .adopt-links a.adopt-live:hover {
   background: #f57a2b;
 }
+
+/* ── 가족을 기다리는 아이들로 가는 길 ── */
+.adopt-link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sheet-more {
+  display: block;
+  margin-top: 10px;
+  text-decoration: none;
+  text-align: center;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.intro-adopt-link {
+  display: block;
+  margin-top: 4px;
+  padding: 6px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .adopt-link {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+}
+
+/* 휴대폰: 탭 여백을 줄여 '우리 아이' 탭까지 한눈에 */
+@media (max-width: 720px) {
+  .pet-tab {
+    padding: 7px 10px;
+  }
+
+  .pet-tabs {
+    gap: 4px;
+  }
+}
