@@ -31,3 +31,5 @@ generated-images/
 
 # 빌드할 때 받아 오는 유기동물 공고 데이터 (scripts/fetch-animals.ts)
 public/data/
+# 실사화한 공고 아이들 (shelter-data 브랜치에서 배포 때 받는다)
+public/shelter/

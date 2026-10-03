@@ -12,6 +12,10 @@ import { dirname, join } from 'node:path'
 
 const OUT = join(import.meta.dirname, '..', 'public', 'data', 'animals.json')
 const CANDIDATES = join(import.meta.dirname, '..', 'public', 'data', 'candidates.json')
+/** 실사화한 공고 아이들 (기술 쪽 shelter:make가 shelter-data 브랜치에 쓰고, 배포 때 public/shelter/로 받는다) */
+const SHELTER_MANIFEST = join(import.meta.dirname, '..', 'public', 'shelter', 'manifest.json')
+/** 앱이 읽는 작은 파일: 실사화한 아이 중 아직 공고 중인 아이 + 프로필 */
+const SHELTER_LIVE = join(import.meta.dirname, '..', 'public', 'data', 'shelter-live.json')
 /** 실사화 후보 수 */
 const CANDIDATE_COUNT = 10
 /** 한 시도에서 고르는 최대 수 (지역을 고르게) */
@@ -177,6 +181,25 @@ function pickCandidates(animals: Animal[]) {
     .slice(0, CANDIDATE_COUNT)
 }
 
+// ───────────────────────── 실사화한 공고 아이 → 앱용 ─────────────────────────
+
+/** 실사화한 아이 중 아직 공고 중인 아이만 프로필을 붙여 쓴다. 공고가 끝나면 여기서 빠져 앱에서도 사라진다 */
+function writeShelterLive(animals: Animal[]) {
+  let pets: { id: string; sp: string; rig: unknown; photo?: string }[] = []
+  try {
+    if (existsSync(SHELTER_MANIFEST)) pets = JSON.parse(readFileSync(SHELTER_MANIFEST, 'utf8')).pets ?? []
+  } catch (e) {
+    console.warn('shelter/manifest.json을 읽지 못했어요', e)
+  }
+  const byId = new Map(animals.map((a) => [a.id, a]))
+  const live = pets.flatMap((p) => {
+    const a = byId.get(p.id)
+    return a ? [{ ...p, profile: a }] : []
+  })
+  writeFileSync(SHELTER_LIVE, JSON.stringify({ updated: new Date().toISOString(), pets: live }))
+  if (pets.length) console.log(`실사화한 공고 아이 ${pets.length}마리 중 공고 중 ${live.length}마리`)
+}
+
 async function page(key: string, no: number) {
   const q = new URLSearchParams({ serviceKey: key, _type: 'json', state: 'notice', numOfRows: String(PAGE), pageNo: String(no) })
   const res = await fetch(`${API}?${q}`)
@@ -204,6 +227,7 @@ async function main() {
   if (!animals.length) throw new Error('받은 공고가 0마리예요')
   const updated = new Date().toISOString()
   writeFileSync(OUT, JSON.stringify({ updated, animals }))
+  writeShelterLive(animals)
   const dogs = pickCandidates(animals.filter((a) => a.sp === 'dog'))
   const cats = pickCandidates(animals.filter((a) => a.sp === 'cat'))
   writeFileSync(CANDIDATES, JSON.stringify({ updated, dogs, cats }, null, 1))
@@ -223,6 +247,7 @@ async function fallback() {
       const d = res.ok ? await res.json() : null
       if (d?.animals?.length) {
         writeFileSync(OUT, JSON.stringify(d))
+        writeShelterLive(d.animals)
         console.warn(`배포된 목록(${d.animals.length}마리, ${d.updated} 기준)을 그대로 씁니다`)
         return
       }
@@ -231,6 +256,7 @@ async function fallback() {
     }
   }
   if (!existsSync(OUT)) writeFileSync(OUT, JSON.stringify({ updated: null, animals: [] }))
+  writeShelterLive(JSON.parse(readFileSync(OUT, 'utf8')).animals ?? [])
 }
 
 main().catch(async (e) => {

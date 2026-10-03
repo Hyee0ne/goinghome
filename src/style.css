@@ -1145,3 +1145,91 @@ button {
     gap: 4px;
   }
 }
+
+/* 공고 아이: 전화 문의는 바깥 링크 화살표 대신 전화 표시 */
+.adopt.tel::after {
+  content: none;
+}
+
+.adopt.tel::before {
+  content: '☎︎ ';
+}
+
+/* ── 보호소 아이 고르기 ── */
+.shelter-tab {
+  border-color: var(--accent);
+}
+
+.sp-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sp-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.sp-sheet .sheet-close {
+  position: static;
+  flex: none;
+}
+
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sp-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--bg);
+  overflow: hidden;
+  text-align: left;
+}
+
+.sp-card.active {
+  border-color: var(--accent);
+}
+
+.sp-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+
+.sp-text {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px 8px;
+  line-height: 1.3;
+}
+
+.sp-text b {
+  font-size: 13px;
+}
+
+.sp-text small {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.sp-dday {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}

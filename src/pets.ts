@@ -40,6 +40,12 @@ export interface Adoption {
   url?: string
   /** 가상의 아이라 실제 공고가 없다 */
   sample?: boolean
+  /** 보호소 전화 (공고 아이: 전화로 입양 문의) */
+  tel?: string
+  /** 공고 종료일 YYYYMMDD */
+  noticeEnd?: string
+  /** 보호소 공고 사진으로 실사화한 모습 (출처를 밝힌다) */
+  fromShelterPhoto?: boolean
 }
 
 export const PAWINHAND_URL = 'https://pawinhand.kr'

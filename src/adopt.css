@@ -187,3 +187,28 @@
 #ad-d-call::before {
   content: '☎︎ ';
 }
+
+.ad-pettable {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ad-pet {
+  display: block;
+  margin-bottom: 8px;
+  border-color: var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  text-align: center;
+}
+
+.ad-pet[hidden] {
+  display: none;
+}

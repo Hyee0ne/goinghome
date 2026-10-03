@@ -17,6 +17,21 @@
         </button>
       </header>
 
+      <!-- 보호소 아이 고르기 (실사화한 공고 아이들) -->
+      <dialog id="shelter-picker" class="info-sheet sp-sheet" aria-labelledby="sp-title">
+        <div class="sheet-body">
+          <header class="sp-head">
+            <div>
+              <h2 id="sp-title">보호소에서 가족을 기다리는 아이들</h2>
+              <p class="sheet-meta">공고 사진으로 만든 모습이에요. 골라서 쓰다듬어 주세요.</p>
+            </div>
+            <button id="shelter-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
+          </header>
+          <div id="shelter-grid" class="sp-grid"></div>
+          <a class="btn sheet-more" href="adopt.html">공고 중인 아이 모두 보기 ›</a>
+        </div>
+      </dialog>
+
       <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
       <dialog id="info" class="info-sheet" aria-labelledby="info-name">
         <div class="sheet-body">

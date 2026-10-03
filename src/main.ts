@@ -7,6 +7,7 @@ import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
 import { renderAdoptLinks } from './adoptLinks'
+import { isShelter, loadShelterPets } from './shelterPets'
 import { setClipRecorder, sharePet, toast } from './share'
 import { aiCredits } from './credits'
 import { ClipRecorder, clipSupport } from './recorder'
@@ -128,7 +129,10 @@ function landmarkToStage(lm: NormalizedLandmark) {
 
 function renderTabs() {
   tabs.innerHTML = ''
+  // 공고 아이들은 한 탭으로 묶고 고르기 창에서 고른다 (많으면 탭 줄이 넘친다)
+  const shelter = PETS.filter(isShelter)
   for (const p of PETS) {
+    if (isShelter(p)) continue
     const b = document.createElement('button')
     b.type = 'button'
     b.className = 'pet-tab' + (p.id === pet.p.id ? ' active' : '')
@@ -137,12 +141,56 @@ function renderTabs() {
     b.onclick = () => selectPet(p)
     tabs.append(b)
   }
+  if (shelter.length) {
+    const cur = isShelter(pet.p)
+    const b = Object.assign(document.createElement('button'), {
+      type: 'button',
+      className: 'pet-tab shelter-tab' + (cur ? ' active' : ''),
+      textContent: cur ? `🏠 ${pet.p.name}` : `🏠 보호소 아이 ${shelter.length}`,
+    })
+    b.setAttribute('aria-haspopup', 'dialog')
+    b.onclick = () => openShelterPicker(shelter)
+    tabs.append(b)
+  }
   // 우리 아이 만들기 (바이럴 입구)
   const make = Object.assign(document.createElement('a'), { href: 'make.html', className: 'pet-tab make-tab', textContent: '＋ 우리 아이' })
   tabs.append(make)
+  // 탭이 많아 넘치면 고른 탭이 보이게 가로로 스크롤한다
+  tabs.querySelector('.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
   renderBanner()
   renderHelp()
 }
+
+// ───────────────────────── 보호소 아이 고르기 ─────────────────────────
+
+const shelterPicker = $<HTMLDialogElement>('shelter-picker')
+function openShelterPicker(list: PetProfile[]) {
+  $('shelter-grid').replaceChildren(
+    ...list.map((p) => {
+      const b = Object.assign(document.createElement('button'), { type: 'button', className: 'sp-card' + (p.id === pet.p.id ? ' active' : '') })
+      const img = Object.assign(new Image(), { src: p.photo?.src ?? '', alt: '', decoding: 'async', loading: 'lazy' })
+      const end = p.adoption?.noticeEnd
+      const left = end ? Math.round((new Date(+end.slice(0, 4), +end.slice(4, 6) - 1, +end.slice(6, 8)).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000) : null
+      const text = Object.assign(document.createElement('span'), { className: 'sp-text' })
+      text.append(
+        Object.assign(document.createElement('b'), { textContent: p.name }),
+        Object.assign(document.createElement('small'), { textContent: [p.age, p.adoption?.region.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · ') }),
+      )
+      b.append(img, text)
+      if (left !== null) b.append(Object.assign(document.createElement('i'), { className: 'sp-dday', textContent: left <= 0 ? '오늘 마감' : `D-${left}` }))
+      b.onclick = () => {
+        shelterPicker.close()
+        selectPet(p)
+      }
+      return b
+    }),
+  )
+  shelterPicker.showModal()
+}
+$('shelter-close').onclick = () => shelterPicker.close()
+shelterPicker.addEventListener('click', (e) => {
+  if (e.target === shelterPicker) shelterPicker.close()
+})
 
 // ───────────────────────── 간식 접시 ─────────────────────────
 
@@ -368,17 +416,30 @@ function fillInfo(p: PetProfile) {
   $('info-sample').hidden = !a?.sample
   $('info-shelter').replaceChildren(
     ...(a
-      ? ([['보호소', a.shelter], ['지역', a.region], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
+      ? ([['보호소', a.shelter], ['지역', a.region], ['전화', a.tel], ['공고 마감', a.noticeEnd && `${a.noticeEnd.slice(4, 6)}월 ${a.noticeEnd.slice(6, 8)}일`], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
           v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
         )
       : []),
   )
 
   const adopt = $<HTMLAnchorElement>('info-adopt')
-  adopt.href = a?.url ?? PAWINHAND_URL
-  $('info-adopt-note').textContent = a?.url
-    ? `포인핸드에서 ${josa(p.name, '이의', '의')} 공고를 열어요.`
-    : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
+  adopt.classList.toggle('tel', !!a?.tel)
+  if (a?.tel) {
+    // 공고 아이: 보호소에 바로 전화
+    adopt.href = `tel:${a.tel.replace(/[^\d+]/g, '')}`
+    adopt.removeAttribute('target')
+    adopt.textContent = `${a.shelter}에 전화로 입양 문의`
+    $('info-adopt-note').textContent = a.fromShelterPhoto
+      ? '보호소 공고 사진으로 만든 모습이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
+      : ''
+  } else {
+    adopt.href = a?.url ?? PAWINHAND_URL
+    adopt.target = '_blank'
+    adopt.textContent = '포인핸드에서 입양 문의하기'
+    $('info-adopt-note').textContent = a?.url
+      ? `포인핸드에서 ${josa(p.name, '이의', '의')} 공고를 열어요.`
+      : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
+  }
 }
 
 $('info-open').onclick = () => {
@@ -870,6 +931,14 @@ renderTabs()
 loadPhoto(pet.p)
 raf = requestAnimationFrame(frame)
 loadMyPets()
+// 실사화한 공고 아이들 (공고가 끝난 아이는 파일에서 이미 빠져 있다)
+loadShelterPets().then((list) => {
+  for (const p of list) if (!PETS.some((q) => q.id === p.id)) PETS.push(p)
+  renderTabs()
+  const want = new URLSearchParams(location.search).get('pet')
+  const target = want && PETS.find((p) => p.id === want)
+  if (target && target !== pet.p) selectPet(target)
+})
 
 /**
  * 이 기기에 저장된 '우리 아이'(make.html에서 만든)를 탭 목록에 넣고, ?pet=mine-… 로 들어왔으면 바로 연다.

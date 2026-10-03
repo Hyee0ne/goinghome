@@ -32,6 +32,8 @@ const more = $<HTMLButtonElement>('ad-more')
 const sidoSel = $<HTMLSelectElement>('ad-sido')
 
 let all: Animal[] = []
+/** 실사화해서 쓰다듬을 수 있는 아이 (public/data/shelter-live.json) */
+let pettable = new Set<string>()
 let list: Animal[] = []
 let shown = 0
 
@@ -66,6 +68,7 @@ function card(a: Animal) {
     Object.assign(document.createElement('small'), { textContent: a.org }),
   )
   b.append(img, badge, text)
+  if (pettable.has(a.id)) b.append(Object.assign(document.createElement('span'), { className: 'ad-pettable', textContent: '✋ 쓰다듬기' }))
   b.onclick = () => openDetail(a)
   li.append(b)
   return li
@@ -127,6 +130,9 @@ function openDetail(a: Animal) {
       v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
     ),
   )
+  const petLink = $<HTMLAnchorElement>('ad-d-pet')
+  petLink.hidden = !pettable.has(a.id)
+  petLink.href = `./?pet=shelter-${a.id}`
   const call = $<HTMLAnchorElement>('ad-d-call')
   call.hidden = !a.care.tel
   call.href = `tel:${a.care.tel.replace(/[^\d+]/g, '')}`
@@ -141,11 +147,18 @@ detail.addEventListener('click', (e) => {
 
 // ───────────────────────── 시작 ─────────────────────────
 
+const shelterLive = fetch(`${import.meta.env.BASE_URL}data/shelter-live.json`)
+  .then((r) => (r.ok ? r.json() : { pets: [] }))
+  .catch(() => ({ pets: [] }))
+  .then((d: { pets: { id: string }[] }) => (pettable = new Set(d.pets.map((p) => p.id))))
+
 fetch(`${import.meta.env.BASE_URL}data/animals.json`)
   .then((r) => (r.ok ? r.json() : { animals: [], updated: null }))
   .catch(() => ({ animals: [], updated: null }))
-  .then((d: { animals: Animal[]; updated: string | null }) => {
-    all = d.animals
+  .then(async (d: { animals: Animal[]; updated: string | null }) => {
+    await shelterLive
+    // 쓰다듬을 수 있는 아이를 맨 앞에
+    all = [...d.animals].sort((x, y) => Number(pettable.has(y.id)) - Number(pettable.has(x.id)))
     const sidos = [...new Set(all.map((a) => a.sido).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))
     sidoSel.append(...sidos.map((s) => Object.assign(document.createElement('option'), { value: s, textContent: s })))
     if (d.updated) $('ad-updated').textContent = `${new Date(d.updated).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })} 기준`
