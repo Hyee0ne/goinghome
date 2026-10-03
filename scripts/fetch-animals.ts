@@ -11,6 +11,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 const OUT = join(import.meta.dirname, '..', 'public', 'data', 'animals.json')
+const CANDIDATES = join(import.meta.dirname, '..', 'public', 'data', 'candidates.json')
+/** 실사화 후보 수 (사진 판정을 거쳐 시범 10마리를 고른다) */
+const CANDIDATE_COUNT = 40
+/** 한 시도에서 고르는 최대 수 (지역을 고르게) */
+const PER_SIDO = 4
 const API = 'https://apis.data.go.kr/1543061/abandonmentPublicService_v2/abandonmentPublic_v2'
 const PAGE = 1000
 
@@ -82,6 +87,72 @@ function toAnimal(r: Raw): Animal {
   }
 }
 
+// ───────────────────────── 실사화 후보 점수 (2단계) ─────────────────────────
+// 1단계(사진 품질)는 사진을 봐야 해서 기술 쪽 판정에 맡기고, 여기서는 공공데이터만으로 우선순위를 매긴다.
+
+export interface Candidate {
+  id: string
+  score: number
+  reasons: string[]
+}
+
+const THIS_YEAR = new Date().getFullYear()
+
+/** 나이(살). '60일 미만'·올해생은 0 */
+function years(a: Animal) {
+  const y = Number(a.age.slice(0, 4))
+  return Number.isFinite(y) && /^\d{4}/.test(a.age) ? THIS_YEAR - y : 0
+}
+const kg = (a: Animal) => Number.parseFloat(a.weight) || 0
+function daysLeft(a: Animal) {
+  if (!/^\d{8}$/.test(a.end)) return -1
+  const end = Date.UTC(+a.end.slice(0, 4), +a.end.slice(4, 6) - 1, +a.end.slice(6, 8))
+  const now = new Date()
+  return Math.round((end - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000)
+}
+/** 교감 이야기가 되는 성격 낱말 */
+const WARM = /사람|온순|순함|순해|애교|친화|얌전|착함|착해|좋아|활발|다정|순둥/
+
+function score(a: Animal): Candidate | null {
+  const y = years(a)
+  const left = daysLeft(a)
+  // 강아지 성견만, 공고가 만드는 동안 남아 있게 3일 이상
+  if (a.sp !== 'dog' || y < 1 || left < 3) return null
+  const reasons: string[] = []
+  let s = 0
+  const add = (n: number, why: string) => {
+    s += n
+    reasons.push(why)
+  }
+  if (y >= 7) add(3, `${y}살 노견`)
+  else if (y >= 3) add(1, `${y}살`)
+  if (kg(a) >= 25) add(3, `${kg(a)}kg 대형견`)
+  else if (kg(a) >= 15) add(2, `${kg(a)}kg 중형견`)
+  if (a.kind.includes('믹스')) add(1, '믹스견')
+  if (a.note.length >= 20 && WARM.test(a.note)) add(1, '성격 이야기')
+  if (a.photos.length >= 3) add(1, `사진 ${a.photos.length}장`)
+  if (left <= 9) add(1, `공고 D-${left}`)
+  return { id: a.id, score: s, reasons }
+}
+
+/** 점수순으로 고르되 한 시도에서 PER_SIDO마리까지 */
+function pickCandidates(animals: Animal[]) {
+  const bySido = new Map<string, number>()
+  const byId = new Map(animals.map((a) => [a.id, a]))
+  return animals
+    .map(score)
+    .filter((c): c is Candidate => !!c)
+    .sort((a, b) => b.score - a.score || daysLeft(byId.get(a.id)!) - daysLeft(byId.get(b.id)!))
+    .filter((c) => {
+      const sido = byId.get(c.id)!.sido
+      const n = bySido.get(sido) ?? 0
+      if (n >= PER_SIDO) return false
+      bySido.set(sido, n + 1)
+      return true
+    })
+    .slice(0, CANDIDATE_COUNT)
+}
+
 async function page(key: string, no: number) {
   const q = new URLSearchParams({ serviceKey: key, _type: 'json', state: 'notice', numOfRows: String(PAGE), pageNo: String(no) })
   const res = await fetch(`${API}?${q}`)
@@ -107,7 +178,11 @@ async function main() {
     // 공고가 곧 끝나는 아이부터
     .sort((a, b) => a.end.localeCompare(b.end))
   if (!animals.length) throw new Error('받은 공고가 0마리예요')
-  writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), animals }))
+  const updated = new Date().toISOString()
+  writeFileSync(OUT, JSON.stringify({ updated, animals }))
+  const candidates = pickCandidates(animals)
+  writeFileSync(CANDIDATES, JSON.stringify({ updated, candidates }, null, 1))
+  console.log(`실사화 후보 ${candidates.length}마리 (점수 ${candidates[0]?.score}~${candidates.at(-1)?.score})`)
   console.log(`공고 중 ${first.total}마리 → 사진 있는 ${animals.length}마리를 ${OUT}에 썼어요`)
 }
 
