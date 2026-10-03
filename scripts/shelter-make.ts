@@ -38,6 +38,9 @@ const DRY = args['dry-run'] === 'true'
 const MIN_EYE_GAP = 80 // 두 눈 사이(원본 픽셀). 이보다 작으면 털이 뭉개져 보인다
 const MAX_YAW = 0.18 // 코가 두 눈 가운데에서 옆으로 비껴난 정도 (두 눈 사이 거리 비율)
 const MIN_JOINT = 0.5 // 눈·코 관절 확신도
+/** 자른 뒤 앱 화면 배치 (펫 로컬 좌표, FLOOR_Y 250 기준). 폰 세로 화면에서 보이는 위쪽 끝이 약 -370 */
+const MIN_HEAD_TOP = -360 // 머리 위 끝이 이보다 위로 가면 화면 위에서 잘린다 (초코·삼식 약 -320)
+const MAX_BELOW_CHIN = 2.6 // 턱 아래로 보이는 몸 길이 (두 눈 사이 거리 배). 길면 가슴 대신 다리·몸통이 크게 보인다 (보통 2.2~2.4)
 
 interface Animal {
   id: string
@@ -101,6 +104,12 @@ async function make() {
       try {
         v.rig = build(a, v.photo!)
         v.made = true
+        // 자른 뒤 구도: 머리가 화면 안에 들어오는지, 턱 아래로 다리·몸통이 너무 길게 보이지 않는지
+        const bad = layoutProblems(v.rig as Rig)
+        if (bad.length) {
+          v.ok = false
+          v.why.push(...bad)
+        }
       } catch (e) {
         v.ok = false
         v.why.push(`실사 만들기 실패: ${(e as Error).message.split('\n')[0]}`)
@@ -242,7 +251,8 @@ function rawFromPose(d: Detect, sp: 'dog' | 'cat') {
     nose_width: nx(D * (cat ? 0.26 : 0.5)),
     nose_height: ny(D * (cat ? 0.26 : 0.42)),
     mouth: N(at(cat ? 1.45 : 1.4)),
-    chin_bottom: N(at(cat ? 1.9 : 2.0)),
+    // 턱 끝: 눈→코 거리의 1.9배(고양이)·1.8배(개). 삼식 1.93, 초코 1.79
+    chin_bottom: N(at(cat ? 1.9 : 1.8)),
     head_top: N(at(cat ? -1.1 : -1.0)),
     left_ear_base: N(L[2]),
     left_ear_tip: N(L[0]),
@@ -265,6 +275,20 @@ async function visionLandmarks(photo: string, d: Detect, sp: 'dog' | 'cat') {
     return rawFromPose(d, sp)
   }
   fail('비전 모델 판정은 아직 사용자 확인 전이라 막아 두었어요')
+}
+
+type Rig = ReturnType<typeof deriveRig>
+
+/** 앱이 사진을 놓는 방식(발밑 = FLOOR_Y, rig.scale)으로 머리 위치를 계산해 구도를 본다 */
+function layoutProblems(r: Rig) {
+  const out: string[] = []
+  const FLOOR_Y = 250
+  const headTop = (r.head.y - r.head.ry - r.footY) * r.scale + FLOOR_Y
+  const D = dist(r.eyes[0], r.eyes[1])
+  const belowChin = (r.footY - (r.head.y + r.head.ry)) / D
+  if (headTop < MIN_HEAD_TOP) out.push(`자른 뒤 머리가 화면 위로 잘림 (${headTop.toFixed(0)})`)
+  if (belowChin > MAX_BELOW_CHIN) out.push(`턱 아래로 몸·다리가 길게 보임 (${belowChin.toFixed(1)}D)`)
+  return out
 }
 
 /** pet-add.ts로 실사 에셋을 만들고(표정 없이), 앱용 리그를 계산해 무대(stage)에 둔다 */
