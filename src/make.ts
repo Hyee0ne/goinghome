@@ -93,28 +93,18 @@ fileInput.addEventListener('change', async () => {
 nameInput.addEventListener('input', updatePhotoNext)
 function updatePhotoNext() {
   const ai = mode() === 'ai'
-  const ready = !!state.img && !!nameInput.value.trim() && (!ai || ((!needRefs() || refs.length > 0) && consent.checked))
+  const ready = !!state.img && !!nameInput.value.trim() && (!ai || consent.checked)
   $<HTMLButtonElement>('mk-photo-next').disabled = !ready
-  $('mk-refs-error').hidden = !(needRefs() && state.img && refs.length === 0)
 }
 
 // ── 만들기 방식: AI면 참고 사진 1~2장과 서버 전송 동의를 더 받는다
 const mode = () => (document.querySelector('input[name=mk-mode]:checked') as HTMLInputElement).value as 'free' | 'ai'
 const consent = $<HTMLInputElement>('mk-consent')
-const refs: { blob: Blob; url: string }[] = []
-const MAX_REFS = 2
-/**
- * 참고 사진은 '손' 하는 강아지의 앞발을 만들 때만 받는다.
- * 표정 편집에 참고 사진을 같이 주면 AI가 털색·얼굴을 참고 사진 쪽으로 다시 그려 다른 아이처럼 된다 (2026-10-03 기술 검증)
- */
-const needRefs = () => mode() === 'ai' && species() === 'dog' && $<HTMLInputElement>('mk-paw').checked
 function onMode() {
   const ai = mode() === 'ai'
   const n = aiCredits.count
   $('mk-ai-credit').textContent = n > 0 ? `공유 기회 ${n}번 · 광고 없이` : '공유하면 광고 없이 1번 더'
-  $('mk-refs-wrap').hidden = !needRefs()
   $('mk-ai-extra').hidden = !ai
-  $('mk-paw-field').hidden = species() !== 'dog'
   $('mk-privacy').textContent = ai
     ? '🔒 배경 지우기와 얼굴 점은 이 기기 안에서 하고, 표정을 만들 때만 사진을 보내요.'
     : '🔒 사진은 이 기기 안에서만 처리돼요. 어디로도 보내지 않아요.'
@@ -123,42 +113,6 @@ function onMode() {
 document.querySelectorAll('input[name=mk-mode]').forEach((r) => r.addEventListener('change', onMode))
 document.querySelectorAll('input[name=mk-species]').forEach((r) => r.addEventListener('change', onMode))
 consent.addEventListener('change', updatePhotoNext)
-$('mk-paw').addEventListener('change', onMode)
-
-$<HTMLInputElement>('mk-ref-file').addEventListener('change', async (e) => {
-  const input = e.target as HTMLInputElement
-  for (const f of [...(input.files ?? [])].slice(0, MAX_REFS - refs.length)) {
-    try {
-      const { blob } = await shrinkPhoto(f)
-      refs.push({ blob, url: URL.createObjectURL(blob) })
-    } catch {
-      alert(`${f.name}은(는) 열 수 없는 사진이에요.`)
-    }
-  }
-  input.value = ''
-  renderRefs()
-})
-function renderRefs() {
-  const box = $('mk-refs')
-  const add = box.querySelector('.mk-ref-add') as HTMLElement
-  box.querySelectorAll('.mk-ref').forEach((n) => n.remove())
-  refs.forEach((r, i) => {
-    const fig = Object.assign(document.createElement('figure'), { className: 'mk-ref' })
-    const img = Object.assign(new Image(), { src: r.url, alt: `참고 사진 ${i + 1}` })
-    const del = Object.assign(document.createElement('button'), { type: 'button', className: 'photo-del', textContent: '✕' })
-    del.setAttribute('aria-label', `참고 사진 ${i + 1} 빼기`)
-    del.onclick = () => {
-      URL.revokeObjectURL(r.url)
-      refs.splice(i, 1)
-      renderRefs()
-    }
-    fig.append(img, del)
-    box.insertBefore(fig, add)
-  })
-  add.hidden = refs.length >= MAX_REFS
-  updatePhotoNext()
-}
-$('mk-photo-next').onclick = () => go('cut')
 
 // ───────────────────────── 캔버스 보기 (사진을 칸에 맞춰 그리고, 화면 ↔ 사진 좌표 변환) ─────────────────────────
 
@@ -485,7 +439,7 @@ $('mk-face-next').onclick = async () => {
     rig: result.photo ?? undefined,
     files: result.files,
     ...(wantAi && {
-      ai: { status: 'waiting' as const, requestedAt: new Date().toISOString(), refs: needRefs() ? refs.map((r) => r.blob) : [], canPaw: sp === 'dog' && $<HTMLInputElement>('mk-paw').checked },
+      ai: { status: 'waiting' as const, requestedAt: new Date().toISOString(), refs: [], canPaw: false },
     }),
   })
   $('mk-ai-status').hidden = !wantAi
