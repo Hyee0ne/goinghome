@@ -319,6 +319,7 @@ if (run('frame')) {
   const prevFrame = existsSync(f.frame) ? JSON.stringify(readJson(f.frame).box) : ''
   if (prevFrame && prevFrame !== JSON.stringify(box)) {
     for (const name of Object.keys(prompts('dog'))) rmSync(f.expr(name), { force: true })
+    rmSync(join(SRC, 'face-square.json'), { force: true })
     warn('자르는 범위가 바뀌어 전에 만든 표정 사진을 지웠어요')
   }
   // 옆면이 잘렸으면 앱이 그쪽을 배경으로 서서히 사라지게 한다 (아래쪽은 늘 그렇게 한다)
@@ -349,19 +350,34 @@ if (run('expressions')) {
   const bottom = lm.chin.y + D * 0.35
   const left = Math.min(lm.leftEar.outer.x, lm.leftEar.tip.x) - D * 0.15
   const right = Math.max(lm.rightEar.outer.x, lm.rightEar.tip.x) + D * 0.15
-  const side = Math.round(Math.max(bottom - top, right - left))
-  const sq = {
-    x0: Math.round((left + right) / 2 - side / 2 + face.offsetX),
-    y0: Math.round((top + bottom) / 2 - side / 2 + face.offsetY),
-  }
+  // 표정 사진을 만든 얼굴 정사각형 자리는 저장해 두고, 이미 만든 표정 사진을 다시 쓸 때는 그 자리를 쓴다
+  // (기준점만 고쳐 다시 돌릴 때 정사각형이 바뀌면 전에 만든 표정 사진이 어긋난다)
+  const sqFile = join(SRC, 'face-square.json')
+  const reuse = args.regen !== 'true' && existsSync(sqFile)
+  const side = reuse ? readJson(sqFile).side : Math.round(Math.max(bottom - top, right - left))
+  const sq = reuse
+    ? { x0: readJson(sqFile).x0, y0: readJson(sqFile).y0 }
+    : { x0: Math.round((left + right) / 2 - side / 2 + face.offsetX), y0: Math.round((top + bottom) / 2 - side / 2 + face.offsetY) }
+  writeJson(sqFile, { ...sq, side })
   const faceSq = join(SRC, 'face-square.png')
   py('pet_tools.py', 'crop', f.base, faceSq, String(sq.x0), String(sq.y0), String(sq.x0 + side), String(sq.y0 + side))
   py('pet_tools.py', 'fit', faceSq, faceSq, '1024', '1024')
   const out = { mid: join(SRC, 'expr-mid-square.png'), final: join(SRC, 'expr-final-square.png') }
+  // --refs a.jpg,b.jpg: 같은 아이의 다른 사진. 편집할 때 같이 보내 털색·무늬·귀 모양을 지킨다 (자세·배경은 따르지 않게)
+  const refs = (args.refs ? String(args.refs).split(',') : []).filter((r) => {
+    if (!existsSync(r)) warn(`참고 사진이 없어요: ${r}`)
+    return existsSync(r)
+  })
+  const withRefs = (prompt: string) =>
+    refs.length
+      ? `${prompt} The first image is the photo to edit. The other images are other photos of the same animal: use them only as a reference ` +
+        `to keep its exact fur colors, markings and ear shape. Do not copy their pose, framing or background.`
+      : prompt
+  const refJob = refs.length ? { refs: refs.join('|') } : {}
   // 이미 만든 표정은 다시 만들지 않는다 (기준점만 고쳤을 때). 새로 만들려면 --regen
   const jobs = (['mid', 'final'] as const)
     .filter((k) => args.regen === 'true' || !existsSync(out[k]))
-    .map((k) => ({ id: k, mode: 'edit', edit_target: faceSq, prompt: P[k], background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: out[k] }))
+    .map((k) => ({ id: k, mode: 'edit', edit_target: faceSq, prompt: withRefs(P[k]), background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: out[k], ...refJob }))
   const failed = jobs.length ? await gptImage(jobs) : []
   if (!jobs.length) console.log('   이미 있는 표정 사진을 씁니다 (새로 만들려면 --regen)')
   if (failed.length) {
@@ -391,7 +407,7 @@ if (run('expressions')) {
     const eatOut = { pantMid: join(SRC, 'expr-eatmid-square.png'), pant: join(SRC, 'expr-eat-square.png') }
     const eatJobs = (['pantMid', 'pant'] as const)
       .filter((k) => args.regen === 'true' || !existsSync(eatOut[k]))
-      .map((k) => ({ id: `eat-${k}`, mode: 'edit', edit_target: faceSq, prompt: k === 'pant' ? P.eat : P.eatMid, background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: eatOut[k] }))
+      .map((k) => ({ id: `eat-${k}`, mode: 'edit', edit_target: faceSq, prompt: withRefs(k === 'pant' ? P.eat : P.eatMid), background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: eatOut[k], ...refJob }))
     const eatFailed = eatJobs.length ? await gptImage(eatJobs) : []
     if (eatFailed.length) warn(`간식 먹는 입 사진을 만들지 못했어요: ${eatFailed.join(', ')}. 입은 턱만 조금 움직입니다`)
     for (const k of ['pantMid', 'pant'] as const) {
@@ -414,7 +430,8 @@ if (run('assets')) {
   if (has('pantMid', 'pant')) py('prepare-expression.py', f.base, join(PUB, 'pant'), ...box(b.pant), f.expr('pantMid'), f.expr('pant'), '--match-color')
   if (has('eyesHalf', 'eyesClosed'))
     py('prepare-expression.py', f.base, join(PUB, 'eyes'), ...box(b.eyes), f.expr('eyesHalf'), f.expr('eyesClosed'), '--eyes-frames', '0', '--eyes', ...eyes)
-  if (has('earsMid', 'earsBack')) py('prepare-expression.py', f.base, join(PUB, 'ears'), ...box(b.ears), f.expr('earsMid'), f.expr('earsBack'))
+  // 귀 레이어는 머리 위쪽 전체라 편집본의 털색 차이가 잘 보인다: 원본 색에 맞춘다
+  if (has('earsMid', 'earsBack')) py('prepare-expression.py', f.base, join(PUB, 'ears'), ...box(b.ears), f.expr('earsMid'), f.expr('earsBack'), '--match-color')
   const part = (name: string, x: { x0: number; y0: number; x1: number; y1: number }, a: string, c: string, extra = '') =>
     `${name}:${x.x0},${x.y0},${x.x1},${x.y1}:${f.expr(a)}:${f.expr(c)}${extra}`
   // 움직임 아틀라스: 눈·귀는 꼭 있어야 하고, 입은 있을 때만 (고양이 입은 간식 먹을 때 쓰는 입)
@@ -635,7 +652,12 @@ async function apiEdit(job: Record<string, string>) {
   const form = new FormData()
   form.append('model', IMAGE_MODEL)
   form.append('prompt', job.prompt)
-  form.append('image', new Blob([readFileSync(job.edit_target)], { type: 'image/png' }), 'image.png')
+  // 참고 사진이 있으면 편집할 사진을 첫 장으로, 참고 사진을 뒤에 붙여 여러 장으로 보낸다 (털색·무늬를 지키는 용도)
+  const refs = job.refs ? job.refs.split('|') : []
+  if (refs.length) {
+    form.append('image[]', new Blob([readFileSync(job.edit_target)], { type: 'image/png' }), 'image.png')
+    refs.forEach((r, i) => form.append('image[]', new Blob([readFileSync(r)], { type: mimeOf(r) }), `ref${i}${extname(r)}`))
+  } else form.append('image', new Blob([readFileSync(job.edit_target)], { type: 'image/png' }), 'image.png')
   form.append('size', job.size ?? '1024x1536')
   form.append('quality', job.quality ?? QUALITY)
   form.append('output_format', 'png')
@@ -648,6 +670,11 @@ async function apiEdit(job: Record<string, string>) {
   const u = res.usage
   console.log(`   ✓ ${job.id} (${((Date.now() - t0) / 1000).toFixed(0)}초${u ? `, 입력 ${u.input_tokens} · 출력 ${u.output_tokens} 토큰` : ''})`)
   return true
+}
+
+function mimeOf(path: string) {
+  const e = extname(path).toLowerCase()
+  return e === '.png' ? 'image/png' : e === '.webp' ? 'image/webp' : 'image/jpeg'
 }
 
 function py(script: string, ...a: string[]) {

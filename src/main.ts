@@ -890,6 +890,7 @@ function myPetProfile(m: MyPet): PetProfile {
   const files = m.files!
   const url = (key: string) => (files[key] ? URL.createObjectURL(files[key]) : key)
   const rig = m.rig!
+  const ex = rig.expressions
   const cat = m.species === 'cat'
   return {
     id: m.id,
@@ -908,6 +909,19 @@ function myPetProfile(m: MyPet): PetProfile {
     eye: '#3b2a1e',
     pattern: 'none',
     // 표정 사진·앞발 사진은 없다 (기기 안에서 AI 없이 만든 아이). 손 주기는 앞발 사진이 없어 자동으로 꺼진다
-    photo: { ...rig, src: url(rig.src), flow: url(rig.flow), catchlight: rig.catchlight && url(rig.catchlight) },
+    photo: {
+      ...rig,
+      src: url(rig.src),
+      flow: url(rig.flow),
+      catchlight: rig.catchlight && url(rig.catchlight),
+      // AI 표정 업그레이드를 했으면 표정 사진·움직임 아틀라스도 이 기기의 파일에서 읽는다 (maker/upgrade.ts)
+      expressions: ex && {
+        ...ex,
+        pant: ex.pant && { ...ex.pant, src: url(ex.pant.src) },
+        eyesClosed: ex.eyesClosed && { ...ex.eyesClosed, src: url(ex.eyesClosed.src) },
+        earsBack: ex.earsBack && { ...ex.earsBack, src: url(ex.earsBack.src) },
+        morph: ex.morph && { ...ex.morph, src: url(ex.morph.src) },
+      },
+    },
   }
 }
