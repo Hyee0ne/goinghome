@@ -1119,3 +1119,17 @@ button {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+.adopt-links a.adopt-live {
+  background: var(--accent);
+  color: #fff;
+}
+
+.adopt-links a.adopt-live small,
+.adopt-links a.adopt-live .adopt-go {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.adopt-links a.adopt-live:hover {
+  background: #f57a2b;
+}

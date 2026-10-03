@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4e6" />
+    <title>가족을 기다리는 아이들 · 손끝 교감</title>
+  </head>
+  <body class="ad-page">
+    <header class="reg-top">
+      <a class="reg-back" href="./" aria-label="손끝 교감으로 돌아가기">‹</a>
+      <div class="reg-title">
+        <p class="reg-kicker" id="ad-count">공고 중</p>
+        <h1>가족을 기다리는 아이들</h1>
+      </div>
+    </header>
+
+    <main class="ad-wrap">
+      <div class="ad-filters">
+        <div class="seg" role="radiogroup" aria-label="종류">
+          <label><input type="radio" name="ad-sp" value="all" checked /><span>전체</span></label>
+          <label><input type="radio" name="ad-sp" value="dog" /><span>🐶 강아지</span></label>
+          <label><input type="radio" name="ad-sp" value="cat" /><span>🐱 고양이</span></label>
+        </div>
+        <label class="ad-region">
+          <span class="sr-only">지역</span>
+          <select id="ad-sido"><option value="">전국</option></select>
+        </label>
+      </div>
+      <p class="ad-sort muted">공고가 곧 끝나는 아이부터 보여 드려요</p>
+
+      <ul id="ad-grid" class="ad-grid"></ul>
+      <p id="ad-empty" class="ad-empty" hidden></p>
+      <button id="ad-more" class="btn ad-more" type="button" hidden>더 보기</button>
+
+      <p class="ad-source muted">
+        출처: 농림축산식품부 농림축산검역본부 국가동물보호정보시스템 (공공데이터포털)<br />
+        <span id="ad-updated"></span>
+      </p>
+    </main>
+
+    <!-- 아이 자세히 -->
+    <dialog id="ad-detail" class="info-sheet" aria-labelledby="ad-d-name">
+      <div class="sheet-body">
+        <div class="gallery">
+          <div id="ad-d-slides" class="slides" tabindex="0" aria-label="사진, 옆으로 넘겨 보기"></div>
+        </div>
+        <button id="ad-d-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
+        <header class="sheet-head">
+          <div>
+            <h2 id="ad-d-name"></h2>
+            <p id="ad-d-meta" class="sheet-meta"></p>
+          </div>
+        </header>
+        <ul id="ad-d-tags" class="traits"></ul>
+        <section id="ad-d-note-wrap">
+          <h3>특징</h3>
+          <p id="ad-d-note"></p>
+        </section>
+        <section>
+          <h3>보호 정보</h3>
+          <dl id="ad-d-care" class="shelter"></dl>
+        </section>
+      </div>
+      <footer class="sheet-foot">
+        <a id="ad-d-call" class="btn primary adopt">보호소에 전화로 입양 문의</a>
+        <p class="muted">입양 상담은 보호소가 직접 해요. <a href="https://www.animal.go.kr" target="_blank" rel="noopener">국가동물보호정보시스템</a>에서 공고번호로도 찾을 수 있어요.</p>
+      </footer>
+    </dialog>
+    <script type="module" src="/src/adopt.ts"></script>
+  </body>
+</html>

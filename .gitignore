@@ -28,3 +28,6 @@ dist-ssr
 # 사진 파이프라인의 원본 사진과 중간 결과 (개인 사진이고 용량이 커서 올리지 않는다. 앱에 쓰는 에셋은 public/pets/)
 pets-src/
 generated-images/
+
+# 빌드할 때 받아 오는 유기동물 공고 데이터 (scripts/fetch-animals.ts)
+public/data/

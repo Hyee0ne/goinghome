@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # 유기동물 공고(공공데이터)를 매시간 새로 받아 다시 배포한다
+  schedule:
+    - cron: '17 * * * *'
 
 permissions:
   contents: read
@@ -25,6 +28,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # 공고 중인 유기동물 → public/data/animals.json (키는 저장소 비밀값, 없으면 빈 목록)
+      - run: npm run data:animals
+        env:
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
       - run: npm run build
         env:
           GITHUB_PAGES: '1'

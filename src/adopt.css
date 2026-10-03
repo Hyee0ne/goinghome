@@ -1,0 +1,189 @@
+/* 가족을 기다리는 아이들 (정보 시트·바둑 칸은 style.css, 상단 바·세그먼트는 register.css) */
+
+.ad-page {
+  height: auto;
+  min-height: 100%;
+  word-break: keep-all;
+}
+
+.ad-wrap {
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 14px 16px max(28px, env(safe-area-inset-bottom));
+}
+
+.ad-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ad-filters .seg {
+  flex: 1 1 280px;
+}
+
+.ad-filters .seg span {
+  white-space: nowrap;
+  padding: 9px 6px;
+}
+
+.ad-region {
+  flex: 1 1 140px;
+}
+
+.ad-region select {
+  width: 100%;
+}
+
+.ad-region select {
+  height: 100%;
+  min-height: 42px;
+  padding: 0 34px 0 12px;
+  border: 1px solid rgba(120, 80, 40, 0.2);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ad-sort {
+  margin: 10px 0 12px;
+}
+
+.ad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 640px) {
+  .ad-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .ad-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.ad-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  text-align: left;
+  box-shadow: 0 2px 10px rgba(80, 50, 20, 0.06);
+}
+
+.ad-card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--bg-2);
+}
+
+.ad-dday {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ad-dday:empty {
+  display: none;
+}
+
+.ad-dday.soon {
+  background: #e5484d;
+  color: #fff;
+}
+
+.ad-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 10px 12px 12px;
+  line-height: 1.4;
+}
+
+.ad-card-text b {
+  font-size: 15px;
+}
+
+.ad-card-text span {
+  font-size: 13px;
+}
+
+.ad-card-text small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.ad-empty {
+  padding: 40px 0;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.ad-empty[hidden],
+.ad-more[hidden] {
+  display: none;
+}
+
+.ad-more {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.ad-source {
+  margin-top: 24px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* 자세히: 정보 시트 모양을 그대로 쓰고, 공고 사진은 꽉 채운다 */
+#ad-detail .slides img {
+  object-fit: cover;
+}
+
+#ad-detail .sheet-head {
+  margin-top: 4px;
+}
+
+#ad-detail .sheet-foot .muted a {
+  color: inherit;
+}
+
+#ad-detail .adopt[hidden] {
+  display: none;
+}
+
+#ad-detail section[hidden] {
+  display: none;
+}
+
+/* 전화는 바깥 링크 화살표 대신 전화 표시 */
+#ad-d-call::after {
+  content: none;
+}
+
+#ad-d-call::before {
+  content: '☎︎ ';
+}

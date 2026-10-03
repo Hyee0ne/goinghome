@@ -22,6 +22,20 @@ export function renderAdoptLinks(el: HTMLElement, title = '가족을 기다리�
   el.classList.add('adopt-links')
   const h = Object.assign(document.createElement('h3'), { textContent: title })
   const list = document.createElement('ul')
+  // 맨 위: 공공데이터로 받은 공고 중인 아이들 (우리 사이트 안)
+  const live = document.createElement('li')
+  const a = Object.assign(document.createElement('a'), { href: `${import.meta.env.BASE_URL}adopt.html`, className: 'adopt-live' })
+  a.append(
+    Object.assign(document.createElement('span'), { className: 'adopt-icon', textContent: '🏠' }),
+    Object.assign(document.createElement('span'), { className: 'adopt-text' }),
+    Object.assign(document.createElement('span'), { className: 'adopt-go', textContent: '›' }),
+  )
+  a.querySelector('.adopt-text')!.append(
+    Object.assign(document.createElement('b'), { textContent: '지금 공고 중인 아이들 보기' }),
+    Object.assign(document.createElement('small'), { textContent: '전국 보호소 · 마감 임박 순 · 매시간 업데이트' }),
+  )
+  live.append(a)
+  list.append(live)
   list.append(
     ...ADOPT_SITES.map((s) => {
       const li = document.createElement('li')
