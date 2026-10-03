@@ -833,14 +833,36 @@ void main() {
             col = mix(col, layer(uEyesImg, uEyesBox, uFrames.y, fi, Q), cover);
           }
         } else {
-          // 눈 감은 사진이 없으면 눈 위의 털을 끌어내려 덮는다
-          float r = length(vec2(e.x * 0.92, e.y));
+          // 눈 감은 사진이 없으면 눈꺼풀을 그린다: 위·아래 눈꺼풀이 눈 둘레 털 색으로 덮고, 둥글게 휜 속눈썹 선에서 만난다.
+          // (예전처럼 눈 위 한 곳의 털을 끌어내리면 밝은 눈썹 털이 늘어나 하얀 딱지처럼 보였다)
+          float r = length(vec2(e.x * 0.85, e.y));
           if (r < 1.35) {
-            float lidY = mix(-1.25, 1.1, lid) + 0.22 * e.x * e.x;
-            float cover = smoothstep(lidY + 0.1, lidY - 0.1, e.y) * smoothstep(1.35, 1.05, r);
-            vec2 src = eye.xy + vec2(e.x * 1.05, -1.45 - (lidY - e.y) * 0.3) * eye.z;
-            col = mix(col, img(src), cover);
-            float lash = smoothstep(0.2, 0.0, abs(e.y - lidY)) * smoothstep(1.3, 0.9, r) * smoothstep(0.02, 0.2, lid);
+            // 눈꺼풀 색: 눈 바깥 둘레 8곳의 평균 (눈 바로 옆의 어두운 테두리는 피해 조금 바깥에서)
+            vec3 ring = vec3(0.0);
+            for (int i = 0; i < 8; i++) {
+              float a = float(i) * 0.7853982;
+              ring += img(eye.xy + vec2(cos(a) * 1.9, sin(a) * 1.7) * eye.z).rgb;
+            }
+            ring /= 8.0;
+            // 털 무늬: 같은 모양 그대로 위쪽(눈 지름 하나 반 위) 털을 가져와, 그 자리 평균 색을 빼고 무늬만 얹는다 (늘이지 않아 줄무늬가 생기지 않는다)
+            vec2 up = vec2(0.0, -2.6) * eye.z;
+            vec3 patch = img(eye.xy + e * eye.z + up).rgb;
+            vec3 patchMean = (img(eye.xy + up + vec2(-0.8, 0.0) * eye.z).rgb + img(eye.xy + up + vec2(0.8, 0.0) * eye.z).rgb + img(eye.xy + up).rgb) / 3.0;
+            // (둘레 평균은 밝은 털이 섞여 눈꺼풀보다 조금 밝다)
+            vec3 skin = ring * 0.93 + (patch - patchMean) * 0.6;
+            // 위 눈꺼풀 끝: 감을수록 내려와 눈 아래쪽 1/3쯤에서 멈추고, 가운데가 아래로 둥글게 휜다
+            float upper = mix(-1.1, 0.3, lid) - 0.2 * e.x * e.x;
+            // 아래 눈꺼풀: 거의 다 감을 때만 조금 올라와 위 눈꺼풀과 만난다
+            float lower = mix(1.3, upper + 0.02, smoothstep(0.6, 1.0, lid));
+            float inUpper = smoothstep(upper + 0.07, upper - 0.07, e.y);
+            float inLower = smoothstep(lower - 0.07, lower + 0.07, e.y);
+            // 가장자리는 넓게 풀어 둘레 털에 녹아들게
+            float m = max(inUpper, inLower) * smoothstep(1.35, 1.05, r);
+            // 위 눈꺼풀은 끝으로 갈수록 살짝 어둡게 (둥근 눈꺼풀의 그늘)
+            float shade = 1.0 - 0.12 * smoothstep(upper - 0.6, upper, e.y) * inUpper;
+            col.rgb = mix(col.rgb, skin * shade, m);
+            // 속눈썹 선 (가운데가 가장 짙고 양끝으로 흐려진다)
+            float lash = smoothstep(0.07, 0.0, abs(e.y - upper)) * smoothstep(1.0, 0.55, r) * smoothstep(0.05, 0.3, lid);
             col.rgb *= 1.0 - 0.5 * lash;
           }
         }
