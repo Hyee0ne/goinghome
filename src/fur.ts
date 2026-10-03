@@ -971,8 +971,14 @@ export class FurRenderer {
   private breathDepth = 1
   /** 눈 감은 표정 사진이 있는지 (없으면 눈꺼풀을 흉내 낸다) */
   private hasEyesPhoto = false
-  /** 자동 기준점 아이(표정 사진이 하나도 없음)는 차분한 움직임 */
+  /** 자동 기준점 아이(표정 사진이 하나도 없음)는 AUTO_MOTION 묶음 */
   private calmMotion = false
+  /** 지금 쓰는 움직임 묶음. ?motion=로 바꾸고, ?debug면 window.__motionOverride로 효과를 하나씩 켜 볼 수 있다 */
+  motionNow(): Motion {
+    const base = this.calmMotion ? MOTION[MOTION_Q && MOTION[MOTION_Q] ? MOTION_Q : AUTO_MOTION] : MOTION.full
+    const o = (window as unknown as { __motionOverride?: Partial<Motion> }).__motionOverride
+    return o ? { ...base, ...o } : base
+  }
   private rig: PhotoRig | null = null
   private loading: string | null = null
   private cache = new Map<
@@ -1172,7 +1178,6 @@ export class FurRenderer {
     })
     v4('uMuzzle', rig.muzzle)
     // 털이 눕는 거리는 화면 기준으로 같게 (펫 로컬 3.8단위)
-    gl.uniform1f(this.loc('uFurShift'), 3.8 / rig.scale)
     gl.uniform1f(this.loc('uShadowAmt'), rig.floorShadow ? 1 : 0)
     gl.uniform1f(this.loc('uFadeFrom'), rig.fadeBottom > 0 ? rig.height - rig.fadeBottom : rig.height + 1)
     gl.uniform2f(this.loc('uFadeSides'), rig.fadeSides?.left ?? -1e4, rig.fadeSides?.right ?? 1e4)
@@ -1237,13 +1242,15 @@ export class FurRenderer {
     const m = this.motion!
     const soft = FaceMotion.soft
     gl.uniform1f(this.loc('uTime'), p.t)
-    gl.uniform1f(this.loc('uShrink'), p.startle * 0.03 + p.flinch * 0.02)
-    gl.uniform1f(this.loc('uShiver'), p.startle * Math.sin(p.t * 60) * 2.5 * toPx * 0.6)
+    const mo = this.motionNow()
+    gl.uniform1f(this.loc('uFurShift'), (3.8 / rig.scale) * mo.field)
+    gl.uniform1f(this.loc('uShrink'), (p.startle * 0.03 + p.flinch * 0.02) * mo.startle)
+    gl.uniform1f(this.loc('uShiver'), p.startle * Math.sin(p.t * 60) * 2.5 * toPx * 0.6 * mo.startle)
     // 사진은 크게 비틀면 티가 나므로 몸짓(pose)은 작게, 손에 끌려가는 움직임(motion)은 한계를 두고 더한다
     // 고양이 부비부비: 손 쪽으로 기울며 천천히 좌우로 비빈다
     const rub = p.bunt * p.buntSide * (0.045 + 0.02 * Math.sin(p.t * 2.6))
-    // 자동 기준점 아이(보호소 사진·기기에서 만든 아이)는 차분한 움직임: 부위 위치가 대충이라 크게 움직일수록 티가 난다 (CALM)
-    const calm = this.calmMotion ? CALM : FULL_MOTION
+    // 자동 기준점 아이(보호소 사진·기기에서 만든 아이)는 움직임 묶음으로 줄인다 (MOTION, 기본 SAFE)
+    const calm = this.motionNow()
     const sway = calm.head
     gl.uniform1f(this.loc('uTilt'), (p.tilt * 0.55 + soft(m.rot, ROT_MAX) + p.cock + rub) * sway)
     gl.uniform2f(
@@ -1274,7 +1281,7 @@ export class FurRenderer {
       this.breathDepth = 0.8 + Math.random() * 0.45
     }
     const depth = this.breathDepth * (1 + p.sigh * 1.6)
-    gl.uniform1f(this.loc('uBreath'), Math.sin(this.breathPhase) * (0.012 * depth + p.startle * 0.01) + p.happy * 0.004)
+    gl.uniform1f(this.loc('uBreath'), (Math.sin(this.breathPhase) * (0.012 * depth + p.startle * 0.01) + p.happy * 0.004) * calm.breath)
     // 표정 전환: 반쯤 섞인 상태가 오래가면 두 장이 겹쳐 보이므로, 켜고 끄기는 문턱으로 정하고 전환은 빠르게
     // 고양이는 기분이 좋아도 입을 벌리지 않는다 (입을 벌리면 하악질처럼 보인다)
     // 간식을 먹는 동안은 헥헥대지 않는다 (먹고 나서 기분 좋으면 헥헥댄다)
@@ -1331,9 +1338,9 @@ export class FurRenderer {
       // 깜빡임은 원래 빠르다 (감기 0.07초·뜨기 0.13초, pet.ts)
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[0])), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[1])))
     }
-    gl.uniform2f(this.loc('uNoseOff'), m.noseX * toPx * calm.face, m.noseY * toPx * calm.face)
-    gl.uniform1f(this.loc('uNoseSquash'), m.noseSquash)
-    gl.uniform1f(this.loc('uFlare'), m.flare)
+    gl.uniform2f(this.loc('uNoseOff'), m.noseX * toPx * calm.nose, m.noseY * toPx * calm.nose)
+    gl.uniform1f(this.loc('uNoseSquash'), m.noseSquash * calm.nose)
+    gl.uniform1f(this.loc('uFlare'), m.flare * calm.nose)
     gl.uniform1f(this.loc('uNoseGloss'), p.species === 'dog' ? 1 : 0)
     gl.uniform1f(this.loc('uCatEye'), p.species === 'cat' ? 1 : 0)
 
@@ -1346,13 +1353,13 @@ export class FurRenderer {
     // 입 사진이 있으면 턱은 그대로 둔다 (턱 부위만 끌어내리면 아랫입술 선이 어긋나 구겨져 보인다)
     const eatJaw = rig.expressions?.pant ? 0 : -(p.chomp * CHOMP_OPEN + chewBob)
     gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT * calm.face + pantBob + eatJaw) * toPx)
-    gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx : 0)
+    gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx * calm.face : 0)
     gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx * calm.head, -soft(m.pitch, 1) * PITCH_SHIFT * toPx * calm.head)
     gl.uniform2f(this.loc('uGaze'), clamp(p.lookX, -1, 1) * GAZE, clamp(p.lookY, -1, 1) * GAZE * 0.6)
     const v = m.velocity
     const lag = Math.min(1, 2.5 / (Math.hypot(v.x, v.y) * 0.03 + 1e-6))
     gl.uniform2f(this.loc('uFurLag'), -v.x * 0.03 * lag * toPx * calm.drag, -v.y * 0.03 * lag * toPx * calm.drag)
-    gl.uniform1f(this.loc('uBreeze'), 0.7 + Math.min(0.6, Math.hypot(v.x, v.y) / 60))
+    gl.uniform1f(this.loc('uBreeze'), (0.7 + Math.min(0.6, Math.hypot(v.x, v.y) / 60)) * calm.breeze)
 
     this.uploadField()
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
@@ -1486,13 +1493,25 @@ const DRAWN_SNAP = 0.3
 /** 다 감은 채로 있는 최대 시간(초). 그 뒤로는 바로 뜬다 */
 const DRAWN_HOLD_S = 0.3
 /**
- * 움직임 배율 묶음. 손으로 기준점을 맞춘 아이(초코·삼식, 표정 사진 있음)는 FULL, 자동 기준점 아이는 CALM.
- *   ear  귀 따로 까딱이기·젖히기   head  고개 기울이기·따라오기·돌리기   drag  손에 끌리는 털·얼굴   face  눈썹·턱·코 움직임
- * 보호소 사진은 정성 들여 찍은 사진이 아니라 부위 위치가 대충이므로, 위치에 기대는 움직임(귀·고개)을 크게 줄인다.
- * 털 눕기·쓰다듬기 반응·숨쉬기·깜빡임은 부위 위치와 상관없어 그대로다
+ * 움직임 묶음 (효과마다 배율 0~1). 손으로 기준점을 맞춘 아이(초코·삼식, 표정 사진 있음)는 FULL,
+ * 자동 기준점 아이(보호소 사진·기기에서 만든 아이)는 AUTO_MOTION (기본 SAFE). ?motion=safe|calm|full 로 바꿔 볼 수 있다.
+ *   field  쓰다듬을 때 털이 눕는 것 (손이 닿은 자리만)     breeze 가만히 있을 때 털끝 흔들림
+ *   drag   손에 끌리는 털·얼굴                          head   고개 기울이기·따라오기·돌리기 (깊이 변형 포함)
+ *   ear    귀 따로 까딱이기·젖히기                        breath 숨쉬기 (가슴이 부풀었다 꺼짐)
+ *   face   눈썹·턱 들기·수염 패드                        nose   코 움직임·킁킁 벌름 (코 둘레만)
+ *   startle 놀라 움츠림·떨림
+ * 보호소 사진은 정성 들여 찍은 사진이 아니라 부위 위치가 대충이고, 얼굴 전체가 계속 휘면 사진 한 장의 한계가 드러난다.
+ * SAFE는 좁은 곳에서 짧게 일어나는 반응(털 눕기, 깜빡임, 코, 간식)만 남긴다
  */
-const FULL_MOTION = { ear: 1, head: 1, drag: 1, face: 1 }
-const CALM = { ear: 0.25, head: 0.35, drag: 0.6, face: 0.5 }
+type Motion = Record<'field' | 'breeze' | 'drag' | 'head' | 'ear' | 'breath' | 'face' | 'nose' | 'startle', number>
+const MOTION: Record<'full' | 'calm' | 'safe', Motion> = {
+  full: { field: 1, breeze: 1, drag: 1, head: 1, ear: 1, breath: 1, face: 1, nose: 1, startle: 1 },
+  calm: { field: 1, breeze: 1, drag: 0.6, head: 0.35, ear: 0.25, breath: 1, face: 0.5, nose: 0.5, startle: 1 },
+  safe: { field: 1, breeze: 0, drag: 0, head: 0, ear: 0, breath: 0, face: 0, nose: 1, startle: 0.3 },
+}
+/** 자동 기준점 아이의 기본 움직임 묶음 */
+const AUTO_MOTION: keyof typeof MOTION = 'safe'
+const MOTION_Q = new URLSearchParams(location.search).get('motion') as keyof typeof MOTION | null
 /** 감았다 뜬 뒤 다시 감기까지 쉬는 시간(초) */
 const DRAWN_REARM_S = 1.5
 
