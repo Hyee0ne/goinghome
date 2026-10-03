@@ -305,14 +305,18 @@ function rawFromPose(d: Detect, sp: 'dog' | 'cat') {
     frontal: yaw < 0.1,
     left_eye: N(e.l),
     right_eye: N(e.r),
-    eye_radius: nx(D * 0.11),
+    // 눈(홍채) 반지름: 고양이 눈은 개보다 훨씬 크다 (두 눈 사이의 약 0.17배, 개 0.11배)
+    eye_radius: nx(D * (cat ? 0.17 : 0.11)),
     nose: N(n),
     nose_width: nx(D * (cat ? 0.26 : 0.5)),
     nose_height: ny(D * (cat ? 0.26 : 0.42)),
     mouth: N(at(cat ? 1.45 : 1.4)),
-    // 턱 끝: 눈→코 거리의 1.9배(고양이)·1.8배(개). 삼식 1.93, 초코 1.79
-    chin_bottom: N(at(cat ? 1.9 : 1.8)),
-    head_top: N(at(cat ? -1.1 : -1.0)),
+    // 턱 끝: 눈→코 거리의 2.1배(고양이)·1.8배(개). 고양이는 코가 짧아 이 비율이 크다
+    // (얼굴이 납작한 고양이는 눈→코가 아주 짧아, 코에서 두 눈 사이의 0.5배 아래보다는 내려가게)
+    chin_bottom: N(cat ? { x: at(2.1).x, y: Math.max(at(2.1).y, n.y + D * 0.5) } : at(1.8)),
+    // 정수리: 고양이는 코가 짧아 눈→코 비율로 잡으면 이마 중간에 걸린다 (머리 부위가 이마를 못 덮어, 고개를 기울이면 이마가 접힌다).
+    // 그래서 두 귀가 붙은 곳 높이를 쓴다
+    head_top: N(cat ? { x: mid.x, y: Math.min(at(-1.1).y, (L[2].y + R[2].y) / 2 - D * 0.1) } : at(-1.0)),
     left_ear_base: N(L[2]),
     left_ear_tip: N(L[0]),
     left_ear_outer: N(outer(L)),

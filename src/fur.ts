@@ -534,6 +534,7 @@ uniform float uNoseSquash; // 코를 톡 건드려 눌린 정도 (0~1)
 uniform vec4 uNostrils;    // 콧구멍 두 개의 중심 (x, y, x, y)
 uniform float uNostrilR;
 uniform float uFlare;      // 콧구멍 벌름 (0~1)
+uniform float uCatEye;     // 그린 눈꺼풀을 고양이 눈 모양으로 (1)
 uniform float uNoseGloss;  // 젖은 코 반사광 세기 (개 1, 고양이 0: 고양이 코는 마른 분홍색이라 빛나면 어색하다)
 
 uniform float uFurShift;   // 쓰다듬을 때 털이 눕는 최대 거리 (픽셀)
@@ -835,15 +836,21 @@ void main() {
         } else {
           // 눈 감은 사진이 없으면 눈꺼풀을 그린다: 위·아래 눈꺼풀이 눈 둘레 털 색으로 덮고, 둥글게 휜 속눈썹 선에서 만난다.
           // (예전처럼 눈 위 한 곳의 털을 끌어내리면 밝은 눈썹 털이 늘어나 하얀 딱지처럼 보였다)
-          float r = length(vec2(e.x * 0.85, e.y));
+          // 고양이 눈은 크고 아몬드형이며 눈 둘레 테두리가 진하다: 가로로 더 넓게 덮고, 감은 선은 거의 일자로
+          float cat = uCatEye;
+          float r = length(vec2(e.x * mix(0.85, 0.78, cat), e.y));
           if (r < 1.65) {
             // 눈꺼풀 색: 눈 바깥 둘레 8곳의 평균 (눈 바로 옆의 어두운 테두리는 피해 조금 바깥에서)
+            // (고양이는 눈 아래 눈물 자국·털색 차이가 커서 눈 위쪽 둘레를 더 믿는다)
             vec3 ring = vec3(0.0);
+            float ringW = 0.0;
             for (int i = 0; i < 8; i++) {
               float a = float(i) * 0.7853982;
-              ring += img(eye.xy + vec2(cos(a) * 2.2, sin(a) * 1.9) * eye.z).rgb;
+              float w = mix(1.0, sin(a) < -0.1 ? 1.0 : 0.35, cat);
+              ring += img(eye.xy + vec2(cos(a) * mix(2.2, 1.6, cat), sin(a) * mix(1.9, 1.45, cat)) * eye.z).rgb * w;
+              ringW += w;
             }
-            ring /= 8.0;
+            ring /= ringW;
             // 털 무늬: 같은 모양 그대로 위쪽(눈 지름 하나 반 위) 털을 가져와, 그 자리 평균 색을 빼고 무늬만 얹는다 (늘이지 않아 줄무늬가 생기지 않는다)
             vec2 up = vec2(0.0, -2.6) * eye.z;
             vec3 patch = img(eye.xy + e * eye.z + up).rgb;
@@ -851,7 +858,7 @@ void main() {
             // (둘레 평균은 밝은 털이 섞여 눈꺼풀보다 조금 밝다)
             vec3 skin = ring * 0.98 + (patch - patchMean) * 0.6;
             // 위 눈꺼풀 끝: 감을수록 내려와 눈 아래쪽 1/3쯤에서 멈추고, 가운데가 아래로 둥글게 휜다
-            float upper = mix(-1.1, 0.3, lid) - 0.2 * e.x * e.x;
+            float upper = mix(-1.1, mix(0.3, 0.12, cat), lid) - mix(0.2, 0.05, cat) * e.x * e.x;
             // 아래 눈꺼풀: 거의 다 감을 때만 조금 올라와 위 눈꺼풀과 만난다
             float lower = mix(1.3, upper + 0.02, smoothstep(0.6, 1.0, lid));
             float inUpper = smoothstep(upper + 0.07, upper - 0.07, e.y);
@@ -859,13 +866,15 @@ void main() {
             // 가장자리는 넓게 풀어 둘레 털에 녹아들게
             // 다 감을수록 눈 둘레의 어두운 테두리까지 덮도록 넓히고, 가장자리를 더 길게 풀어 둘레 털에 녹인다
             float full = smoothstep(0.7, 1.0, lid);
-            float m = max(inUpper, inLower) * smoothstep(mix(1.35, 1.65, full), mix(1.05, 1.15, full), r);
+            // (고양이는 눈 반지름을 크게 잡아 두어 넓히지 않는다)
+            float grow = full * (1.0 - cat);
+            float m = max(inUpper, inLower) * smoothstep(mix(1.3, 1.65, grow), mix(1.02, 1.15, grow), r);
             // 위 눈꺼풀은 끝으로 갈수록 살짝 어둡게 (둥근 눈꺼풀의 그늘)
             float shade = 1.0 - 0.12 * smoothstep(upper - 0.6, upper, e.y) * inUpper;
             col.rgb = mix(col.rgb, skin * shade, m);
             // 속눈썹 선 (가운데가 가장 짙고 양끝으로 흐려진다)
-            float lash = smoothstep(0.07, 0.0, abs(e.y - upper)) * smoothstep(1.0, 0.55, r) * smoothstep(0.05, 0.3, lid);
-            col.rgb *= 1.0 - 0.5 * lash;
+            float lash = smoothstep(mix(0.07, 0.055, cat), 0.0, abs(e.y - upper)) * smoothstep(mix(1.0, 1.15, cat), 0.55, r) * smoothstep(0.05, 0.3, lid);
+            col.rgb *= 1.0 - mix(0.5, 0.65, cat) * lash;
           }
         }
       }
@@ -1230,11 +1239,13 @@ export class FurRenderer {
     // 사진은 크게 비틀면 티가 나므로 몸짓(pose)은 작게, 손에 끌려가는 움직임(motion)은 한계를 두고 더한다
     // 고양이 부비부비: 손 쪽으로 기울며 천천히 좌우로 비빈다
     const rub = p.bunt * p.buntSide * (0.045 + 0.02 * Math.sin(p.t * 2.6))
-    gl.uniform1f(this.loc('uTilt'), p.tilt * 0.55 + soft(m.rot, ROT_MAX) + p.cock + rub)
+    // 표정 사진이 없는 고양이(자동으로 잡은 기준점)는 얼굴이 납작하고 둥글어, 개만큼 기울이고 끌면 이마·볼이 접혀 보인다 → 움직임을 줄인다
+    const sway = p.species === 'cat' && !this.hasEyesPhoto ? CAT_DRAWN_MOTION : 1
+    gl.uniform1f(this.loc('uTilt'), (p.tilt * 0.55 + soft(m.rot, ROT_MAX) + p.cock + rub) * sway)
     gl.uniform2f(
       this.loc('uLean'),
-      (p.leanX * 0.08 + soft(m.ox, HEAD_MAX)) * toPx,
-      (p.leanY * 0.08 + soft(m.oy, HEAD_MAX)) * toPx,
+      (p.leanX * 0.08 + soft(m.ox, HEAD_MAX)) * toPx * sway,
+      (p.leanY * 0.08 + soft(m.oy, HEAD_MAX)) * toPx * sway,
     )
     const flap = Math.sin(p.t * 10) * 0.05 * p.petting
     // 관심이 가면 쫑긋, 기분 좋으면 편하게 늘어지고, 놀라면 뒤로 젖힌다
@@ -1320,6 +1331,7 @@ export class FurRenderer {
     gl.uniform1f(this.loc('uNoseSquash'), m.noseSquash)
     gl.uniform1f(this.loc('uFlare'), m.flare)
     gl.uniform1f(this.loc('uNoseGloss'), p.species === 'dog' ? 1 : 0)
+    gl.uniform1f(this.loc('uCatEye'), p.species === 'cat' ? 1 : 0)
 
     gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx, m.browR * BROW_LIFT * toPx)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
@@ -1469,6 +1481,8 @@ const DRAWN_OPEN_S = 0.15
 const DRAWN_SNAP = 0.3
 /** 다 감은 채로 있는 최대 시간(초). 그 뒤로는 바로 뜬다 */
 const DRAWN_HOLD_S = 0.3
+/** 표정 사진이 없는 고양이의 고개 기울이기·끌림 배율 */
+const CAT_DRAWN_MOTION = 0.65
 /** 감았다 뜬 뒤 다시 감기까지 쉬는 시간(초) */
 const DRAWN_REARM_S = 1.5
 

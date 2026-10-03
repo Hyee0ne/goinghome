@@ -368,7 +368,8 @@ export class Pet {
       this.blinkClock = 0
       this.nextBlink = Math.random() < 0.15 ? 0.28 : 1.2 + Math.random() ** 1.5 * 5.5
       // 눈 감은 표정 사진이 없는 아이는 지그시 감는 대신, 기분이 좋을수록 빠른 깜빡임이 잦아진다 (그린 눈꺼풀은 멈춰 있으면 티가 난다)
-      if (!this.p.photo?.expressions?.eyesClosed) this.nextBlink *= 1 - 0.6 * this.happy
+      // (고양이는 원래 개보다 훨씬 덜 깜빡여서, 표정 사진이 없는 고양이는 간격을 두 배 넘게 두고 기분이 좋아도 잦아지지 않는다)
+      if (!this.p.photo?.expressions?.eyesClosed) this.nextBlink *= this.p.species === 'cat' ? 2.2 : 1 - 0.6 * this.happy
     }
     this.blinkClock += dt
     const bc = this.blinkClock

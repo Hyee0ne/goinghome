@@ -344,7 +344,8 @@ function landmarksFromTaps(t: { eyeL: Pt; eyeR: Pt; nose: Pt; chin: Pt; earL?: P
     species,
     leftEye: left,
     rightEye: right,
-    eyeR: D * 0.11,
+    // 눈(홍채) 반지름: 고양이 눈은 개보다 훨씬 크다
+    eyeR: D * (cat ? 0.17 : 0.11),
     nose: t.nose,
     // 코 크기: 개는 넓고 크며 고양이는 작다 (초코·삼식 기준 비율)
     noseRx: D * (cat ? 0.13 : 0.25),
