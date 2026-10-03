@@ -7,6 +7,7 @@ import { josa, type PetProfile } from './pets'
 /** 녹화 엔진 (기술 쪽). 연결 전에는 링크만 공유한다 */
 export type ClipRecorder = (seconds: number) => Promise<{ blob: Blob; ext: 'mp4' | 'webm' }>
 let recorder: ClipRecorder | null = null
+const CLIP_SECONDS = 6
 export function setClipRecorder(r: ClipRecorder) {
   recorder = r
 }
@@ -33,7 +34,7 @@ export async function sharePet(p: PetProfile, mine: boolean, onRecording?: (on: 
     onRecording?.(true)
     let clip: Awaited<ReturnType<ClipRecorder>>
     try {
-      clip = await recorder(6)
+      clip = await recorder(CLIP_SECONDS)
     } finally {
       onRecording?.(false)
     }

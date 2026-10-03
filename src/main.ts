@@ -7,7 +7,9 @@ import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
 import { renderAdoptLinks } from './adoptLinks'
-import { sharePet, toast } from './share'
+import { setClipRecorder, sharePet, toast } from './share'
+import { ClipRecorder, clipSupport } from './recorder'
+import { clipOverlay } from './clipOverlay'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -38,9 +40,11 @@ const fur = (() => {
 /** 셰이더 캔버스 배율. 프레임이 밀리면 낮춘다 (renderQuality) */
 let glDpr = Math.min(window.devicePixelRatio || 1, 1.5)
 const debug = new URLSearchParams(location.search).has('debug')
+/** 공유용 짧은 영상 녹화: 털 셰이더 캔버스 위에 손끝·간식 캔버스를 겹쳐 담는다 (recorder.ts) */
+export const recorder = new ClipRecorder([$<HTMLCanvasElement>('pet-gl'), stage])
 hud.hidden = !debug
 if (debug) {
-  Object.assign(window, { __fur: fur, __tracker: tracker, __setPaused: (on: boolean) => setPaused(on) })
+  Object.assign(window, { __fur: fur, __tracker: tracker, __setPaused: (on: boolean) => setPaused(on), __recorder: recorder })
   // 테스트용: 현재 펫의 상태를 콘솔에서 보고 바꿀 수 있게
   Object.defineProperty(window, '__pet', { get: () => pet })
 }
@@ -145,13 +149,30 @@ if (debug) Object.assign(window, { __treatTray: treatTray })
 
 // ───────────────────────── 공유 · 공유로 들어온 사람 ─────────────────────────
 
+// 녹화가 되는 브라우저는 짧은 영상(끝 장면 포함)으로 공유한다 (길이는 share.ts)
+if (clipSupport().ok) {
+  setClipRecorder(async (seconds) => {
+    const mine = pet.p.id.startsWith('mine-')
+    const host = new URL(import.meta.env.BASE_URL, location.origin).host + import.meta.env.BASE_URL.replace(/\/$/, '')
+    // 버튼을 누른 손을 들어 쓰다듬을 시간: 3초 세고 녹화한다
+    for (let n = 3; n > 0; n--) {
+      shareBtn.querySelector('b')!.textContent = `${n}초 뒤`
+      toast(`${n}… 손을 보여 주세요. ${seconds}초 동안 담아요`)
+      await new Promise((r) => setTimeout(r, 1000))
+    }
+    shareBtn.querySelector('b')!.textContent = '녹화 중'
+    const blob = await recorder.record(seconds, { overlay: clipOverlay(pet.p, mine, seconds, host) })
+    return { blob, ext: clipSupport().ext }
+  })
+}
+
 const shareBtn = $<HTMLButtonElement>('share-btn')
 shareBtn.onclick = async () => {
   shareBtn.disabled = true
   try {
     const r = await sharePet(pet.p, pet.p.id.startsWith('mine-'), (on) => {
       shareBtn.classList.toggle('recording', on)
-      shareBtn.querySelector('b')!.textContent = on ? '녹화 중' : '공유'
+      if (!on) shareBtn.querySelector('b')!.textContent = '공유'
     })
     if (r === 'copied') toast('링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요')
     if (r === 'downloaded') toast('영상을 저장하고 링크를 복사했어요')
@@ -518,6 +539,8 @@ function frame(now: number) {
 
   updateFur(dt, inputs)
   draw()
+  // 녹화 중이면 방금 그린 화면을 녹화 캔버스에 합친다 (WebGL 내용은 같은 프레임 안에서만 남아 있다)
+  recorder.captureFrame()
   drawCameraOverlay()
   renderQuality(frameMs, dt, performance.now() - workStart)
   raf = requestAnimationFrame(frame)
