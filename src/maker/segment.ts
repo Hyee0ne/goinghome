@@ -11,7 +11,8 @@ import type { BrushMode, InteractiveSegmenter, InteractiveSegmenterLegacy } from
 export type SegModel = 'v1' | 'v2'
 
 const MODEL_URL: Record<SegModel, string> = {
-  v1: 'https://storage.googleapis.com/mediapipe-models/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite',
+  // 앱이 쓰는 v1은 손 인식 모델처럼 우리 사이트에 둔다 (구글 저장소보다 가깝고 브라우저 캐시에 남는다)
+  v1: `${import.meta.env.BASE_URL}models/magic_touch.tflite`,
   v2: 'https://storage.googleapis.com/mediapipe-models/interactive_segmenter_v2/magic_touch/int8/1/interactive_segmentation.task',
 }
 
@@ -57,6 +58,12 @@ export function loadSegmenter(model: SegModel = 'v2') {
               outputCategoryMask: false,
               outputConfidenceMasks: true,
             })
+      // 첫 탭이 느리지 않게 작은 그림으로 한 번 돌려 둔다 (GPU 셰이더 준비가 첫 실행 때 몰린다)
+      if (model === 'v1') {
+        const warm = Object.assign(document.createElement('canvas'), { width: 64, height: 64 })
+        warm.getContext('2d')!.fillRect(16, 16, 32, 32)
+        await new Promise<void>((resolve) => (seg as InteractiveSegmenterLegacy).segment(warm, { keypoint: { x: 0.5, y: 0.5 } }, () => resolve()))
+      }
       return { seg, loadMs: performance.now() - t0 }
     })()
     cache.set(model, p)
