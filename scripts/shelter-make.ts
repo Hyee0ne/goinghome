@@ -70,6 +70,10 @@ interface Verdict {
   why: string[]
   made?: boolean
   rig?: unknown
+  /** 정면도 0~1, 공고 사진 수, 판정을 통과한 사진 수 */
+  frontal?: number
+  total?: number
+  passed?: number
 }
 
 const log = (s: string) => console.log(s)
@@ -99,22 +103,28 @@ async function make() {
       continue
     }
     log(`\n▶ ${a.sp === 'dog' ? '🐶' : '🐱'} ${c.id} (${c.reasons.join(', ')})`)
-    const v = await judge(a)
-    if (v.ok) {
+    const { options, why, total } = await judge(a)
+    const v: Verdict = { id: a.id, sp: a.sp as 'dog' | 'cat', ok: false, why: [...why], total, passed: options.length }
+    // 가장 정면인 사진부터 만들어 보고, 자른 뒤 구도까지 통과하는 첫 사진을 쓴다
+    for (const o of options) {
+      const tag = `사진 ${o.photo + 1}/${total} (정면도 ${(o.frontal * 100).toFixed(0)}%)`
       try {
-        v.rig = build(a, v.photo!)
-        v.made = true
+        writeJson(join(ROOT, 'pets-src', `shelter-${a.id}`, 'landmarks.raw.json'), o.raw)
+        const rig = build(a, o.photo)
         // 자른 뒤 구도: 머리가 화면 안에 들어오는지, 턱 아래로 다리·몸통이 너무 길게 보이지 않는지
-        const bad = layoutProblems(v.rig as Rig)
+        const bad = layoutProblems(rig as Rig)
         if (bad.length) {
-          v.ok = false
-          v.why.push(...bad)
+          v.why.push(`${tag}: ${bad.join(', ')}`)
+          continue
         }
+        Object.assign(v, { ok: true, made: true, rig, photo: o.photo, frontal: o.frontal })
+        v.why.unshift(`${tag} 사용 · 통과 ${options.length}장 중 가장 정면`)
+        break
       } catch (e) {
-        v.ok = false
-        v.why.push(`실사 만들기 실패: ${(e as Error).message.split('\n')[0]}`)
+        v.why.push(`${tag}: 실사 만들기 실패 ${(e as Error).message.split('\n')[0]}`)
       }
     }
+    if (!v.ok) rmSync(join(STAGE, a.id), { recursive: true, force: true })
     log(`   ${v.ok ? '✓ 통과' : '✗ 탈락'}: ${v.why.join(' · ')}`)
     verdicts.push(v)
   }
@@ -125,11 +135,22 @@ async function make() {
   log(`고른 뒤: npm run shelter:make -- --publish ${ok.map((v) => v.id).join(',') || '<공고번호,...>'}`)
 }
 
-/** 공고 사진을 차례로 받아 판정한다. 처음 통과하는 사진을 쓴다 */
-async function judge(a: Animal): Promise<Verdict> {
+/** 정면 후보 사진 한 장 */
+interface Option {
+  photo: number
+  /** 정면도 0~1 (1이 정면: 코가 두 눈 가운데) */
+  frontal: number
+  /** 두 눈 사이 (원본 픽셀). 정면도가 같으면 얼굴이 큰 사진 */
+  eyeGap: number
+  raw: Record<string, unknown>
+}
+
+/** 공고 사진(최대 8장)을 모두 받아 판정하고, 통과한 사진을 정면인 순서로 돌려준다 */
+async function judge(a: Animal): Promise<{ options: Option[]; why: string[]; total: number }> {
   const dir = join(ROOT, 'pets-src', `shelter-${a.id}`)
   mkdirSync(dir, { recursive: true })
   const why: string[] = []
+  const options: Option[] = []
   for (let i = 0; i < a.photos.length; i++) {
     const file = join(dir, `src-${i}.jpg`)
     if (!existsSync(file)) {
@@ -142,19 +163,22 @@ async function judge(a: Animal): Promise<Verdict> {
     }
     const det = detectFree(file, join(dir, `src-${i}.detect.json`))
     const problems = det ? check(det, a.sp as 'dog' | 'cat') : ['Apple Vision 실패']
-    if (!problems.length) {
-      // 기준점: 무료면 Apple Vision 관절에서, 유료면 비전 모델에서 (pet-add 'detect' 결과와 같은 모양으로 둔다)
-      const raw = JUDGE === 'vision' ? await visionLandmarks(file, det!, a.sp as 'dog' | 'cat') : rawFromPose(det!, a.sp as 'dog' | 'cat')
-      if (!raw) {
-        why.push(`사진 ${i + 1}: 기준점을 찾지 못함`)
-        continue
-      }
-      writeJson(join(dir, 'landmarks.raw.json'), raw)
-      return { id: a.id, sp: a.sp as 'dog' | 'cat', ok: true, photo: i, why: [`사진 ${i + 1} 사용`, `정면도 ${(100 - Math.abs(yawOf(det!)) * 100).toFixed(0)}%`] }
+    if (problems.length) {
+      why.push(`사진 ${i + 1}: ${problems.join(', ')}`)
+      continue
     }
-    why.push(`사진 ${i + 1}: ${problems.join(', ')}`)
+    // 기준점: 무료면 Apple Vision 관절에서, 유료면 비전 모델에서 (pet-add 'detect' 결과와 같은 모양으로 둔다)
+    const raw = JUDGE === 'vision' ? await visionLandmarks(file, det!, a.sp as 'dog' | 'cat') : rawFromPose(det!, a.sp as 'dog' | 'cat')
+    if (!raw) {
+      why.push(`사진 ${i + 1}: 기준점을 찾지 못함`)
+      continue
+    }
+    const e = eyesOf(det!)!
+    options.push({ photo: i, frontal: 1 - Math.min(1, Math.abs(yawOf(det!))), eyeGap: dist(e.l, e.r), raw })
   }
-  return { id: a.id, sp: a.sp as 'dog' | 'cat', ok: false, why: why.length ? why : ['사진이 없어요'] }
+  // 정면도 순 (거의 같으면 얼굴이 큰 사진)
+  options.sort((x, y) => (Math.abs(x.frontal - y.frontal) > 0.02 ? y.frontal - x.frontal : y.eyeGap - x.eyeGap))
+  return { options, why, total: a.photos.length }
 }
 
 function detectFree(photo: string, cache: string): Detect | null {
@@ -336,6 +360,7 @@ function writePreview(verdicts: Verdict[], animals: Map<string, Animal>) {
     return `<label class="card ${v.ok ? 'ok' : 'no'}">
   <div class="imgs"><img src="${src}" loading="lazy">${v.made ? `<img class="face" src="${v.id}/face.webp" loading="lazy">` : ''}</div>
   <div class="meta">${v.ok ? `<input type="checkbox" value="${v.id}" checked> ` : ''}<b>${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}</b>
+  ${v.ok ? `<div class="pick">정면도 ${Math.round((v.frontal ?? 0) * 100)}% · ${v.total}장 중 ${(v.photo ?? 0) + 1}번째 (통과 ${v.passed}장)</div>` : ''}
   <small>${v.why.join('<br>')}</small></div>
 </label>`
   }
@@ -344,7 +369,7 @@ function writePreview(verdicts: Verdict[], animals: Map<string, Animal>) {
 body{font:14px system-ui;margin:16px;background:#fdf1e4;color:#3b2a1e}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .card{display:block;background:#fff;border-radius:12px;padding:8px;border:2px solid transparent}
-.card.ok{border-color:#7ec27e}.card.no{opacity:.55}
+.card.ok{border-color:#7ec27e}.pick{margin-top:4px;font-weight:600;color:#3f7a3f}.card.no{opacity:.55}
 .imgs{display:flex;gap:6px}.imgs img{width:50%;aspect-ratio:3/4;object-fit:contain;border-radius:8px;background:#eee}
 .imgs img.face{background:repeating-conic-gradient(#ddd 0 25%,#fff 0 50%) 0 0/16px 16px}
 small{display:block;color:#7a6556;margin-top:4px}pre{background:#fff;padding:10px;border-radius:8px;white-space:pre-wrap}
