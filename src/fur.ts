@@ -36,6 +36,8 @@ export class FurField {
   private vx = new Float32Array(FIELD_W * FIELD_H)
   private vy = new Float32Array(FIELD_W * FIELD_H)
   private press = new Float32Array(FIELD_W * FIELD_H)
+  /** 튕기지 않고 천천히 돌아오는 털 (FurRenderer가 움직임 묶음에 맞춰 정한다) */
+  soft = false
   /** 손마다 지난 접촉 위치 (빠르게 움직여도 선을 따라 빈틈없이 찍기 위해) */
   private last = new Map<string, { x: number; y: number }>()
   /** 격자가 조금이라도 움직였으면 true. false면 텍스처 업로드를 건너뛴다 */
@@ -66,9 +68,10 @@ export class FurField {
     const n = FIELD_W * FIELD_H
     const cw = this.rig.width / FIELD_W
     const ch = this.rig.height / FIELD_H
-    // 스프링: 초당 약 1.2번 흔들리고, 한 번쯤 살짝 넘어갔다 돌아온다
-    const k = 58
-    const c = 8.5
+    // 스프링: 초당 약 1.2번 흔들리고, 한 번쯤 살짝 넘어갔다 돌아온다.
+    // soft면 튕기지 않고 1초쯤에 걸쳐 천천히 제자리로 (자동 기준점 아이: 튕김이 사진 출렁임으로 보인다)
+    const k = this.soft ? 9 : 58
+    const c = this.soft ? 6.6 : 8.5
     const touched = new Uint8Array(n)
 
     for (const contact of contacts) {
@@ -580,6 +583,8 @@ uniform float uSdfRange;
 uniform vec3 uEarsFill;
 uniform vec2 uFurLag;      // 머리가 움직일 때 털끝이 늦게 따라오는 거리 (픽셀)
 uniform float uBreeze;     // 털끝 흔들림 세기 (픽셀)
+uniform float uShimmer;    // 털끝 살랑임 (픽셀): 털 몇 가닥 크기의 짧은 물결이라 영역이 출렁이지 않고 털끝만 산다
+uniform float uBreathFur;  // 숨 쉴 때 가슴 털이 결 따라 오르내리는 거리 (픽셀, 몸통 크기는 그대로)
 uniform float uShadowAmt;  // 바닥 그림자 세기 (클로즈업 사진은 0)
 uniform float uFadeFrom;   // 이 높이(픽셀)부터 아래로 서서히 투명해진다
 uniform vec2 uFadeSides;   // 잘린 옆면 경계 (왼쪽 x, 오른쪽 x). 잘리지 않았으면 사진 밖
@@ -679,6 +684,19 @@ float faceDepth(vec2 p) {
   return smoothstep(1.15, 0.0, ellipseDist(p, uSkull)) * 0.5 + smoothstep(1.1, 0.0, ellipseDist(p, uMuzzle)) * 0.5;
 }
 
+/** 값 잡음 (0~1). 털끝 살랑임에 쓴다 */
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x), mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
 /** 타원 안은 1, 가장자리 30%에서 부드럽게 0으로 */
 float region(vec2 p, vec4 e) {
   return 1.0 - smoothstep(0.7, 1.0, ellipseDist(p, e));
@@ -773,7 +791,15 @@ void main() {
                      min(img(Q + vec2(0.0, 12.0)).a, img(Q - vec2(0.0, 12.0)).a));
   float edge = img(Q).a * (1.0 - around);
   float drift = sin(uTime * 0.7 + Q.y * 0.013 + Q.x * 0.007); // 윤곽 털이 천천히 나부낀다
-  Q += fdir * (breeze * uBreeze * fl.b * (1.0 + 2.5 * edge) + drift * 1.2 * edge) * protect;
+  Q += fdir * (breeze * uBreeze * fl.b * (1.0 + 2.5 * edge) + drift * 1.2 * edge * min(1.0, uBreeze)) * protect;
+  // 털끝 살랑임: 털 몇 가닥 크기(파장 약 18픽셀)의 잡음을 결 방향으로만, 시간에 따라 천천히 바꾼다.
+  // 파장이 짧아 이웃 털끼리 따로 움직이므로 사진 영역이 통째로 출렁이지 않는다
+  if (uShimmer > 0.0) {
+    float sn = vnoise(Q * 0.055 + vec2(uTime * 0.45, -uTime * 0.3)) * 0.65 + vnoise(Q * 0.13 - vec2(uTime * 0.7, uTime * 0.5)) * 0.35;
+    Q += fdir * (sn - 0.5) * 2.0 * uShimmer * (0.35 + 0.65 * fl.b) * (1.0 + 1.2 * edge) * protect;
+  }
+  // 숨쉬기(털): 가슴 쪽 털만 결 따라 아주 조금 오르내린다
+  Q += fdir * uBreathFur * mc * protect;
   // 머리가 움직이면 털끝은 관성으로 늦게 따라온다 (결이 뚜렷한 긴 털일수록 더)
   Q += uFurLag * (0.55 + 0.45 * breeze) * (0.3 + 0.7 * fl.b) * (1.0 + 1.5 * edge) * protect;
 
@@ -973,9 +999,12 @@ export class FurRenderer {
   private hasEyesPhoto = false
   /** 자동 기준점 아이(표정 사진이 하나도 없음)는 AUTO_MOTION 묶음 */
   private calmMotion = false
+  /** 지금 그리는 아이의 종 (움직임 묶음을 개·고양이로 나눈다) */
+  private species: 'dog' | 'cat' = 'dog'
   /** 지금 쓰는 움직임 묶음. ?motion=로 바꾸고, ?debug면 window.__motionOverride로 효과를 하나씩 켜 볼 수 있다 */
   motionNow(): Motion {
-    const base = this.calmMotion ? MOTION[MOTION_Q && MOTION[MOTION_Q] ? MOTION_Q : AUTO_MOTION] : MOTION.full
+    const name = MOTION_Q && MOTION[MOTION_Q] ? MOTION_Q : AUTO_MOTION
+    const base = !this.calmMotion ? MOTION.full : name === 'safe' && this.species === 'cat' ? MOTION.safeCat : MOTION[name]
     const o = (window as unknown as { __motionOverride?: Partial<Motion> }).__motionOverride
     return o ? { ...base, ...o } : base
   }
@@ -1242,8 +1271,13 @@ export class FurRenderer {
     const m = this.motion!
     const soft = FaceMotion.soft
     gl.uniform1f(this.loc('uTime'), p.t)
+    this.species = p.species
     const mo = this.motionNow()
     gl.uniform1f(this.loc('uFurShift'), (3.8 / rig.scale) * mo.field)
+    // SAFE: 털 눕기는 튕기지 않고 천천히 돌아온다, 털끝 살랑임·가슴 털 숨쉬기
+    if (this.field) this.field.soft = mo.shimmer > 0
+    gl.uniform1f(this.loc('uShimmer'), mo.shimmer * toPx)
+    gl.uniform1f(this.loc('uBreathFur'), Math.sin(this.breathPhase) * mo.breathFur * toPx)
     gl.uniform1f(this.loc('uShrink'), (p.startle * 0.03 + p.flinch * 0.02) * mo.startle)
     gl.uniform1f(this.loc('uShiver'), p.startle * Math.sin(p.t * 60) * 2.5 * toPx * 0.6 * mo.startle)
     // 사진은 크게 비틀면 티가 나므로 몸짓(pose)은 작게, 손에 끌려가는 움직임(motion)은 한계를 두고 더한다
@@ -1503,17 +1537,21 @@ const DRAWN_HOLD_S = 0.3
  * 보호소 사진은 정성 들여 찍은 사진이 아니라 부위 위치가 대충이고, 얼굴 전체가 계속 휘면 사진 한 장의 한계가 드러난다.
  * SAFE는 좁은 곳에서 짧게 일어나는 반응(털 눕기, 깜빡임, 코, 간식)만 남긴다
  */
-type Motion = Record<'field' | 'breeze' | 'drag' | 'head' | 'ear' | 'breath' | 'face' | 'nose' | 'startle' | 'gaze', number>
+type Motion = Record<'field' | 'breeze' | 'drag' | 'head' | 'ear' | 'breath' | 'face' | 'nose' | 'startle' | 'gaze' | 'shimmer' | 'breathFur', number>
 // (gaze: 눈동자가 손을 따라가는 거리. 얼굴은 그대로이고 눈 안에서만 움직여 사진 한 장으로도 자연스럽다)
 // SAFE 털 눕기는 손이 닿은 자리만 얌전하게, 코는 아주 조금만 (사용자 확인 2026-10-03)
-const MOTION: Record<'full' | 'calm' | 'safe', Motion> = {
-  full: { field: 1, breeze: 1, drag: 1, head: 1, ear: 1, breath: 1, face: 1, nose: 1, startle: 1, gaze: 1 },
-  calm: { field: 1, breeze: 1, drag: 0.6, head: 0.35, ear: 0.25, breath: 1, face: 0.5, nose: 0.5, startle: 1, gaze: 1 },
-  safe: { field: 0.35, breeze: 0, drag: 0, head: 0, ear: 0, breath: 0, face: 0, nose: 0.3, startle: 0.3, gaze: 2.2 },
+// shimmer·breathFur는 펫 로컬 단위 (털끝 살랑임·가슴 털 오르내림 거리). SAFE에서만 쓴다 (FULL·CALM은 breeze·breath가 있다)
+// SAFE는 털이 살아 있게 하되 영역이 출렁이지 않게: 짧은 파장 살랑임 + 가슴 털 숨쉬기 + 튕기지 않는 털 눕기.
+// 고양이는 털이 길고 부드러워 살랑임·털 눕기를 조금 더 (사용자 확인 2026-10-05 '털이 안 움직여 인위적, 고양이 특히')
+const MOTION: Record<'full' | 'calm' | 'safe' | 'safeCat', Motion> = {
+  full: { field: 1, breeze: 1, drag: 1, head: 1, ear: 1, breath: 1, face: 1, nose: 1, startle: 1, gaze: 1, shimmer: 0, breathFur: 0 },
+  calm: { field: 1, breeze: 1, drag: 0.6, head: 0.35, ear: 0.25, breath: 1, face: 0.5, nose: 0.5, startle: 1, gaze: 1, shimmer: 0, breathFur: 0 },
+  safe: { field: 0.5, breeze: 0, drag: 0, head: 0, ear: 0, breath: 0, face: 0, nose: 0.3, startle: 0.3, gaze: 2.2, shimmer: 0.35, breathFur: 0.35 },
+  safeCat: { field: 0.65, breeze: 0, drag: 0, head: 0, ear: 0, breath: 0, face: 0, nose: 0.3, startle: 0.3, gaze: 2.2, shimmer: 0.75, breathFur: 0.5 },
 }
 /** 자동 기준점 아이의 기본 움직임 묶음 */
-const AUTO_MOTION: keyof typeof MOTION = 'safe'
-const MOTION_Q = new URLSearchParams(location.search).get('motion') as keyof typeof MOTION | null
+const AUTO_MOTION: 'safe' | 'calm' | 'full' = 'safe'
+const MOTION_Q = new URLSearchParams(location.search).get('motion') as 'safe' | 'calm' | 'full' | null
 /** 감았다 뜬 뒤 다시 감기까지 쉬는 시간(초) */
 const DRAWN_REARM_S = 1.5
 
