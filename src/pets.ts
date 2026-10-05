@@ -126,6 +126,8 @@ export interface PhotoRig {
   paw?: { src: string; x: number; y: number; width: number; height: number; shoulder: { x: number; y: number }; pad: { x: number; y: number } }
   /** 전신 사진이면 발밑에 그림자를 깐다. 얼굴 클로즈업처럼 아래가 잘린 사진은 false */
   floorShadow: boolean
+  /** 츄르를 핥아 먹는 고양이 (입 표정 사진이 '혀로 핥기'). 간식이 츄르 스틱으로 그려지고 날름날름 핥는다 */
+  lick?: boolean
   /** 기준점을 자동으로 잡았는지 (보호소 아이). 표정 사진이 있어도 앱은 차분한(SAFE) 움직임으로 그린다 */
   autoLandmarks?: boolean
   /** 사진 아래쪽을 이 높이(픽셀)만큼 배경으로 서서히 사라지게 한다 (잘린 가슴선을 숨긴다) */

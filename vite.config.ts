@@ -77,7 +77,10 @@ function petEditorApi(): Plugin {
           const hasExpr = existsSync(join(root, id, 'expr-final-square.png'))
           const until = shelter ? ['--until', hasExpr ? 'assets' : 'prepare'] : []
           // 보호소 고퀄(-hq)은 눈 감기만 있는 아이라 --parts eyes (빼면 다른 표정 칸을 채우려고 유료 호출을 할 수 있다)
-          const eyes = id.endsWith('-hq') ? ['--parts', 'eyes'] : []
+          // (입 표정까지 만든 아이는 eyes+pant(개)·eyes+lick(고양이))
+          const mouth = existsSync(join(root, id, 'expr-pant.png'))
+          const sp = mouth ? JSON.parse(readFileSync(join(root, id, 'landmarks.json'), 'utf8')).species : ''
+          const eyes = id.endsWith('-hq') ? ['--parts', mouth ? (sp === 'cat' ? 'eyes+lick' : 'eyes+pant') : 'eyes'] : []
           const p = spawn('node', ['scripts/pet-add.ts', '--id', id, '--from', 'prepare', ...until, ...eyes], { cwd: import.meta.dirname })
           let log = ''
           p.stdout.on('data', (c) => (log += c))

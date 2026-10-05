@@ -936,8 +936,13 @@ function treatStage(left: number) {
 }
 
 /** 엄지·검지 끝 사이에 간식을 그린다 (left: 남은 입 수, 0이면 다 먹어서 없다) */
+/** 츄르 스틱 (츄르를 핥는 고양이, rig.lick) */
+const churuImg = new Image()
+churuImg.src = assetUrl('pets/churu.webp')
+
 function drawTreat(left: number, pts: Pt[]) {
   if (left <= 0) return
+  if (pet.p.photo?.lick) return drawChuru(left, pts)
   const img = treatStage(left)
   if (!img) return
   const x = (pts[4].x + pts[8].x) / 2
@@ -950,6 +955,26 @@ function drawTreat(left: number, pts: Pt[]) {
   ctx.shadowBlur = w * 0.15
   ctx.shadowOffsetY = w * 0.06
   ctx.drawImage(img, x - w / 2, y - h / 2, w, h)
+  ctx.restore()
+}
+
+/** 츄르: 뜯은 위쪽이 입(손끝)을 향해 아래로 늘어진다. 핥을수록 짜 놓은 퓨레가 줄고 스틱이 납작해진다 */
+function drawChuru(left: number, pts: Pt[]) {
+  if (!churuImg.complete || !churuImg.naturalWidth) return
+  const x = (pts[4].x + pts[8].x) / 2
+  const y = (pts[4].y + pts[8].y) / 2
+  const f = left / 3
+  const h = pet.L.headRx * 1.0 * scale
+  const w = (h * churuImg.naturalWidth) / churuImg.naturalHeight
+  // 남은 양만큼 위쪽(퓨레)을 덜 보이게: 다 먹을수록 위쪽 15%까지 잘라 낸다
+  const cut = (1 - f) * 0.15
+  const sy = churuImg.naturalHeight * cut
+  const dh = h * (1 - cut)
+  ctx.save()
+  ctx.shadowColor = 'rgba(60, 35, 15, 0.3)'
+  ctx.shadowBlur = w * 0.3
+  ctx.globalAlpha = 0.6 + 0.4 * f
+  ctx.drawImage(churuImg, 0, sy, churuImg.naturalWidth, churuImg.naturalHeight - sy, x - w / 2, y - h * 0.08, w, dh)
   ctx.restore()
 }
 
