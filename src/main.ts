@@ -146,7 +146,7 @@ function renderTabs() {
     const b = Object.assign(document.createElement('button'), {
       type: 'button',
       className: 'pet-tab shelter-tab' + (cur ? ' active' : ''),
-      textContent: cur ? `🏠 ${pet.p.name}` : `🏠 보호소 아이 ${shelter.length}`,
+      textContent: cur ? `${pet.p.adoption?.aiFrontal ? '✨' : '🏠'} ${pet.p.name}` : `🏠 보호소 아이 ${shelter.length}`,
     })
     b.setAttribute('aria-haspopup', 'dialog')
     b.onclick = () => openShelterPicker(shelter)
@@ -165,8 +165,9 @@ function renderTabs() {
 
 const shelterPicker = $<HTMLDialogElement>('shelter-picker')
 function openShelterPicker(list: PetProfile[]) {
+  const sorted = [...list].sort((a, b) => Number(!!b.adoption?.aiFrontal) - Number(!!a.adoption?.aiFrontal))
   $('shelter-grid').replaceChildren(
-    ...list.map((p) => {
+    ...sorted.map((p) => {
       const b = Object.assign(document.createElement('button'), { type: 'button', className: 'sp-card' + (p.id === pet.p.id ? ' active' : '') })
       const img = Object.assign(new Image(), { src: p.photo?.src ?? '', alt: '', decoding: 'async', loading: 'lazy' })
       const end = p.adoption?.noticeEnd
@@ -178,6 +179,12 @@ function openShelterPicker(list: PetProfile[]) {
       )
       b.append(img, text)
       if (left !== null) b.append(Object.assign(document.createElement('i'), { className: 'sp-dday', textContent: left <= 0 ? '오늘 마감' : `D-${left}` }))
+      // 고퀄(AI 정면 + 표정)으로 만든 아이: 표정까지 움직여요
+      if (p.adoption?.aiFrontal) {
+        const hq = Object.assign(document.createElement('i'), { className: 'sp-hq', textContent: '✨ 생생' })
+        hq.title = '표정까지 생생하게 움직이는 아이'
+        b.append(hq)
+      }
       b.onclick = () => {
         shelterPicker.close()
         selectPet(p)

@@ -36,6 +36,8 @@ let all: Animal[] = []
 let pettable = new Set<string>()
 /** 쓰다듬을 수 있는 아이의 가장 정면인 사진 (카드 사진으로 쓴다) */
 const frontal = new Map<string, string>()
+/** 고퀄(AI 정면 + 표정)으로 만든 아이 */
+const vivid = new Set<string>()
 let list: Animal[] = []
 let shown = 0
 
@@ -70,7 +72,7 @@ function card(a: Animal) {
     Object.assign(document.createElement('small'), { textContent: a.org }),
   )
   b.append(img, badge, text)
-  if (pettable.has(a.id)) b.append(Object.assign(document.createElement('span'), { className: 'ad-pettable', textContent: '✋ 쓰다듬기' }))
+  if (pettable.has(a.id)) b.append(Object.assign(document.createElement('span'), { className: 'ad-pettable', textContent: vivid.has(a.id) ? '✨ 생생 쓰다듬기' : '✋ 쓰다듬기' }))
   b.onclick = () => openDetail(a)
   li.append(b)
   return li
@@ -152,8 +154,9 @@ detail.addEventListener('click', (e) => {
 const shelterLive = fetch(`${import.meta.env.BASE_URL}data/shelter-live.json`)
   .then((r) => (r.ok ? r.json() : { pets: [] }))
   .catch(() => ({ pets: [] }))
-  .then((d: { pets: { id: string; photo?: string }[] }) => {
+  .then((d: { pets: { id: string; photo?: string; aiFrontal?: boolean }[] }) => {
     pettable = new Set(d.pets.map((p) => p.id))
+    for (const p of d.pets) if (p.aiFrontal) vivid.add(p.id)
     for (const p of d.pets) if (p.photo) frontal.set(p.id, `${import.meta.env.BASE_URL}${p.photo}`)
   })
 

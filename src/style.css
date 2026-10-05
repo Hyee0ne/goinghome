@@ -1260,3 +1260,16 @@ button {
 .treat-tray.churu .tray-treat.gone {
   transform: translateY(-14px) scale(0.6);
 }
+
+.sp-hq {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
