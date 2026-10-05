@@ -1150,7 +1150,8 @@ export class FurRenderer {
       }
       gl.uniform1f(this.loc('uHasCatch'), assets.catch ? 1 : 0)
       this.hasEyesPhoto = !!rig.expressions?.eyesClosed && !!assets.expr[1]
-      this.calmMotion = !rig.expressions
+      // 표정 사진이 없거나, 있어도 기준점을 자동으로 잡은 아이는 차분하게 (손으로 맞춘 고퀄 아이는 초코·삼식처럼 FULL)
+      this.calmMotion = !rig.expressions || !!rig.autoLandmarks
       this.paw.load(rig.paw)
       this.setRigUniforms(rig, assets.expr.map((im) => !!im), !!assets.morph)
     } finally {

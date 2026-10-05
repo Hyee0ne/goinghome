@@ -33,3 +33,5 @@ generated-images/
 public/data/
 # 공고 아이 실사 (배포 때 shelter-data 브랜치에서 받는다. scripts/shelter-make.ts)
 public/shelter/
+# 보호소 아이 실사 작업 자리 (기준점 편집 화면이 읽는다. scripts/shelter-make.ts)
+public/pets/shelter-*/

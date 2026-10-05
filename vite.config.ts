@@ -62,6 +62,8 @@ function petEditorApi(): Plugin {
           req.on('end', () => {
             try {
               writeFileSync(file, JSON.stringify(JSON.parse(body), null, 2) + '\n')
+              // 보호소 아이는 손으로 맞췄다는 표시를 남긴다 (shelter:make가 기준점을 덮어쓰지 않고, 앱은 FULL 움직임으로)
+              if (id.startsWith('shelter-')) writeFileSync(join(root, id, 'hand-tuned'), new Date().toISOString())
               send(200, { ok: true })
             } catch (e) {
               send(400, { error: String(e) })
@@ -70,7 +72,13 @@ function petEditorApi(): Plugin {
           return
         }
         if (what === 'rebuild' && req.method === 'POST') {
-          const p = spawn('node', ['scripts/pet-add.ts', '--id', id, '--from', 'prepare'], { cwd: import.meta.dirname })
+          // 보호소 아이는 앱에 등록하지 않고(src/rigs에 쓰지 않음) 사진·부위만 다시 만든다. AI 표정 사진이 이미 있을 때만 표정 부위도 (유료 호출 없음)
+          const shelter = id.startsWith('shelter-')
+          const hasExpr = existsSync(join(root, id, 'expr-final-square.png'))
+          const until = shelter ? ['--until', hasExpr ? 'assets' : 'prepare'] : []
+          // 보호소 고퀄(-hq)은 눈 감기만 있는 아이라 --parts eyes (빼면 다른 표정 칸을 채우려고 유료 호출을 할 수 있다)
+          const eyes = id.endsWith('-hq') ? ['--parts', 'eyes'] : []
+          const p = spawn('node', ['scripts/pet-add.ts', '--id', id, '--from', 'prepare', ...until, ...eyes], { cwd: import.meta.dirname })
           let log = ''
           p.stdout.on('data', (c) => (log += c))
           p.stderr.on('data', (c) => (log += c))
