@@ -462,6 +462,8 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
       fadeSides: { ...(frame.cutLeft && { left: -face.offsetX }), ...(frame.cutRight && { right: 1086 - face.offsetX }) },
     }),
     ...(expressions && { expressions }),
+    // 고퀄은 표정이 반쯤 머물지 않고 열고 닫는 두 상태만 (사용자 확인 2026-10-06)
+    ...(id.endsWith('-hq') && expressions && { snapFace: true }),
     // 고퀄 고양이에 입 표정(츄르 핥는 혀)이 있으면 핥아 먹는다
     ...(a.sp === 'cat' && id.endsWith('-hq') && expressions?.pant && { lick: true }),
     // 손으로 맞추지 않은 기준점이면 앱이 표정이 있어도 SAFE로 그린다

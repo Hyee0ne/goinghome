@@ -983,6 +983,9 @@ export class FurRenderer {
   private pant = 0
   /** 씹기: 살짝 벌린 입 사진으로 넘어간 정도 (0~1) */
   private chewW = 0
+  /** 보호소 고퀄: 눈·입이 열고 닫는 두 상태 사이를 빠르게 넘어간 정도 */
+  private snapLid = [0, 0]
+  private snapPant = 0
   /** 그린 눈꺼풀이 감긴 정도 (눈마다, 표정 사진이 없는 아이) */
   private drawnLid = [0, 0]
   /** 그린 눈꺼풀이 다 감은 채로 있은 시간 (눈마다) */
@@ -1338,7 +1341,11 @@ export class FurRenderer {
     // 츄르를 핥는 고양이(rig.lick, 혀 표정 사진): 한 입마다 혀를 날름날름 (혀 살짝 ↔ 혀로 핥기 사진을 초당 3번 넘나든다)
     const licking = rig.lick && p.chomp > 0.5 ? (Math.sin(p.t * Math.PI * 2 * 3) > 0 ? 1 : 0.5) : 0
     const eatW = rig.lick ? Math.max(licking, this.chewW * 0.5) : Math.max(p.chomp * (p.species === 'dog' ? 0.8 : 0.5), this.chewW * 0.5)
-    gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42, eatW) : eatW)
+    // 보호소 고퀄(rig.snapFace): 입은 확실히 벌리거나(헥헥) 다물거나 둘 중 하나. 반쯤 열렸다 닫혔다 하면 오물거려 보인다 (입맛 다시기도 뺀다)
+    if (rig.snapFace) {
+      this.snapPant = step01(this.snapPant, this.panting ? 1 : 0, SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      gl.uniform1f(this.loc('uPantW'), Math.max(this.snapPant, eatW))
+    } else gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42, eatW) : eatW)
     gl.uniform1f(this.loc('uEarsW'), this.earsBack)
 
     // 기분 좋은 눈: 개는 지그시 감고, 고양이는 게슴츠레 반쯤 뜬 채로 있다 (반쯤 감은 표정 사진이 딱 그 모양)
@@ -1349,7 +1356,13 @@ export class FurRenderer {
     const slow = p.slowBlink
     // 눈가를 만지면 그쪽 눈을 감는다 (반대쪽도 반쯤 따라 감는다)
     const lid = Math.max(p.blink * 1.1, squint, p.sigh * 0.35, slow)
-    if (this.hasEyesPhoto) {
+    if (this.hasEyesPhoto && rig.snapFace) {
+      // 보호소 고퀄: 게슴츠레 반쯤 머물지 않는다. 감을 때는 빠르게 끝까지, 뜰 때는 빠르게 동그랗게 (다 감은 채로 있는 건 괜찮다)
+      const want = (v: number) => (v > DRAWN_SNAP ? 1 : 0)
+      this.snapLid[0] = step01(this.snapLid[0], want(Math.max(lid, m.eyeTouchL)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      this.snapLid[1] = step01(this.snapLid[1], want(Math.max(lid, m.eyeTouchR)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      gl.uniform2f(this.loc('uLid'), this.snapLid[0], this.snapLid[1])
+    } else if (this.hasEyesPhoto) {
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(lid, m.eyeTouchL)), Math.min(1, Math.max(lid, m.eyeTouchR)))
     } else {
       // 눈 감은 표정 사진이 없는 아이는 눈꺼풀을 그려 덮는다. 그린 눈꺼풀은 반쯤 감은 채 멈춰 있거나 다 감은 채로 있으면 티가 나서,
@@ -1383,7 +1396,8 @@ export class FurRenderer {
 
     gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx * calm.face, m.browR * BROW_LIFT * toPx * calm.face)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
-    const pantBob = this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
+    // (보호소 고퀄은 헥헥 입이 숨에 맞춰 들썩이면 오물거려 보여 뺀다)
+    const pantBob = rig.snapFace ? 0 : this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
     // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다
     // (입 벌린 사진이 있으면 무는 동작은 사진이 하고, 씹을 때 아래턱만 오르내린다)
     const chewBob = p.chew * (0.5 + 0.5 * Math.sin(p.t * 9)) * CHEW_OPEN
@@ -1529,6 +1543,15 @@ class PawLayer {
 const DRAWN_CLOSE_S = 0.08
 const DRAWN_OPEN_S = 0.15
 const DRAWN_SNAP = 0.3
+/** 보호소 고퀄 눈·입: 닫기(감기)·열기(뜨기) 시간 */
+const SNAP_CLOSE_S = 0.09
+const SNAP_OPEN_S = 0.12
+
+/** 0~1을 목표 쪽으로 정해진 시간에 걸쳐 일정하게 옮긴다 (올라갈 때 upS초, 내려갈 때 downS초) */
+function step01(cur: number, target: number, upS: number, downS: number, dt: number) {
+  return target > cur ? Math.min(target, cur + dt / upS) : Math.max(target, cur - dt / downS)
+}
+
 /** 다 감은 채로 있는 최대 시간(초). 그 뒤로는 바로 뜬다 */
 const DRAWN_HOLD_S = 0.3
 /**
