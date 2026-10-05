@@ -1,4 +1,4 @@
-# main에 올리면 빌드해서 깃허브 페이지로 배포한다 (https://hyee0ne.github.io/sonkkeut-pet/)
+# main에 올리면 빌드해서 깃허브 페이지로 배포한다 (https://hyee0ne.github.io/goinghome/)
 name: Deploy to GitHub Pages
 
 on:
@@ -42,7 +42,7 @@ jobs:
         env:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           # 받아 오지 못하면 지금 배포된 목록을 그대로 쓴다
-          ANIMALS_FALLBACK_URL: https://hyee0ne.github.io/sonkkeut-pet/data/animals.json
+          ANIMALS_FALLBACK_URL: https://hyee0ne.github.io/goinghome/data/animals.json
       - run: npm run build
         env:
           GITHUB_PAGES: '1'

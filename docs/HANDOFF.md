@@ -2,8 +2,8 @@
 
 2026-10-01, 기술 담당 세션(pet-03)이 작성. 서비스 기능을 붙이는 세션이 읽고 시작하면 된다.
 
-- 라이브: https://hyee0ne.github.io/sonkkeut-pet/ (`main`에 push하면 1분 안에 자동 배포)
-- 저장소: https://github.com/Hyee0ne/sonkkeut-pet (공개)
+- 라이브: https://hyee0ne.github.io/goinghome/ (`main`에 push하면 1분 안에 자동 배포)
+- 저장소: https://github.com/Hyee0ne/goinghome (공개)
 - 로컬: `npm run dev` → http://localhost:5173 (포트가 차 있으면 5176 등), 휴대폰은 `npm run dev:mobile`
 - 확인용 주소: `?debug` (fps·손 인식 시간 표시), `?debug=mouse` (카메라 없이 마우스로 쓰다듬기, Shift = 양손)
 
@@ -76,7 +76,7 @@ npm run pet:add -- 사진.jpg --id <영문id> --species dog|cat --reference --na
 
 ## 6. 배포·저장소 규칙
 
-- `main`에 push하면 GitHub Actions가 빌드해 페이지에 배포 (`.github/workflows/pages.yml`, `GITHUB_PAGES=1`이면 경로가 `/sonkkeut-pet/`).
+- `main`에 push하면 GitHub Actions가 빌드해 페이지에 배포 (`.github/workflows/pages.yml`, `GITHUB_PAGES=1`이면 경로가 `/goinghome/`).
 - 경로는 항상 `import.meta.env.BASE_URL` 기준으로 (절대경로 `/...` 쓰면 페이지에서 깨진다).
 - 커밋하면 안 되는 것: `.env.local`(API 키), `pets-src/`, `generated-images/`(사용자의 원본 사진). 이미 `.gitignore`에 있음.
 - 저장소가 **공개**라는 점 유의 (키·개인정보 절대 커밋 금지).

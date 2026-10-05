@@ -8,8 +8,8 @@ const DEV_ONLY_PAGES = ['rig.html', 'maker-spike.html']
 
 // 휴대폰·태블릿에서 카메라를 쓰려면 HTTPS가 필요하다: `npm run dev:mobile`
 export default defineConfig({
-  // 깃허브 페이지는 https://<계정>.github.io/sonkkeut-pet/ 아래에서 열린다 (배포 워크플로가 GITHUB_PAGES=1로 빌드)
-  base: process.env.GITHUB_PAGES ? '/sonkkeut-pet/' : '/',
+  // 깃허브 페이지는 https://<계정>.github.io/goinghome/ 아래에서 열린다 (배포 워크플로가 GITHUB_PAGES=1로 빌드)
+  base: process.env.GITHUB_PAGES ? '/goinghome/' : '/',
   plugins: [...(process.env.HTTPS ? [basicSsl()] : []), petEditorApi()],
   // 손 인식 워커는 MediaPipe의 ES 모듈판 wasm 로더를 동적 import하므로 모듈 워커로 빌드한다
   worker: { format: 'es' },
