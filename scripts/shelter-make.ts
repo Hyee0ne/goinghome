@@ -91,6 +91,10 @@ interface Verdict {
   hand?: boolean
   hq?: boolean
   aiFrontal?: boolean
+  /** 무료 버전은 '자른 뒤 머리 잘림'으로만 탈락 (고퀄은 AI가 잘린 부분을 채워 그려 만들 수 있다) */
+  layoutOnly?: boolean
+  /** 원본 사진에서 머리·귀가 사진 밖으로 잘려 AI가 채워 그렸다 */
+  aiFill?: boolean
   /** 정면도 0~1, 공고 사진 수, 판정을 통과한 사진 수 */
   frontal?: number
   total?: number
@@ -130,7 +134,10 @@ async function make() {
     const { options, why, total } = await judge(a)
     const v: Verdict = { id: a.id, sp: a.sp as 'dog' | 'cat', ok: false, why: [...why], total, passed: options.length, end: a.end }
     // 사람이 기준점을 손으로 맞춘 아이와 고퀄로 만든 아이는 다시 만들지 않고 그대로 쓴다 (덮어쓰면 손으로 맞춘 기준점·AI 결과가 사라진다)
-    const prev = handTuned(a.id) || previous.get(a.id)?.hq ? previous.get(a.id) : undefined
+    const prevV = previous.get(a.id)
+    // (고퀄 작업 자리가 없어졌으면 다시 만든다)
+    const prevHqOk = prevV?.hq && existsSync(join(hqDir(a.id), 'landmarks.json'))
+    const prev = handTuned(a.id) || prevHqOk ? prevV : undefined
     if (prev?.ok) {
       const hqId = prev.hq ? `shelter-${a.id}-hq` : undefined
       Object.assign(v, prev, { why: ['이전 결과 그대로 (손으로 맞춤·고퀄)', ...prev.why.filter((w) => !w.startsWith('이전 결과'))], end: a.end, rig: rigFor(a, hqId) })
@@ -148,6 +155,8 @@ async function make() {
         const bad = layoutProblems(rig as Rig)
         if (bad.length) {
           v.why.push(`${tag}: ${bad.join(', ')}`)
+          // 무료 버전은 탈락이지만, 고퀄(AI 정면)은 잘린 부분을 채워 그릴 수 있어 후보로 남긴다
+          if (!v.layoutOnly) Object.assign(v, { layoutOnly: true, photo: o.photo, frontal: o.frontal })
           continue
         }
         Object.assign(v, { ok: true, made: true, rig, photo: o.photo, frontal: o.frontal })
@@ -453,6 +462,8 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
       fadeSides: { ...(frame.cutLeft && { left: -face.offsetX }), ...(frame.cutRight && { right: 1086 - face.offsetX }) },
     }),
     ...(expressions && { expressions }),
+    // 고퀄 고양이에 입 표정(츄르 핥는 혀)이 있으면 핥아 먹는다
+    ...(a.sp === 'cat' && id.endsWith('-hq') && expressions?.pant && { lick: true }),
     // 손으로 맞추지 않은 기준점이면 앱이 표정이 있어도 SAFE로 그린다
     autoLandmarks: !existsSync(join(SRC, 'hand-tuned')),
   }
@@ -485,7 +496,7 @@ async function hq(ids: string[]) {
   const vpath = join(STAGE, 'verdicts.json')
   const all = existsSync(vpath) ? (readJson(vpath).verdicts as Verdict[]) : fail('먼저 npm run shelter:make')
   const animals = new Map((readJson(join(DATA, 'animals.json')).animals as Animal[]).map((a) => [a.id, a]))
-  const pick = ids.map((id) => all.find((v) => v.id === id && v.ok) ?? fail(`통과하지 못했거나 없는 아이예요: ${id}`))
+  const pick = ids.map((id) => all.find((v) => v.id === id && (v.ok || v.layoutOnly)) ?? fail(`통과하지 못했거나 없는 아이예요: ${id}`))
   // 유료: 정면 새로 그리기 약 $0.2, 눈 감기 2장 약 $0.28
   const cost = pick.reduce((s, v) => s + (existsSync(join(hqDir(v.id), 'cutout.png')) ? 0 : 0.2) + (existsSync(join(hqDir(v.id), 'expr-final-square.png')) ? 0 : 0.28), 0)
   // --via chatgpt: ChatGPT 구독(gpt-image 스킬)으로 그린다 (API 비용 없음, 구독 사용량을 쓴다)
@@ -510,7 +521,20 @@ async function hq(ids: string[]) {
         const det = detectPadded(join(dir, 'cutout.png'), join(dir, 'cutout.detect.json'))
         const problems = det ? check({ ...det, humanFaces: 0, hands: [] }, v.sp).filter((p) => !p.startsWith('얼굴이 작음')) : ['Apple Vision 실패']
         if (problems.length) throw new Error(`AI 정면 사진 판정: ${problems.join(', ')}`)
-        writeJson(join(dir, 'landmarks.raw.json'), rawFromPose(det!, v.sp))
+        const raw = rawFromPose(det!, v.sp)
+        // 정수리: 관절로 짐작한 높이보다 실제 머리(불투명한 털)가 더 위면 그 높이로 (털이 풍성하거나 귀가 접힌 고양이는 짐작이 낮아 머리 위가 평평하게 잘렸다)
+        const top = spawnSync('python3', ['-c', `
+import sys, numpy as np
+from PIL import Image
+a = np.array(Image.open(sys.argv[1]).convert('RGBA'))[:, :, 3] > 128
+h, w = a.shape
+x0, x1 = int(float(sys.argv[2]) * w), int(float(sys.argv[3]) * w)
+cols = a[:, max(0, x0):min(w, x1)]
+rows = np.where(cols.mean(axis=1) > 0.5)[0]
+print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.left_eye.x / 1000), String(raw.right_eye.x / 1000)], { encoding: 'utf8' })
+        const topN = Math.round(Number(top.stdout.trim()) * 1000)
+        if (Number.isFinite(topN) && topN < raw.head_top.y) raw.head_top = { x: raw.head_top.x, y: topN }
+        writeJson(join(dir, 'landmarks.raw.json'), raw)
         add('--id', id, '--from', 'frontal', '--until', 'prepare')
         writeFileSync(join(dir, 'landmarks.auto.json'), readFileSync(join(dir, 'landmarks.json')))
       } else add('--id', id, '--from', 'prepare', '--until', 'prepare')
@@ -521,8 +545,9 @@ async function hq(ids: string[]) {
       v.hq = !!(v.rig as { expressions?: unknown }).expressions
       v.hand = handTunedDir(dir)
       v.aiFrontal = true
-      // 고양이 '츄르 핥는 혀' 표정이면 앱이 간식을 핥아 먹는다
-      if (partsArg === 'mouth' && v.sp === 'cat') (v.rig as Record<string, unknown>).lick = true
+      v.aiFill = cutAtEdge(join(ROOT, 'pets-src', `shelter-${v.id}`, `src-${v.photo}.jpg`), join(ROOT, 'pets-src', `shelter-${v.id}`, 'cutout.png'))
+      // 고퀄이 되면 공개 후보 (무료 버전이 구도로 떨어졌어도)
+      v.ok = true
       log(`   ${v.hq ? '✓ 정면 + 눈 감기' : '✗ 눈 감기 표정 파일이 없어요'}${v.hand ? '' : ' (기준점 자동 → 앱은 SAFE. rig.html에서 맞추면 FULL)'}`)
     } catch (e) {
       log(`   ✗ 실패: ${(e as Error).message}`)
@@ -576,6 +601,20 @@ print(json.dumps({'w': w, 'h': h, 'p': p}))`, png, padded, String(bg), String(pa
   return null
 }
 
+/** 원본 사진에서 동물이 위·왼쪽·오른쪽 가장자리에 닿아 있는지 (머리·귀가 사진 밖으로 잘렸을 수 있다) */
+function cutAtEdge(_photo: string, cutout: string) {
+  if (!existsSync(cutout)) return false
+  const r = spawnSync('python3', ['-c', `
+import sys
+import numpy as np
+from PIL import Image
+a = np.array(Image.open(sys.argv[1]).convert('RGBA'))[:, :, 3] > 128
+h, w = a.shape
+band = max(2, int(min(h, w) * 0.01))
+print(int(a[:band].mean() > 0.03 or a[:, :band].mean() > 0.05 or a[:, -band:].mean() > 0.05))`, cutout], { encoding: 'utf8' })
+  return r.stdout.trim() === '1'
+}
+
 function handTunedDir(dir: string) {
   return existsSync(join(dir, 'hand-tuned'))
 }
@@ -592,7 +631,8 @@ function writePreview(verdicts: Verdict[], animals: Map<string, Animal>) {
     return `<label class="card ${v.ok ? 'ok' : 'no'}">
   <div class="imgs"><img src="${src}" loading="lazy">${v.made ? `<img class="face" src="${v.id}/face.webp" loading="lazy">` : ''}</div>
   <div class="meta">${v.ok ? `<input type="checkbox" value="${v.id}"${preChecked.has(v.id) ? ' checked' : ''}> ` : ''}<b>${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}</b>
-  ${v.ok ? `<div class="pick">${dday(v.end)} · ${v.hq && v.hand ? '✨ 고퀄 · ✋ 손으로 맞춤' : v.hand ? '✋ 손으로 맞춤' : v.hq ? `✨ 고퀄 (기준점 자동) · <a href="http://localhost:5173/rig.html?id=shelter-${v.id}-hq" target="_blank">기준점 맞추기</a>` : `<a href="http://localhost:5173/rig.html?id=shelter-${v.id}${v.aiFrontal ? '-hq' : ''}" target="_blank">기준점 맞추기</a>`}</div>` : ''}
+ ${!v.ok && v.layoutOnly ? `<div class="pick">${dday(v.end)} · 무료 버전은 머리 잘림 → 고퀄 후보 (AI가 채워 그림)</div>` : ''}
+  ${v.ok ? `<div class="pick">${dday(v.end)} ·${v.aiFill ? ' ✂️ 잘린 부분 AI로 채움 ·' : ''} ${v.hq && v.hand ? '✨ 고퀄 · ✋ 손으로 맞춤' : v.hand ? '✋ 손으로 맞춤' : v.hq ? `✨ 고퀄 (기준점 자동) · <a href="http://localhost:5173/rig.html?id=shelter-${v.id}-hq" target="_blank">기준점 맞추기</a>` : `<a href="http://localhost:5173/rig.html?id=shelter-${v.id}${v.aiFrontal ? '-hq' : ''}" target="_blank">기준점 맞추기</a>`}</div>` : ''}
   ${v.ok ? `<div class="pick">정면도 ${Math.round((v.frontal ?? 0) * 100)}% · ${v.total}장 중 ${(v.photo ?? 0) + 1}번째 (통과 ${v.passed}장)</div>` : ''}
   <small>${v.why.join('<br>')}</small></div>
 </label>`
@@ -637,7 +677,7 @@ function publish(ids: string[]) {
   }
   writeJson(join(tree, 'manifest.json'), {
     updated: madeAt,
-    pets: pick.map((p) => ({ id: p.id, sp: p.sp, madeAt, rig: p.rig, photo: `shelter/${p.id}/photo.jpg`, ...(p.aiFrontal && { aiFrontal: true }) })),
+    pets: pick.map((p) => ({ id: p.id, sp: p.sp, madeAt, rig: p.rig, photo: `shelter/${p.id}/photo.jpg`, ...(p.aiFrontal && { aiFrontal: true }), ...(p.aiFill && { aiFill: true }) })),
   })
   // 부모 없는 커밋 하나로 브랜치를 새로 만든다 (지금 공개할 아이들만, 기록이 쌓이지 않게). 작업 폴더·현재 브랜치는 건드리지 않는다
   const index = join(STAGE, '_index')

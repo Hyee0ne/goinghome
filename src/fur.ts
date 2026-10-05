@@ -1388,7 +1388,9 @@ export class FurRenderer {
     // (입 벌린 사진이 있으면 무는 동작은 사진이 하고, 씹을 때 아래턱만 오르내린다)
     const chewBob = p.chew * (0.5 + 0.5 * Math.sin(p.t * 9)) * CHEW_OPEN
     // 입 사진이 있으면 턱은 그대로 둔다 (턱 부위만 끌어내리면 아랫입술 선이 어긋나 구겨져 보인다)
-    const eatJaw = rig.expressions?.pant ? 0 : -(p.chomp * CHOMP_OPEN + chewBob)
+    // 입 사진이 없는 고양이(츄르)는 입을 벌리지 못하니, 츄르를 댄 채 아래턱만 아주 작게 오물거린다
+    const nibble = p.species === 'cat' && p.chomp > 0.5 ? (0.5 + 0.5 * Math.sin(p.t * Math.PI * 2 * 3)) * CHURU_NIBBLE : 0
+    const eatJaw = rig.expressions?.pant ? 0 : p.species === 'cat' ? -(nibble + chewBob * 0.5) : -(p.chomp * CHOMP_OPEN + chewBob)
     gl.uniform1f(this.loc('uChinLift'), (m.chinLift * CHIN_LIFT * calm.face + pantBob + eatJaw) * toPx)
     gl.uniform1f(this.loc('uWhisker'), p.species === 'cat' ? Math.max(0, p.happy - 0.3) * 3.2 * toPx * calm.face : 0)
     gl.uniform2f(this.loc('uTurn'), soft(m.yaw, 1) * YAW_SHIFT * toPx * calm.head, -soft(m.pitch, 1) * PITCH_SHIFT * toPx * calm.head)
@@ -1560,6 +1562,8 @@ const DRAWN_REARM_S = 1.5
 
 /** 간식 먹기: 한 입 물 때, 씹을 때 아래턱이 내려가는 거리 (펫 로컬 단위) */
 const CHOMP_OPEN = 5
+/** 입 사진이 없는 고양이가 츄르를 먹을 때 턱이 오물거리는 거리 */
+const CHURU_NIBBLE = 1.4
 const CHEW_OPEN = 3
 
 /** 표정 전환 시간 (초). 놀랄 때 귀는 빨리 젖히고 천천히 돌아온다 */

@@ -420,6 +420,11 @@ export class Pet {
     return this.treats.get(id) ?? 0
   }
 
+  /** 한 입 시간: 고양이는 츄르를 날름날름 핥아 한 입이 길다 */
+  private get biteS() {
+    return this.p.species === 'cat' ? CHURU_BITE : TREAT_BITE
+  }
+
   /** 입 자리 (펫 로컬 좌표): 입이 벌어지는 곳 */
   private get mouth() {
     return { x: this.leanX, y: this.L.mouthY }
@@ -459,8 +464,8 @@ export class Pet {
         // 한 입: 입을 벌렸다 다물 때(한 입의 55%) 간식이 줄어든다
         const left = this.treats.get(this.eatHand) ?? 0
         const bitten = TREAT_BITES - left
-        if (this.eatT > TREAT_BITE * (bitten + 0.55) && left > 0) this.treats.set(this.eatHand, left - 1)
-        if ((this.treats.get(this.eatHand) ?? 0) === 0 && this.eatT > TREAT_BITE * TREAT_BITES) {
+        if (this.eatT > this.biteS * (bitten + 0.55) && left > 0) this.treats.set(this.eatHand, left - 1)
+        if ((this.treats.get(this.eatHand) ?? 0) === 0 && this.eatT > this.biteS * TREAT_BITES) {
           this.eatPhase = 'chew'
           this.eatT = 0
           // 간식을 받아먹으면 낯가리던 아이도 마음을 연다
@@ -476,7 +481,7 @@ export class Pet {
     // 입 벌림: 한 입마다 앞쪽 절반은 크게 벌리고 있다가 다문다.
     // 사진(다문 입·벌린 입) 사이의 중간 모양은 이와 혀가 맞지 않아 구겨져 보이므로, 그 사이는 빠르게(약 0.07초) 넘긴다
     const biting = this.eatHand && this.eatPhase === 'bite'
-    const ph = biting ? (this.eatT / TREAT_BITE) % 1 : 1
+    const ph = biting ? (this.eatT / this.biteS) % 1 : 1
     this.chomp = approach(this.chomp, biting && ph < 0.5 ? 1 : 0, 45, dt)
     // 씹기 시작·끝도 사진 사이를 빠르게 넘긴다 (천천히 넘기면 그동안 입이 구겨져 보인다)
     this.chew = approach(this.chew, this.eatHand && this.eatPhase === 'chew' && this.eatT < TREAT_CHEW - 0.3 ? 1 : 0, 40, dt)
@@ -1236,6 +1241,8 @@ const PAW_AIR = 'air'
 /** 간식 주기: 간식 수, 한 입 시간, 먹기 전 냄새 맡는 시간, 다 먹고 씹는 시간 (초) */
 const TREAT_BITES = 3
 const TREAT_BITE = 0.55
+/** 고양이 츄르 한 번 핥는 시간 (세 번에 나눠 약 4초) */
+const CHURU_BITE = 1.3
 const TREAT_SNIFF = 0.7
 const TREAT_CHEW = 1.8
 /** 간식이 입에서 얼굴 반폭의 이 비율 안에 오면 받아먹는다 */

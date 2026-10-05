@@ -120,6 +120,8 @@ if (run('cutout')) {
         prompt:
           `Close-up portrait photo of this exact same ${species} (same fur color and length, same markings and where they are, same face shape, ` +
           'same eye color, same ear shape and ear carriage: upright ears stay upright, folded or floppy ears stay folded or floppy). ' +
+          'If the head, ears or chin are cut off by the edge of the photo, complete the missing parts naturally so they match the visible parts ' +
+          '(same fur, color and ear shape); the whole head and both full ears must be visible. ' +
           'Face-focused framing: the head fills most of the frame, including both ears fully, with just the top of the chest visible at the bottom edge. ' +
           'Facing the camera straight on, head centered and level, both eyes open and looking directly into the lens, mouth closed and relaxed. ' +
           'Soft, even, diffuse studio lighting with no harsh shadows, very sharp focus on individual fur strands and whiskers, natural colors, photorealistic. ' +
@@ -324,6 +326,8 @@ if (run('frame')) {
   const prevFrame = existsSync(f.frame) ? JSON.stringify(readJson(f.frame).box) : ''
   if (prevFrame && prevFrame !== JSON.stringify(box)) {
     for (const name of Object.keys(prompts('dog'))) rmSync(f.expr(name), { force: true })
+    // AI가 그린 얼굴 정사각형 원본도 (남아 있으면 새 구도에 다시 붙여 어긋난다)
+    for (const sq of ['mid', 'final', 'eat', 'eatmid']) rmSync(join(SRC, `expr-${sq}-square.png`), { force: true })
     rmSync(join(SRC, 'face-square.json'), { force: true })
     warn('자르는 범위가 바뀌어 전에 만든 표정 사진을 지웠어요')
   }
@@ -375,7 +379,19 @@ if (run('expressions')) {
             `Edit this close-up photo of the dog with two changes at the same time: (1) both eyes gently closed, happy and content; ` +
             `(2) happily panting, mouth open in a relaxed doggy smile with the pink tongue slightly out over the lower teeth. ${KEEP_ID}`,
         }
-  const P = withMouth ? { ...P0, ...mouthPrompts } : eyesOnly ? { ...P0, mid: P0.eyesHalf, final: P0.eyesClosed } : P0
+  // --cat-mouth lick: 고양이 간식 입 2장을 '츄르 핥는 혀'로 (간식이 츄르라서. 눈·귀 표정은 그대로)
+  const lickMouth =
+    args['cat-mouth'] === 'lick'
+      ? {
+          eatMid:
+            `Edit this photo so the cat's mouth is slightly open with just the tip of the small pink tongue showing, as if about to lick a creamy treat. ` +
+            `Eyes, nose, whiskers and ears unchanged. No food in the image. ${KEEP_ID}`,
+          eat:
+            `Edit this photo so the cat's pink tongue sticks out and curls slightly upward, licking as if lapping a creamy treat. ` +
+            `Eyes, nose, whiskers and ears unchanged. No food in the image. ${KEEP_ID}`,
+        }
+      : {}
+  const P = { ...(withMouth ? { ...P0, ...mouthPrompts } : eyesOnly ? { ...P0, mid: P0.eyesHalf, final: P0.eyesClosed } : P0), ...lickMouth }
   // 얼굴 정사각형 (귀와 턱까지). 최종 사진 좌표 → base 좌표 (+잘라낸 위치)
   const D = dist(lm.leftEye, lm.rightEye)
   const top = Math.min(lm.headTop.y, lm.leftEar.tip.y, lm.rightEar.tip.y) - D * 0.15

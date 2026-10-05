@@ -949,7 +949,8 @@ churuImg.src = assetUrl('pets/churu.webp')
 
 function drawTreat(left: number, pts: Pt[]) {
   if (left <= 0) return
-  if (pet.p.photo?.lick) return drawChuru(left, pts)
+  // 고양이 간식은 츄르 (접시도 츄르 스틱)
+  if (pet.p.species === 'cat') return drawChuru(left, pts)
   const img = treatStage(left)
   if (!img) return
   const x = (pts[4].x + pts[8].x) / 2
@@ -971,7 +972,8 @@ function drawChuru(left: number, pts: Pt[]) {
   const x = (pts[4].x + pts[8].x) / 2
   const y = (pts[4].y + pts[8].y) / 2
   const f = left / 3
-  const h = pet.L.headRx * 1.0 * scale
+  // 손에 든 츄르가 또렷이 보이게: 얼굴 반폭의 1.4배 길이 (짧으면 혀에 가려 보이지 않는다)
+  const h = pet.L.headRx * 1.4 * scale
   const w = (h * churuImg.naturalWidth) / churuImg.naturalHeight
   // 남은 양만큼 위쪽(퓨레)을 덜 보이게: 다 먹을수록 위쪽 15%까지 잘라 낸다
   const cut = (1 - f) * 0.15
@@ -980,7 +982,6 @@ function drawChuru(left: number, pts: Pt[]) {
   ctx.save()
   ctx.shadowColor = 'rgba(60, 35, 15, 0.3)'
   ctx.shadowBlur = w * 0.3
-  ctx.globalAlpha = 0.6 + 0.4 * f
   ctx.drawImage(churuImg, 0, sy, churuImg.naturalWidth, churuImg.naturalHeight - sy, x - w / 2, y - h * 0.08, w, dh)
   ctx.restore()
 }
