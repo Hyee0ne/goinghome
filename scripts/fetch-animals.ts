@@ -128,6 +128,15 @@ function score(a: Animal): Candidate | null {
   return a.sp === 'dog' ? dogScore(a, y, left) : catScore(a, y, left)
 }
 
+/**
+ * 공고가 오래 남은 아이 우선 (2026-10-05 사용자 결정): 실사화한 아이를 오래 보여 줄 수 있어서.
+ * 3일마다 +1 (공고는 보통 10일이라 최대 +3)
+ */
+function addDday(add: (n: number, why: string) => void, left: number) {
+  const n = Math.floor(left / 3)
+  if (n > 0) add(n, `공고 D-${left}`)
+}
+
 function dogScore(a: Animal, y: number, left: number): Candidate {
   const reasons: string[] = []
   let s = 0
@@ -142,7 +151,7 @@ function dogScore(a: Animal, y: number, left: number): Candidate {
   if (a.kind.includes('믹스')) add(1, '믹스견')
   if (a.note.length >= 20 && WARM.test(a.note)) add(1, '성격 이야기')
   if (a.photos.length >= 3) add(1, `사진 ${a.photos.length}장`)
-  if (left <= 9) add(1, `공고 D-${left}`)
+  addDday(add, left)
   return { id: a.id, score: s, reasons }
 }
 
@@ -162,7 +171,7 @@ function catScore(a: Animal, y: number, left: number): Candidate {
   if (/한국 고양이|믹스/.test(a.kind)) add(1, a.kind)
   if (a.note.length >= 20 && WARM.test(a.note)) add(1, '성격 이야기')
   if (a.photos.length >= 3) add(1, `사진 ${a.photos.length}장`)
-  if (left <= 9) add(1, `공고 D-${left}`)
+  addDday(add, left)
   return { id: a.id, score: s, reasons }
 }
 
@@ -174,7 +183,7 @@ function pickCandidates(animals: Animal[], count: number) {
   return animals
     .map(score)
     .filter((c): c is Candidate => !!c)
-    .sort((a, b) => b.score - a.score || daysLeft(byId.get(a.id)!) - daysLeft(byId.get(b.id)!))
+    .sort((a, b) => b.score - a.score || daysLeft(byId.get(b.id)!) - daysLeft(byId.get(a.id)!))
     .filter((c) => {
       const sido = byId.get(c.id)!.sido
       const n = bySido.get(sido) ?? 0
