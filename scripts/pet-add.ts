@@ -116,7 +116,8 @@ if (run('cutout')) {
         mode: 'edit',
         edit_target: photo!,
         prompt:
-          `Close-up portrait photo of this exact same ${species} (same fur color and length, same markings, same face shape, same eye color). ` +
+          `Close-up portrait photo of this exact same ${species} (same fur color and length, same markings and where they are, same face shape, ` +
+          'same eye color, same ear shape and ear carriage: upright ears stay upright, folded or floppy ears stay folded or floppy). ' +
           'Face-focused framing: the head fills most of the frame, including both ears fully, with just the top of the chest visible at the bottom edge. ' +
           'Facing the camera straight on, head centered and level, both eyes open and looking directly into the lens, mouth closed and relaxed. ' +
           'Soft, even, diffuse studio lighting with no harsh shadows, very sharp focus on individual fur strands and whiskers, natural colors, photorealistic. ' +
@@ -345,7 +346,10 @@ if (run('expressions')) {
   step('6/8 표정 사진 2장 (얼굴만 잘라 원본 편집)')
   const lm = readJson(f.landmarks) as Landmarks
   const face = readJson(join(PUB, 'face.json'))
-  const P = prompts(lm.species)
+  // --parts eyes: 눈 감기만 (입·귀는 원본 그대로. 보호소 고퀄)
+  const eyesOnly = args.parts === 'eyes'
+  const P0 = prompts(lm.species)
+  const P = eyesOnly ? { ...P0, mid: P0.eyesHalf, final: P0.eyesClosed } : P0
   // 얼굴 정사각형 (귀와 턱까지). 최종 사진 좌표 → base 좌표 (+잘라낸 위치)
   const D = dist(lm.leftEye, lm.rightEye)
   const top = Math.min(lm.headTop.y, lm.leftEar.tip.y, lm.rightEar.tip.y) - D * 0.15
@@ -403,7 +407,10 @@ if (run('expressions')) {
   ].map((v) => v.map(Math.round))
   // 고양이는 기분이 좋아도 입을 벌리지 않아 위 두 장에서는 입을 그대로 둔다 (입 표정은 아래에서 따로)
   const cat = lm.species === 'cat'
-  const parts = { mid: [...(cat ? [] : ['pantMid']), 'eyesHalf', 'earsMid'], final: [...(cat ? [] : ['pant']), 'eyesClosed', 'earsBack'] }
+  const parts = eyesOnly
+    ? { mid: ['eyesHalf'], final: ['eyesClosed'] }
+    : { mid: [...(cat ? [] : ['pantMid']), 'eyesHalf', 'earsMid'], final: [...(cat ? [] : ['pant']), 'eyesClosed', 'earsBack'] }
+  if (eyesOnly) for (const name of ['pantMid', 'pant', 'earsMid', 'earsBack']) rmSync(f.expr(name), { force: true })
   for (const k of ['mid', 'final'] as const) {
     for (const name of parts[k]) rmSync(f.expr(name), { force: true })
     if (!existsSync(out[k])) continue
@@ -412,7 +419,7 @@ if (run('expressions')) {
     for (const name of parts[k]) copyFileSync(full, f.expr(name))
   }
   // 고양이 입은 간식을 받아먹을 때만 쓴다: 살짝 벌린 입, 크게 벌려 무는 입 2장을 따로 만든다 (약 2장 비용 추가)
-  if (cat) {
+  if (cat && !eyesOnly) {
     const eatOut = { pantMid: join(SRC, 'expr-eatmid-square.png'), pant: join(SRC, 'expr-eat-square.png') }
     const eatJobs = (['pantMid', 'pant'] as const)
       .filter((k) => allowed(k === 'pant' ? 'eat' : 'eatMid') && (args.regen === 'true' || !existsSync(eatOut[k])))
@@ -444,10 +451,12 @@ if (run('assets')) {
   const part = (name: string, x: { x0: number; y0: number; x1: number; y1: number }, a: string, c: string, extra = '') =>
     `${name}:${x.x0},${x.y0},${x.x1},${x.y1}:${f.expr(a)}:${f.expr(c)}${extra}`
   // 움직임 아틀라스: 눈·귀는 꼭 있어야 하고, 입은 있을 때만 (고양이 입은 간식 먹을 때 쓰는 입)
-  if (has('eyesHalf', 'eyesClosed', 'earsMid', 'earsBack'))
+  // 눈은 꼭 있어야 하고, 입·귀는 있을 때만 (고양이 입은 간식 먹을 때 쓰는 입, 보호소 고퀄은 눈만)
+  if (has('eyesHalf', 'eyesClosed'))
     py('prepare-morph.py', f.base, join(PUB, 'morph.png'),
       ...(has('pantMid', 'pant') ? [part('pant', b.pant, 'pantMid', 'pant')] : []),
-      part('eyes', b.eyes, 'eyesHalf', 'eyesClosed'), part('ears', b.ears, 'earsMid', 'earsBack', ':sdf'))
+      part('eyes', b.eyes, 'eyesHalf', 'eyesClosed'),
+      ...(has('earsMid', 'earsBack') ? [part('ears', b.ears, 'earsMid', 'earsBack', ':sdf')] : []))
   else if (has('pant') || has('eyesHalf') || has('earsMid')) warn('표정 사진이 일부만 있어 움직임 아틀라스는 건너뜁니다')
 }
 
