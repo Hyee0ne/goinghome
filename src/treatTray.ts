@@ -44,7 +44,7 @@ export class TreatTray {
     this.rect = { x: r.left - s.left - pad, y: r.top - s.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 }
   }
 
-  /** 간식 그림 바꾸기 (츄르를 핥는 고양이는 츄르 스틱). 같은 그림이면 아무것도 안 한다 */
+  /** 간식 그림 바꾸기 (고양이는 츄르 스틱). 같은 그림이면 아무것도 안 한다 */
   setTreat(src: string, kind: 'cube' | 'churu') {
     this.el.classList.toggle('churu', kind === 'churu')
     for (const img of this.items) if ((img as HTMLImageElement).src !== new URL(src, location.href).href) (img as HTMLImageElement).src = src
