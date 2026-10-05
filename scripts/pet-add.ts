@@ -52,7 +52,9 @@ const EXPR_PAD = 1.3
 const ROOT = resolve(import.meta.dirname, '..')
 // API 키는 .env.local에서 읽는다 (저장소에 올라가지 않는 파일). 키 값은 어디에도 출력하지 않는다
 if (existsSync(join(ROOT, '.env.local'))) process.loadEnvFile(join(ROOT, '.env.local'))
-const API_KEY = process.env.OPENAI_API_KEY?.trim() || ''
+// --via chatgpt (또는 PET_IMAGE_VIA=chatgpt): 이미지 편집을 API 키 대신 ChatGPT 구독(gpt-image 스킬, Codex CLI)으로 한다
+const VIA_CHATGPT = process.env.PET_IMAGE_VIA === 'chatgpt' || process.argv.slice(2).join(' ').includes('--via chatgpt')
+const API_KEY = VIA_CHATGPT ? '' : process.env.OPENAI_API_KEY?.trim() || ''
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL ?? 'gpt-image-1.5'
 const VISION_MODEL = process.env.OPENAI_VISION_MODEL ?? 'gpt-5.5'
 const GPT_IMAGE = process.env.GPT_IMAGE_SCRIPT ?? join(homedir(), '.claude/skills/gpt-image/scripts/gpt_image.mjs')
@@ -347,9 +349,33 @@ if (run('expressions')) {
   const lm = readJson(f.landmarks) as Landmarks
   const face = readJson(join(PUB, 'face.json'))
   // --parts eyes: 눈 감기만 (입·귀는 원본 그대로. 보호소 고퀄)
-  const eyesOnly = args.parts === 'eyes'
+  // --parts eyes: 눈 감기만 / eyes+pant: 눈 감기 + 웃는 입(개) / eyes+lick: 눈 감기 + 츄르 핥는 혀(고양이). 귀는 원본 그대로
+  const partsArg = String(args.parts ?? '')
+  const eyesOnly = partsArg.startsWith('eyes')
+  const withMouth = partsArg === 'eyes+pant' || partsArg === 'eyes+lick'
   const P0 = prompts(lm.species)
-  const P = eyesOnly ? { ...P0, mid: P0.eyesHalf, final: P0.eyesClosed } : P0
+  const KEEP_ID =
+    'Keep everything else exactly identical to the original photo: same head position, size, angle and framing, same fur, markings, ' +
+    'ear shape and position, lighting and colors, same transparent background. Photorealistic.'
+  const mouthPrompts =
+    partsArg === 'eyes+lick'
+      ? {
+          mid:
+            `Edit this close-up photo of the cat with two small changes at the same time: (1) both eyes half closed in a content, relaxed squint; ` +
+            `(2) mouth slightly open with just the tip of the small pink tongue showing, as if about to lick a treat. No food in the image. ${KEEP_ID}`,
+          final:
+            `Edit this close-up photo of the cat with two changes at the same time: (1) both eyes gently closed, blissful; ` +
+            `(2) pink tongue stuck out and curled slightly upward, licking as if lapping a creamy treat. No food in the image. ${KEEP_ID}`,
+        }
+      : {
+          mid:
+            `Edit this close-up photo of the dog with two small changes at the same time: (1) both eyes half closed in a relaxed, content look; ` +
+            `(2) mouth slightly open in a soft smile, lips just parted with the tip of the pink tongue visible. ${KEEP_ID}`,
+          final:
+            `Edit this close-up photo of the dog with two changes at the same time: (1) both eyes gently closed, happy and content; ` +
+            `(2) happily panting, mouth open in a relaxed doggy smile with the pink tongue slightly out over the lower teeth. ${KEEP_ID}`,
+        }
+  const P = withMouth ? { ...P0, ...mouthPrompts } : eyesOnly ? { ...P0, mid: P0.eyesHalf, final: P0.eyesClosed } : P0
   // 얼굴 정사각형 (귀와 턱까지). 최종 사진 좌표 → base 좌표 (+잘라낸 위치)
   const D = dist(lm.leftEye, lm.rightEye)
   const top = Math.min(lm.headTop.y, lm.leftEar.tip.y, lm.rightEar.tip.y) - D * 0.15
@@ -407,10 +433,12 @@ if (run('expressions')) {
   ].map((v) => v.map(Math.round))
   // 고양이는 기분이 좋아도 입을 벌리지 않아 위 두 장에서는 입을 그대로 둔다 (입 표정은 아래에서 따로)
   const cat = lm.species === 'cat'
-  const parts = eyesOnly
+  const parts = withMouth
+    ? { mid: ['eyesHalf', 'pantMid'], final: ['eyesClosed', 'pant'] }
+    : eyesOnly
     ? { mid: ['eyesHalf'], final: ['eyesClosed'] }
     : { mid: [...(cat ? [] : ['pantMid']), 'eyesHalf', 'earsMid'], final: [...(cat ? [] : ['pant']), 'eyesClosed', 'earsBack'] }
-  if (eyesOnly) for (const name of ['pantMid', 'pant', 'earsMid', 'earsBack']) rmSync(f.expr(name), { force: true })
+  if (eyesOnly) for (const name of [...(withMouth ? [] : ['pantMid', 'pant']), 'earsMid', 'earsBack']) rmSync(f.expr(name), { force: true })
   for (const k of ['mid', 'final'] as const) {
     for (const name of parts[k]) rmSync(f.expr(name), { force: true })
     if (!existsSync(out[k])) continue

@@ -488,7 +488,11 @@ async function hq(ids: string[]) {
   const pick = ids.map((id) => all.find((v) => v.id === id && v.ok) ?? fail(`통과하지 못했거나 없는 아이예요: ${id}`))
   // 유료: 정면 새로 그리기 약 $0.2, 눈 감기 2장 약 $0.28
   const cost = pick.reduce((s, v) => s + (existsSync(join(hqDir(v.id), 'cutout.png')) ? 0 : 0.2) + (existsSync(join(hqDir(v.id), 'expr-final-square.png')) ? 0 : 0.28), 0)
-  if (cost > 0 && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
+  // --via chatgpt: ChatGPT 구독(gpt-image 스킬)으로 그린다 (API 비용 없음, 구독 사용량을 쓴다)
+  const via = args.via === 'chatgpt'
+  if (via) process.env.PET_IMAGE_VIA = 'chatgpt'
+  const partsArg = args.parts ?? 'eyes'
+  if (cost > 0 && !via && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
   const add = (...a: string[]) => {
     const r = spawnSync('node', [join(ROOT, 'scripts', 'pet-add.ts'), ...a], { cwd: ROOT, encoding: 'utf8' })
     process.stdout.write((r.stdout ?? '').split('\n').filter((l) => /✓|✗|정렬|이미 있는|정면/.test(l)).map((l) => l + '\n').join(''))
@@ -511,12 +515,14 @@ async function hq(ids: string[]) {
         writeFileSync(join(dir, 'landmarks.auto.json'), readFileSync(join(dir, 'landmarks.json')))
       } else add('--id', id, '--from', 'prepare', '--until', 'prepare')
       // 3) 눈 감기 2장 (입·귀는 원본 그대로) + 표정 사이 움직임
-      add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', 'eyes')
+      add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', partsArg === 'mouth' ? (v.sp === 'cat' ? 'eyes+lick' : 'eyes+pant') : partsArg)
       const a = animals.get(v.id) ?? ({ id: v.id, sp: v.sp, photos: [], end: v.end ?? '' } as Animal)
       v.rig = rigFor(a, id)
       v.hq = !!(v.rig as { expressions?: unknown }).expressions
       v.hand = handTunedDir(dir)
       v.aiFrontal = true
+      // 고양이 '츄르 핥는 혀' 표정이면 앱이 간식을 핥아 먹는다
+      if (partsArg === 'mouth' && v.sp === 'cat') (v.rig as Record<string, unknown>).lick = true
       log(`   ${v.hq ? '✓ 정면 + 눈 감기' : '✗ 눈 감기 표정 파일이 없어요'}${v.hand ? '' : ' (기준점 자동 → 앱은 SAFE. rig.html에서 맞추면 FULL)'}`)
     } catch (e) {
       log(`   ✗ 실패: ${(e as Error).message}`)
