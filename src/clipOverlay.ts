@@ -25,7 +25,7 @@ export function clipOverlay(p: PetProfile, mine: boolean, seconds: number, host:
     g.save()
     g.font = `700 ${26 * u}px ${FONT}`
     g.textBaseline = 'alphabetic'
-    const label = '🐾 손끝 교감'
+    const label = '🏠 고잉홈'
     const tw = g.measureText(label).width
     g.fillStyle = 'rgba(255, 255, 255, 0.85)'
     roundRect(g, 24 * u, h - 76 * u, tw + 32 * u, 50 * u, 25 * u)

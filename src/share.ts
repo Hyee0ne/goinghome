@@ -20,10 +20,34 @@ export function shareUrl(petId?: string) {
   return u.toString()
 }
 
+/** 이 아이 입양 정보 글: 이름 · 지역 · 마감 · 보호소 전화 */
 export function shareText(p: PetProfile, mine: boolean) {
-  return mine
-    ? `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾 너도 우리 아이 사진으로 만들어 봐!`
-    : `${josa(p.name, '이', '가')} 가족을 기다려요. 화면 속에서 손끝으로 쓰다듬어 볼래요? 🐾`
+  if (mine) return `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾`
+  const a = p.adoption
+  const due = a?.noticeEnd ? `${Number(a.noticeEnd.slice(4, 6))}월 ${Number(a.noticeEnd.slice(6, 8))}일까지` : ''
+  const lines = [
+    `🏠 ${josa(p.name, '이', '가')} 가족을 기다려요${due ? ` (${due})` : ''}`,
+    [p.sex, p.age, a?.region].filter(Boolean).join(' · '),
+    a?.tel ? `입양 문의: ${a.shelter} ${a.tel}` : '',
+    '고잉홈에서 손끝으로 먼저 만나 보세요',
+  ]
+  return lines.filter(Boolean).join('\n')
+}
+
+/** 고잉홈(사이트) 공유 */
+export async function shareSite(): Promise<ShareResult> {
+  const url = new URL(import.meta.env.BASE_URL, location.origin).toString()
+  const text = '고잉홈 · 보호소에서 가족을 기다리는 아이들을 손끝으로 만나 보세요 🏠'
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: '고잉홈', text, url })
+      return 'shared'
+    } catch (e) {
+      if ((e as DOMException).name === 'AbortError') return 'cancelled'
+    }
+  }
+  await copy(`${text}\n${url}`)
+  return 'copied'
 }
 
 export type ShareResult = 'shared' | 'copied' | 'downloaded' | 'cancelled'
@@ -59,7 +83,7 @@ export async function sharePet(p: PetProfile, mine: boolean, onRecording?: (on: 
 
   if (navigator.share) {
     try {
-      await navigator.share({ title: '손끝 교감', text, url })
+      await navigator.share({ title: '고잉홈', text, url })
       return 'shared'
     } catch (e) {
       if ((e as DOMException).name === 'AbortError') return 'cancelled'

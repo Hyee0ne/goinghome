@@ -5,67 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#fff4e6" />
-    <title>손끝 교감</title>
+    <title>고잉홈 · 가족을 기다리는 아이들</title>
   </head>
   <body>
     <div id="app">
       <header class="topbar">
-        <nav id="pet-tabs" class="pet-tabs" aria-label="만날 아이 선택"></nav>
-        <a class="adopt-link" href="adopt.html"><span aria-hidden="true">🏠</span>입양</a>
+        <a class="brand" href="./"><b>고잉홈</b><small>가족을 기다리는 아이들</small></a>
+        <span class="topbar-sp"></span>
+        <a class="adopt-link" href="adopt.html"><span aria-hidden="true">🏠</span>전체 공고</a>
+        <!-- 고잉홈(사이트) 공유. 아이 입양 정보 공유는 오른쪽 상세·아래 카드에 따로 있다 -->
+        <button id="share-site" class="share-site" type="button" aria-label="고잉홈 공유하기">
+          <span aria-hidden="true">↗</span><span class="help-label">고잉홈 공유</span>
+        </button>
         <button id="help-toggle" class="help-toggle" type="button" aria-controls="help" aria-expanded="false" aria-label="도움말">
           <span aria-hidden="true">?</span><span class="help-label">도움말</span>
         </button>
       </header>
 
-      <!-- 보호소 아이 고르기 (실사화한 공고 아이들) -->
-      <dialog id="shelter-picker" class="info-sheet sp-sheet" aria-labelledby="sp-title">
-        <div class="sheet-body">
-          <header class="sp-head">
-            <div>
-              <h2 id="sp-title">보호소에서 가족을 기다리는 아이들</h2>
-              <p class="sheet-meta">공고 사진으로 만든 모습이에요. 골라서 쓰다듬어 주세요.</p>
-            </div>
-            <button id="shelter-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
-          </header>
-          <div id="shelter-grid" class="sp-grid"></div>
-          <a class="btn sheet-more" href="adopt.html">공고 중인 아이 모두 보기 ›</a>
-        </div>
-      </dialog>
 
-      <!-- 아이 정보 → 입양 문의(포인핸드). 열 때만 내용을 채운다 -->
-      <dialog id="info" class="info-sheet" aria-labelledby="info-name">
-        <div class="sheet-body">
-          <!-- 사진 슬라이드: 자주 보며 얼굴을 눈에 익히도록 맨 위에 크게 -->
-          <div id="info-gallery" class="gallery">
-            <div id="info-slides" class="slides" tabindex="0" aria-label="사진, 옆으로 넘겨 보기"></div>
-            <button id="info-prev" class="slide-nav prev" type="button" aria-label="이전 사진">‹</button>
-            <button id="info-next" class="slide-nav next" type="button" aria-label="다음 사진">›</button>
-            <div id="info-dots" class="dots" aria-hidden="true"></div>
-          </div>
-          <header class="sheet-head">
-            <span id="info-emoji" class="sheet-emoji" aria-hidden="true"></span>
-            <div>
-              <h2 id="info-name"></h2>
-              <p id="info-meta" class="sheet-meta"></p>
-            </div>
-            <button id="info-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
-          </header>
-          <ul id="info-traits" class="traits"></ul>
-          <section id="info-story-wrap">
-            <h3>이야기</h3>
-            <p id="info-story"></p>
-          </section>
-          <section id="info-shelter-wrap">
-            <h3>보호 정보 <span id="info-sample" class="sample-badge">예시</span></h3>
-            <dl id="info-shelter" class="shelter"></dl>
-          </section>
-        </div>
-        <footer class="sheet-foot">
-          <a id="info-adopt" class="btn primary adopt" target="_blank" rel="noopener">포인핸드에서 입양 문의하기</a>
-          <p id="info-adopt-note" class="muted"></p>
-          <a class="btn sheet-more" href="adopt.html">지금 공고 중인 다른 아이들 보기 ›</a>
-        </footer>
-      </dialog>
+      <div class="layout">
+        <nav id="pet-tabs" class="pet-list" aria-label="가족을 기다리는 아이들"></nav>
 
       <main class="stage-wrap">
         <canvas id="pet-gl" aria-hidden="true"></canvas>
@@ -89,21 +48,24 @@
           <div id="help-trick" class="help-trick"></div>
         </aside>
 
-        <!-- 공유: 녹화 엔진이 있으면 짧은 영상, 없으면 링크 -->
-        <button id="share-btn" class="share-btn" type="button" aria-label="공유하기">
-          <span aria-hidden="true">↗</span><b>공유</b>
-        </button>
 
 
-        <!-- 아이 정보 열기 배너 (시작 화면이 떠 있는 동안은 그 아래에 가려진다) -->
-        <button id="info-open" class="info-banner" type="button" aria-haspopup="dialog">
-          <img id="info-thumb" class="banner-thumb" alt="" />
-          <span class="banner-text">
-            <b id="info-banner-title"></b>
-            <span id="info-banner-sub">사진과 이야기 보고 입양 문의하기</span>
-          </span>
-          <span class="banner-go" aria-hidden="true">›</span>
-        </button>
+        <!-- 휴대폰 아래 카드: 지금 아이 + 입양 문의 (PC에서는 오른쪽 상세가 대신한다) -->
+        <div id="pet-card" class="pet-card">
+          <div class="card-head">
+            <img id="info-thumb" class="banner-thumb" alt="" />
+            <span class="banner-text">
+              <b id="info-banner-title"></b>
+              <span id="info-banner-sub"></span>
+              <span id="card-due" class="card-due"></span>
+            </span>
+          </div>
+          <div class="card-actions">
+            <a id="card-call" class="btn primary card-call">☎ 입양 문의</a>
+            <button id="card-share" class="btn card-icon" type="button" aria-label="이 아이 입양 정보 공유">↗</button>
+            <button id="info-open" class="btn card-more" type="button" aria-haspopup="dialog">자세히</button>
+          </div>
+        </div>
 
         <!-- 카메라 영상은 손 인식에만 쓰고 화면에는 보이지 않는다 (display:none이면 일부 브라우저가 프레임을 멈춰서 투명하게 숨긴다) -->
         <div id="camera-box" class="camera-box camera-hidden">
@@ -114,8 +76,9 @@
 
         <section id="intro" class="overlay">
           <div class="card">
-            <div class="card-emoji">🐶🐱</div>
-            <h1>손끝으로 전하는 온기</h1>
+            <div class="card-emoji">🏠</div>
+            <h1>고잉홈</h1>
+            <p class="card-tag">가족을 기다리는 아이들을 손끝으로 만나요</p>
             <p>
               전면 카메라에 손바닥을 보여주고, 화면 속 아이를 <b>살살</b> 쓰다듬어 주세요.
               너무 세게 움직이면 깜짝 놀라요.
@@ -124,7 +87,6 @@
             <p class="muted">"손!" 같은 말을 알아듣도록 마이크도 함께 켜요. 크롬 등 일부 브라우저는 음성 인식을 위해 소리를 브라우저 회사 서버로 보내요.</p>
             <div class="actions">
               <button id="start-camera" class="btn primary" type="button">카메라로 시작하기</button>
-              <a class="btn make-link" href="make.html">📸 우리 아이 사진으로 만들기</a>
               <a class="intro-adopt-link" href="adopt.html">🏠 가족을 기다리는 아이들 보기 ›</a>
             </div>
             <p id="intro-error" class="error" hidden></p>
@@ -134,6 +96,43 @@
         </section>
 
       </main>
+
+      <!-- 오른쪽 상세: PC에서는 늘 열려 있는 패널, 휴대폰에서는 '자세히'로 올라오는 시트 -->
+      <dialog id="info" class="info-sheet" aria-labelledby="info-name">
+        <div class="sheet-body">
+          <!-- 사진 슬라이드: 자주 보며 얼굴을 눈에 익히도록 맨 위에 크게 -->
+          <div id="info-gallery" class="gallery">
+            <div id="info-slides" class="slides" tabindex="0" aria-label="사진, 옆으로 넘겨 보기"></div>
+            <button id="info-prev" class="slide-nav prev" type="button" aria-label="이전 사진">‹</button>
+            <button id="info-next" class="slide-nav next" type="button" aria-label="다음 사진">›</button>
+            <div id="info-dots" class="dots" aria-hidden="true"></div>
+          </div>
+          <header class="sheet-head">
+            <span id="info-emoji" class="sheet-emoji" aria-hidden="true"></span>
+            <div>
+              <h2 id="info-name"></h2>
+              <p id="info-meta" class="sheet-meta"></p>
+              <p id="info-due" class="sheet-due"></p>
+            </div>
+            <button id="info-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
+          </header>
+          <ul id="info-traits" class="traits"></ul>
+          <section id="info-story-wrap">
+            <h3>이야기</h3>
+            <p id="info-story"></p>
+          </section>
+          <section id="info-shelter-wrap">
+            <h3>보호 정보 <span id="info-sample" class="sample-badge">예시</span></h3>
+            <dl id="info-shelter" class="shelter"></dl>
+          </section>
+        </div>
+        <footer class="sheet-foot">
+          <a id="info-adopt" class="btn primary adopt" target="_blank" rel="noopener">포인핸드에서 입양 문의하기</a>
+          <button id="info-share" class="btn share-pet" type="button">↗ 이 아이 입양 정보 공유</button>
+          <p id="info-adopt-note" class="muted"></p>
+        </footer>
+      </dialog>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
