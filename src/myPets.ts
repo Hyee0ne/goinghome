@@ -30,6 +30,8 @@ export interface MyPet {
   /** 엔진이 만든 앱용 리그. src 등 파일 경로는 files의 키를 가리킨다 (열 때 objectURL로 바꾼다) */
   rig?: PhotoRig
   files?: Record<string, Blob>
+  /** 털색 (닮은 보호소 아이 찾기용, 배경 지운 사진의 평균) */
+  color?: [number, number, number]
   /** 표정 업그레이드(선택, 서버 AI)를 했는지 */
   upgraded?: boolean
   /** AI 표정 업그레이드 신청 (참고 사진은 서버에 보낼 때까지 기기에만) */

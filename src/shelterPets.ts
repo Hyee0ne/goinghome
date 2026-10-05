@@ -56,6 +56,7 @@ function toProfile(l: LivePet): PetProfile {
     name: a.kind && a.kind !== '기타' ? a.kind : cat ? '고양이' : '강아지',
     species: l.sp,
     breed: a.kind,
+    coat: a.color,
     age: a.age,
     sex: a.sex === 'M' ? '남아' : a.sex === 'F' ? '여아' : '',
     story: a.note,

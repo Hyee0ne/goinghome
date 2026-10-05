@@ -12,9 +12,11 @@ export function setClipRecorder(r: ClipRecorder) {
   recorder = r
 }
 
-export function shareUrl() {
+/** petId가 있으면 받은 사람이 그 아이를 바로 보게 (?pet=) */
+export function shareUrl(petId?: string) {
   const u = new URL(import.meta.env.BASE_URL, location.origin)
   u.searchParams.set('from', 'share')
+  if (petId) u.searchParams.set('pet', petId)
   return u.toString()
 }
 
@@ -26,9 +28,9 @@ export function shareText(p: PetProfile, mine: boolean) {
 
 export type ShareResult = 'shared' | 'copied' | 'downloaded' | 'cancelled'
 
-export async function sharePet(p: PetProfile, mine: boolean, onRecording?: (on: boolean) => void): Promise<ShareResult> {
+export async function sharePet(p: PetProfile, mine: boolean, onRecording?: (on: boolean) => void, linkPet?: string): Promise<ShareResult> {
   const text = shareText(p, mine)
-  const url = shareUrl()
+  const url = shareUrl(linkPet)
 
   if (recorder) {
     onRecording?.(true)

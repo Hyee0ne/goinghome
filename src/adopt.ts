@@ -168,4 +168,8 @@ fetch(`${import.meta.env.BASE_URL}data/animals.json`)
     sidoSel.append(...sidos.map((s) => Object.assign(document.createElement('option'), { value: s, textContent: s })))
     if (d.updated) $('ad-updated').textContent = `${new Date(d.updated).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })} 기준`
     applyFilter()
+    // 다른 화면(닮은 아이 등)에서 ?id=공고번호로 들어오면 그 아이를 바로 보여 준다
+    const want = new URLSearchParams(location.search).get('id')
+    const hit = want && all.find((a) => a.id === want)
+    if (hit) openDetail(hit)
   })

@@ -10,7 +10,8 @@ import { renderAdoptLinks } from './adoptLinks'
 import { isShelter, loadShelterPets } from './shelterPets'
 import { setClipRecorder, sharePet, toast } from './share'
 import { ClipRecorder, clipSupport } from './recorder'
-import { clipOverlay } from './clipOverlay'
+import { clipOverlay, type Featured } from './clipOverlay'
+import { findLookalikes } from './lookalike'
 import { myPets, type MyPet } from './myPets'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
@@ -211,19 +212,61 @@ if (clipSupport().ok) {
       await new Promise((r) => setTimeout(r, 1000))
     }
     shareBtn.querySelector('b')!.textContent = '녹화 중'
-    const blob = await recorder.record(seconds, { overlay: clipOverlay(pet.p, mine, seconds, host) })
+    const blob = await recorder.record(seconds, { overlay: clipOverlay(pet.p, mine, seconds, host, featured ?? undefined) })
     return { blob, ext: clipSupport().ext }
   })
+}
+
+/**
+ * 공유 영상 끝 장면에 넣을 실제 보호소 아이 (실사화한 공고 아이 중):
+ * 보호소 아이를 공유하면 그 아이, 우리 아이면 털색이 닮은 아이, 그 밖에는 공고가 가장 빨리 끝나는 아이.
+ * 사진은 우리 사이트에 있는 실사 얼굴이라 녹화 캔버스에 그릴 수 있다
+ */
+let featured: Featured | null = null
+async function pickFeatured(): Promise<PetProfile | null> {
+  const shelter = PETS.filter(isShelter)
+  if (!shelter.length) return null
+  if (isShelter(pet.p)) return pet.p
+  const sp = pet.p.species
+  const pool = shelter.map((p) => ({ id: p.id, sp: p.species, color: p.coat ?? '', end: p.adoption?.noticeEnd ?? '' }))
+  let color: [number, number, number] | null = null
+  if (isMine(pet.p)) color = (await myPets.get(pet.p.id).catch(() => undefined))?.color ?? null
+  const pick = findLookalikes(pool, sp, color, 1)[0] ?? findLookalikes(pool, sp === 'dog' ? 'cat' : 'dog', null, 1)[0]
+  return pick ? (shelter.find((p) => p.id === pick.id) ?? null) : null
+}
+async function loadFeatured(p: PetProfile | null): Promise<Featured | null> {
+  if (!p?.photo) return null
+  const img = new Image()
+  img.src = p.photo.src
+  try {
+    await img.decode()
+  } catch {
+    return null
+  }
+  const end = p.adoption?.noticeEnd
+  return {
+    img,
+    line: [p.name, p.adoption?.region.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · '),
+    due: end ? `${Number(end.slice(4, 6))}월 ${Number(end.slice(6, 8))}일까지` : undefined,
+  }
 }
 
 const shareBtn = $<HTMLButtonElement>('share-btn')
 shareBtn.onclick = async () => {
   shareBtn.disabled = true
   try {
-    const r = await sharePet(pet.p, isMine(pet.p), (on) => {
-      shareBtn.classList.toggle('recording', on)
-      if (!on) shareBtn.querySelector('b')!.textContent = '공유'
-    })
+    const target = await pickFeatured()
+    featured = await loadFeatured(target)
+    // 받은 사람은 끝 장면의 그 보호소 아이로 바로 들어온다 (보호소 아이가 없으면 첫 화면)
+    const r = await sharePet(
+      pet.p,
+      isMine(pet.p),
+      (on) => {
+        shareBtn.classList.toggle('recording', on)
+        if (!on) shareBtn.querySelector('b')!.textContent = '공유'
+      },
+      target?.id,
+    )
     if (r === 'copied') toast('링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요.')
     if (r === 'downloaded') toast('영상을 저장하고 링크를 복사했어요.')
   } finally {

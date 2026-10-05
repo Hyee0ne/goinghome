@@ -20,6 +20,8 @@ export interface PetProfile {
   belly: string
   eye: string
   pattern: 'none' | 'tabby' | 'patch'
+  /** 털색 글 (공고 아이: 공고의 색상, 닮은 아이 찾기용) */
+  coat?: string
   /** 아이 정보 화면의 사진 슬라이드 (public/ 기준 경로 또는 전체 주소). 없으면 실사 얼굴 사진 한 장 */
   photos?: string[]
   /** '손' 개인기를 할 줄 아는지 (강아지만. 고양이는 이 값을 무시한다 → canGivePaw) */
