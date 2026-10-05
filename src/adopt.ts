@@ -1,4 +1,5 @@
 import './style.css'
+import { registerPwa } from './pwa'
 import './form.css'
 import './adopt.css'
 
@@ -176,3 +177,5 @@ fetch(`${import.meta.env.BASE_URL}data/animals.json`)
     const hit = want && all.find((a) => a.id === want)
     if (hit) openDetail(hit)
   })
+
+registerPwa()

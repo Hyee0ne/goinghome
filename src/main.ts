@@ -1,4 +1,5 @@
 import './style.css'
+import { registerPwa } from './pwa'
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand, isPinchHand } from './hand'
 import { Voice } from './voice'
@@ -1080,3 +1081,5 @@ function myPetProfile(m: MyPet): PetProfile {
     },
   }
 }
+
+registerPwa()
