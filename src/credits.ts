@@ -1,51 +1,61 @@
 /**
- * AI로 만들기 기회. 광고를 보거나, 공유하면 한 번 더 (공유 보상은 하루 1번까지: AI 한 번에 약 $0.5가 들어서).
+ * AI로 만들기 횟수 (2026-10-05 사용자 결정): 하루 1번, 그날 공유하면 1번 더. 매번 광고를 끝까지 봐야 한다.
  * 기기(localStorage)에만 둔다. 서버가 생기면 서버에서 세는 게 맞다 (지금은 가안).
  */
 
-const KEY = 'sonkkeut.aiCredits.v1'
-const SHARE_PER_DAY = 1
+const KEY = 'sonkkeut.aiDaily.v1'
+const BASE_PER_DAY = 1
+const SHARE_BONUS = 1
 
 interface Store {
-  credits: number
-  /** 공유로 기회를 받은 날 (YYYY-MM-DD) */
-  sharedOn?: string
+  /** 기준 날짜 (YYYY-MM-DD). 날이 바뀌면 처음부터 */
+  day: string
+  used: number
+  shared: boolean
 }
+
+const today = () => new Date().toLocaleDateString('sv-SE')
 
 function load(): Store {
   try {
-    return { credits: 0, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
+    const s = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Store | null
+    if (s && s.day === today()) return s
   } catch {
-    return { credits: 0 }
+    /* 아래에서 새로 */
   }
+  return { day: today(), used: 0, shared: false }
 }
 function save(s: Store) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s))
   } catch {
-    /* 저장이 안 되면 기회도 안 쌓인다 */
+    /* 저장이 안 되면 횟수도 안 남는다 */
   }
 }
-const today = () => new Date().toLocaleDateString('sv-SE')
 
 export const aiCredits = {
-  get count() {
-    return load().credits
+  /** 오늘 남은 AI 만들기 횟수 */
+  get remaining() {
+    const s = load()
+    return Math.max(0, BASE_PER_DAY + (s.shared ? SHARE_BONUS : 0) - s.used)
   },
-  /** 공유했으면 기회 +1 (하루 1번). 받았으면 true */
+  /** 오늘 공유 보상을 이미 받았는지 */
+  get sharedToday() {
+    return load().shared
+  },
+  /** 공유했으면 오늘 1번 더 (하루 한 번만). 새로 받았으면 true */
   rewardShare() {
     const s = load()
-    if (s.sharedOn === today() && SHARE_PER_DAY <= 1) return false
-    s.credits += 1
-    s.sharedOn = today()
+    if (s.shared) return false
+    s.shared = true
     save(s)
     return true
   },
-  /** 기회를 하나 쓴다 */
+  /** 한 번 쓴다 (광고를 다 본 뒤) */
   use() {
     const s = load()
-    if (s.credits <= 0) return false
-    s.credits -= 1
+    if (BASE_PER_DAY + (s.shared ? SHARE_BONUS : 0) - s.used <= 0) return false
+    s.used += 1
     save(s)
     return true
   },
