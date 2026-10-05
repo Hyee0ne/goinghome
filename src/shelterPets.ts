@@ -25,6 +25,8 @@ interface LivePet {
   rig: PhotoRig
   /** 공고 사진 중 가장 정면인 사진 (shelter:make가 고른다, public 기준 경로) */
   photo?: string
+  /** AI로 정면을 다시 그린 아이 (생김새가 원본과 조금 다를 수 있어 화면에 밝힌다) */
+  aiFrontal?: boolean
   profile: LiveAnimal
 }
 
@@ -66,7 +68,7 @@ function toProfile(l: LivePet): PetProfile {
     traits: ['보호소 공고 중', a.neuter === 'Y' ? '중성화 완료' : '', a.weight].filter(Boolean),
     // 갤러리: 실사화한 얼굴 → 가장 정면인 공고 사진 → 나머지 공고 사진 (너무 많지 않게 5장까지)
     photos: [l.rig.src, ...(l.photo ? [l.photo] : []), ...a.photos].slice(0, 5),
-    adoption: { shelter: a.care.name, region: a.org, noticeNo: a.noticeNo, tel: a.care.tel, noticeEnd: a.end, fromShelterPhoto: true },
+    adoption: { shelter: a.care.name, region: a.org, noticeNo: a.noticeNo, tel: a.care.tel, noticeEnd: a.end, fromShelterPhoto: true, aiFrontal: !!l.aiFrontal },
     fur: cat ? '#e8d6c2' : '#9a6a44',
     furDark: cat ? '#c9b29a' : '#6e4a2e',
     belly: '#f1dcc3',

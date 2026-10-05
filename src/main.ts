@@ -476,9 +476,11 @@ function fillInfo(p: PetProfile) {
     adopt.href = `tel:${a.tel.replace(/[^\d+]/g, '')}`
     adopt.removeAttribute('target')
     adopt.textContent = `${a.shelter}에 전화로 입양 문의`
-    $('info-adopt-note').textContent = a.fromShelterPhoto
-      ? '보호소 공고 사진으로 만든 모습이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
-      : ''
+    $('info-adopt-note').textContent = a.aiFrontal
+      ? 'AI로 정면을 다시 그린 모습이라 실제와 조금 다를 수 있어요. 실제 모습은 사진을 옆으로 넘겨 공고 사진으로 확인해 주세요. 출처: 농림축산식품부 국가동물보호정보시스템'
+      : a.fromShelterPhoto
+        ? '보호소 공고 사진으로 만든 모습이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
+        : ''
   } else {
     adopt.href = a?.url ?? PAWINHAND_URL
     adopt.target = '_blank'

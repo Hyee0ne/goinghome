@@ -48,6 +48,8 @@ export interface Adoption {
   noticeEnd?: string
   /** 보호소 공고 사진으로 실사화한 모습 (출처를 밝힌다) */
   fromShelterPhoto?: boolean
+  /** AI로 정면을 다시 그린 모습 (실제 모습은 공고 사진으로 확인하게 안내한다) */
+  aiFrontal?: boolean
 }
 
 export const PAWINHAND_URL = 'https://pawinhand.kr'
