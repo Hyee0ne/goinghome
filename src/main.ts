@@ -9,7 +9,6 @@ import { TreatTray } from './treatTray'
 import { renderAdoptLinks } from './adoptLinks'
 import { isShelter, loadShelterPets } from './shelterPets'
 import { setClipRecorder, sharePet, toast } from './share'
-import { aiCredits } from './credits'
 import { ClipRecorder, clipSupport } from './recorder'
 import { clipOverlay } from './clipOverlay'
 import { myPets, type MyPet } from './myPets'
@@ -225,10 +224,8 @@ shareBtn.onclick = async () => {
       shareBtn.classList.toggle('recording', on)
       if (!on) shareBtn.querySelector('b')!.textContent = '공유'
     })
-    const msg = r === 'copied' ? '링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요.' : r === 'downloaded' ? '영상을 저장하고 링크를 복사했어요.' : ''
-    // 공유하면 AI로 만들 기회 +1 (하루 1번)
-    const bonus = r !== 'cancelled' && aiCredits.rewardShare()
-    if (msg || bonus) toast([msg, bonus ? '공유 고마워요! 오늘 AI로 1번 더 만들 수 있어요 ✨' : ''].filter(Boolean).join(' '))
+    if (r === 'copied') toast('링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요.')
+    if (r === 'downloaded') toast('영상을 저장하고 링크를 복사했어요.')
   } finally {
     shareBtn.disabled = false
   }

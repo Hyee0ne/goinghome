@@ -103,8 +103,7 @@ const consent = $<HTMLInputElement>('mk-consent')
 function onMode() {
   const ai = mode() === 'ai'
   const n = aiCredits.remaining
-  $('mk-ai-credit').textContent =
-    n > 0 ? `오늘 ${n}번 남음${aiCredits.sharedToday ? '' : ' · 공유하면 1번 더'}` : aiCredits.sharedToday ? '오늘은 다 썼어요 · 내일 다시' : '오늘은 다 썼어요 · 공유하면 1번 더'
+  $('mk-ai-credit').textContent = n > 0 ? '하루 1번 · 오늘 쓸 수 있어요' : '오늘은 다 썼어요 · 내일 다시'
   $('mk-ai-extra').hidden = !ai
   $('mk-privacy').textContent = ai
     ? '🔒 배경 지우기와 얼굴 점은 이 기기 안에서 하고, 표정을 만들 때만 사진을 보내요.'
@@ -468,13 +467,9 @@ $('mk-face-next').onclick = async () => {
   }
   $('mk-making').hidden = true
   $('mk-made').hidden = false
-  // 공유하면 AI로 만들 기회 +1
   $('mk-share').onclick = async () => {
     const r = await sharePet({ id, name, species: sp } as PetProfile, true)
-    if (r === 'cancelled') return
-    const bonus = aiCredits.rewardShare()
-    toast(bonus ? '공유 고마워요! 오늘 AI로 1번 더 만들 수 있어요 ✨' : r === 'copied' ? '링크를 복사했어요' : '공유했어요')
-    onMode()
+    if (r !== 'cancelled') toast(r === 'copied' ? '링크를 복사했어요' : '공유했어요')
   }
   const adopt = $('mk-adopt')
   adopt.hidden = false

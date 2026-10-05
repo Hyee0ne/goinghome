@@ -10,13 +10,13 @@ const LENGTH = 15
 
 /**
  * AI로 만들기 열기: 오늘 남은 횟수가 있으면 광고를 끝까지 봐야 열린다 (광고는 항상 필수).
- * 다 썼으면 공유로 1번 더 받을 수 있는지 알려 주고 무료 버전만 만든다
+ * 다 썼으면 내일 다시라고 알려 주고 무료 버전만 만든다
  */
 export async function unlockAi(): Promise<boolean> {
   if (aiCredits.remaining <= 0) {
     await ask(
       '오늘 AI로 만들기를 다 썼어요',
-      aiCredits.sharedToday ? '내일 다시 만들 수 있어요. 이번에는 기본 버전으로 만들게요.' : '친구에게 공유하면 오늘 1번 더 만들 수 있어요. 이번에는 기본 버전으로 만들게요.',
+      '내일 다시 만들 수 있어요. 이번에는 기본 버전으로 만들게요.',
       ['확인', '기본 버전으로'],
     )
     return false
