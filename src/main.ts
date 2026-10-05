@@ -268,7 +268,9 @@ function renderHelp() {
   const cat = p.species === 'cat'
   $('help-title').textContent = `${josa(p.name, '과', '와')} 교감하는 법`
   const steps: [string, string][] = [
-    ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
+    demo
+      ? ['✋', '체험판이에요. 손가락이나 마우스로 아이를 살살 문질러 쓰다듬어 주세요. (실제 앱은 카메라로 손을 인식해요)']
+      : ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
     ...(p.shy
       ? ([
           [
@@ -605,7 +607,13 @@ function currentInputs(now: number, dt: number): PetInput[] {
  * Shift를 누르고 있으면 펫을 중심으로 좌우 대칭인 손이 하나 더 생긴다 (양손 확인용).
  * 일반 접속에서는 README대로 카메라 입력만 받는다.
  */
-const mouseSim = new URLSearchParams(location.search).get('debug') === 'mouse'
+/**
+ * 체험판(VITE_DEMO=1 빌드, 아티팩트 공유용): 카메라를 쓸 수 없는 곳이라 손가락·마우스로 문질러 쓰다듬는다.
+ * '간식 집기'를 켜면 손끝 모은 손(집은 손)이 된다
+ */
+const demo = import.meta.env.VITE_DEMO === '1'
+let demoPinch = false
+const mouseSim = new URLSearchParams(location.search).get('debug') === 'mouse' || demo
 let simPointer: { x: number; y: number; both: boolean; offer: boolean; pinch: boolean } | null = null
 /** 손바닥 중심 기준 편 손 21개 점 (펫 로컬 단위, 손가락이 위) */
 const SIM_HAND: [number, number][] = [
@@ -638,7 +646,7 @@ if (mouseSim) {
   intro.hidden = true
   const at = (e: PointerEvent) => {
     const r = stage.getBoundingClientRect()
-    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey }
+    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey || demoPinch }
   }
   stage.addEventListener('pointerdown', at)
   stage.addEventListener('pointermove', (e) => e.buttons && at(e))
@@ -1001,6 +1009,26 @@ function drawCameraOverlay() {
     }
     octx.stroke()
   }
+}
+
+// ───────────────────────── 체험판 ─────────────────────────
+
+if (demo) {
+  document.body.classList.add('demo')
+  // 공유·전체 공고(바깥 사진)는 체험판에서 쓸 수 없어 숨긴다
+  for (const id of ['share-site', 'info-share', 'card-share']) $(id).hidden = true
+  document.querySelector<HTMLElement>('.adopt-link')!.hidden = true
+  const bar = Object.assign(document.createElement('div'), { className: 'demo-bar' })
+  bar.innerHTML = '<span class="demo-long">체험판 · 손가락이나 마우스로 문질러 쓰다듬어 보세요 (실제 앱은 카메라로 손을 인식해요)</span><span class="demo-short">체험판 · 손가락으로 문질러요</span>'
+  const pinchBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'demo-pinch', textContent: '🍗 간식 집기' })
+  pinchBtn.setAttribute('aria-pressed', 'false')
+  pinchBtn.onclick = () => {
+    demoPinch = !demoPinch
+    pinchBtn.setAttribute('aria-pressed', String(demoPinch))
+    pinchBtn.textContent = demoPinch ? '✋ 쓰다듬기로' : pet.p.species === 'cat' ? '🐟 츄르 집기' : '🍗 간식 집기'
+  }
+  bar.append(pinchBtn)
+  document.querySelector('.stage-wrap')!.append(bar)
 }
 
 // ───────────────────────── 시작 ─────────────────────────

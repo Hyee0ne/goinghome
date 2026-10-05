@@ -1556,3 +1556,70 @@ button {
 #info .sheet-body:focus {
   outline: none;
 }
+
+/* ── 체험판 (아티팩트 공유용) ── */
+.demo-bar {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 14px rgba(80, 50, 20, 0.14);
+  font-size: 13px;
+  color: var(--ink-soft);
+  transform: translateX(-50%);
+}
+
+.demo-bar span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.demo-pinch {
+  flex: none;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.demo-pinch[aria-pressed='true'] {
+  background: var(--ink);
+}
+
+body.demo #stage {
+  touch-action: none;
+  cursor: grab;
+}
+
+@media (max-width: 720px) {
+  .demo-bar span {
+    font-size: 12px;
+  }
+}
+
+/* 체험판에서 숨긴 버튼 (각 버튼의 display 규칙보다 앞서게) */
+body.demo [hidden] {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .demo-bar .demo-long {
+    display: none;
+  }
+}
+
+@media (min-width: 721px) {
+  .demo-bar .demo-short {
+    display: none;
+  }
+}
