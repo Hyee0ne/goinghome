@@ -44,6 +44,14 @@ export class TreatTray {
     this.rect = { x: r.left - s.left - pad, y: r.top - s.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 }
   }
 
+  /** 간식 그림 바꾸기 (츄르를 핥는 고양이는 츄르 스틱). 같은 그림이면 아무것도 안 한다 */
+  setTreat(src: string, kind: 'cube' | 'churu') {
+    this.el.classList.toggle('churu', kind === 'churu')
+    for (const img of this.items) if ((img as HTMLImageElement).src !== new URL(src, location.href).href) (img as HTMLImageElement).src = src
+    this.el.querySelector('.tray-label')!.textContent = kind === 'churu' ? '츄르' : '간식'
+    this.el.setAttribute('aria-label', kind === 'churu' ? '츄르 접시. 손끝을 모아 츄르를 집어 아이 입 앞에 대 주세요' : '간식 접시. 손끝을 모아 간식을 집어 아이 입 앞에 대 주세요')
+  }
+
   /** 무대 좌표 (x, y)가 접시 위인지 */
   hit(x: number, y: number) {
     const { x: rx, y: ry, w, h } = this.rect

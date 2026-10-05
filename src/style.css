@@ -1233,3 +1233,30 @@ button {
   font-style: normal;
   font-weight: 800;
 }
+
+/* 츄르 접시: 세로 스틱 세 개를 부채꼴로 */
+.treat-tray.churu .tray-treat {
+  width: 22px;
+  height: 64px;
+  bottom: -6px;
+}
+
+.treat-tray.churu .tray-treat.t0 {
+  left: 18px;
+  transform: rotate(-18deg);
+}
+
+.treat-tray.churu .tray-treat.t1 {
+  right: 18px;
+  transform: rotate(18deg);
+}
+
+.treat-tray.churu .tray-treat.t2 {
+  left: 31px;
+  bottom: 0;
+  transform: rotate(0deg);
+}
+
+.treat-tray.churu .tray-treat.gone {
+  transform: translateY(-14px) scale(0.6);
+}

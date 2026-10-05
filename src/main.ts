@@ -326,8 +326,10 @@ function renderHelp() {
   // 특별한 교감: 간식 주기(모두), '손' 개인기(체크된 강아지만)
   const specials: [string, string][] = [
     [
-      '🍗 간식 주기',
-      `왼쪽 간식 접시 위에서 엄지와 검지 끝을 모아 간식을 집고, ${p.name} 입 앞에 가만히 대 보세요. 냄새를 맡고 세 입에 나눠 받아먹어요.`,
+      p.photo?.lick ? '🐟 츄르 주기' : '🍗 간식 주기',
+      p.photo?.lick
+        ? `왼쪽 접시 위에서 엄지와 검지 끝을 모아 츄르를 집고, ${p.name} 입 앞에 가만히 대 보세요. 혀로 날름날름 핥아 먹어요.`
+        : `왼쪽 간식 접시 위에서 엄지와 검지 끝을 모아 간식을 집고, ${p.name} 입 앞에 가만히 대 보세요. 냄새를 맡고 세 입에 나눠 받아먹어요.`,
     ],
   ]
   if (canGivePaw(p)) {
@@ -380,6 +382,9 @@ function isMine(p: PetProfile) {
 
 function renderBanner() {
   const p = pet.p
+  // 츄르를 핥는 아이(rig.lick)는 간식 접시도 츄르 스틱으로
+  const churu = !!p.photo?.lick
+  treatTray.setTreat(assetUrl(churu ? 'pets/churu.webp' : 'pets/treat.webp'), churu ? 'churu' : 'cube')
   // 우리 아이는 입양 대신 자랑하기(공유)로
   const mine = isMine(p)
   $('info-banner-title').textContent = mine ? `우리 ${p.name}` : `${josa(p.name, '이', '가')} 가족을 기다려요`
