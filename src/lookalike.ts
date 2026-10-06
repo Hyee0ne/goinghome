@@ -60,18 +60,27 @@ export interface MatchAnimal {
   end: string
 }
 
+/** 공고 마감(YYYYMMDD)까지 남은 날 (오늘 마감이면 0, 지났으면 음수) */
+export function daysLeft(end: string, now = new Date()) {
+  if (!/^\d{8}$/.test(end)) return Infinity
+  const d = new Date(Number(end.slice(0, 4)), Number(end.slice(4, 6)) - 1, Number(end.slice(6, 8)))
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.round((d.getTime() - today.getTime()) / 86_400_000)
+}
+
 /**
- * 닮은 아이 n마리. 색이 가까운 순, 같으면 쓰다듬을 수 있는 아이·공고가 곧 끝나는 아이 먼저.
- * 색을 모르면 쓰다듬을 수 있는 아이와 마감 순으로 고른다
+ * 닮은 아이 n마리. 색이 가까운 순인데, 이번 주에 공고가 끝나는 아이(남은 7일 이내)와 쓰다듬을 수 있는 아이를 앞에 둔다
+ * (2026-10-06: 급한 아이를 살리는 데 집중). 같으면 공고가 곧 끝나는 아이 먼저. 마감이 지난 아이는 뺀다.
+ * 색을 모르면 급한 아이·쓰다듬을 수 있는 아이와 마감 순으로 고른다
  */
 export function findLookalikes<T extends MatchAnimal>(all: T[], species: 'dog' | 'cat', color: RGB | null, n: number, pettable: Set<string> = new Set()) {
   return all
-    .filter((a) => a.sp === species)
+    .filter((a) => a.sp === species && daysLeft(a.end) >= 0)
     .map((a) => {
       const cs = textColors(a.color)
       const d = color && cs.length ? Math.min(...cs.map((c) => dist(color, c))) : 400
-      // 쓰다듬을 수 있는 아이는 같은 색이면 조금 앞에 (색 거리 40만큼 이득)
-      return { a, score: d - (pettable.has(a.id) ? 40 : 0) }
+      // 같은 색 계열이면 급한 아이(색 거리 60만큼 이득)와 쓰다듬을 수 있는 아이(40)를 앞에
+      return { a, score: d - (daysLeft(a.end) <= 7 ? 60 : 0) - (pettable.has(a.id) ? 40 : 0) }
     })
     .sort((x, y) => x.score - y.score || x.a.end.localeCompare(y.a.end))
     .slice(0, n)

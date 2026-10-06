@@ -779,6 +779,25 @@
   font-size: 11px;
 }
 
+/* 만든 정면 얼굴(배경 투명): 잘리지 않게 얼굴 위주로, 크림색 바탕 */
+.mk-look-card img.mk-look-face {
+  object-fit: contain;
+  object-position: 50% 20%;
+  background: var(--bg-2, #ffe7cc);
+}
+
+.mk-look-due {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.mk-look-due.soon {
+  color: #e5484d;
+}
+
 .mk-look-text i {
   margin-top: 4px;
   color: var(--accent);

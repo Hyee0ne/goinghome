@@ -7,7 +7,7 @@ import { engine as realEngine } from './maker/engine'
 import { myPets, newPetId, type Pt, type Taps } from './myPets'
 import { josa, type PetProfile, type Species } from './pets'
 import { renderAdoptLinks } from './adoptLinks'
-import { findLookalikes, furColor } from './lookalike'
+import { daysLeft, findLookalikes, furColor } from './lookalike'
 import { unlockAi } from './rewardedAd'
 import { aiCredits } from './credits'
 import { sharePet, toast } from './share'
@@ -503,7 +503,8 @@ async function showLookalikes(name: string, sp: Species, color: [number, number,
     fetch(`${base}data/animals.json`).then((r) => (r.ok ? r.json() : { animals: [] })).catch(() => ({ animals: [] })),
     fetch(`${base}data/shelter-live.json`).then((r) => (r.ok ? r.json() : { pets: [] })).catch(() => ({ pets: [] })),
   ])
-  const pettable = new Map<string, string | undefined>((live.pets as { id: string; photo?: string }[]).map((p) => [p.id, p.photo]))
+  // 쓰다듬을 수 있는 아이는 우리가 만든 깨끗한 정면 얼굴(rig.src)로 보여 준다 (공고 사진은 손·목줄이 같이 찍힌 일이 많다)
+  const pettable = new Map<string, string | undefined>((live.pets as { id: string; rig?: { src?: string } }[]).map((p) => [p.id, p.rig?.src]))
   const picks = findLookalikes(animals.animals as LookAnimal[], sp, color, 3, new Set(pettable.keys()))
   if (!picks.length) return
   $('mk-look-title').textContent = `${josa(name, '을', '를')} 닮은 아이들이 가족을 기다려요 🐾`
@@ -516,11 +517,13 @@ async function showLookalikes(name: string, sp: Species, color: [number, number,
       })
       const local = pettable.get(a.id)
       const img = Object.assign(new Image(), { src: local ? `${base}${local}` : a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
+      if (local) img.classList.add('mk-look-face')
       img.referrerPolicy = 'no-referrer'
       const text = Object.assign(document.createElement('span'), { className: 'mk-look-text' })
       text.append(
         Object.assign(document.createElement('b'), { textContent: a.kind }),
         Object.assign(document.createElement('small'), { textContent: [a.age, a.org.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · ') }),
+        dueLine(a.end),
         Object.assign(document.createElement('i'), { textContent: canPet ? '✋ 쓰다듬어 보기' : '자세히 보기 ›' }),
       )
       link.append(img, text)
@@ -528,6 +531,16 @@ async function showLookalikes(name: string, sp: Species, color: [number, number,
     }),
   )
   box.hidden = false
+}
+
+/** 카드의 마감 줄: '10월 12일까지 가족을 찾아요', 이번 주에 끝나면 빨갛게 */
+function dueLine(end: string) {
+  const el = Object.assign(document.createElement('em'), { className: 'mk-look-due' })
+  const left = daysLeft(end)
+  if (!Number.isFinite(left)) return el
+  el.textContent = left === 0 ? '오늘까지 가족을 찾아요' : `${Number(end.slice(4, 6))}월 ${Number(end.slice(6, 8))}일까지 가족을 찾아요`
+  if (left <= 7) el.classList.add('soon')
+  return el
 }
 
 $('mk-again').onclick = () => {
