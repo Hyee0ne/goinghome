@@ -494,6 +494,51 @@ if (run('assets')) {
   const has = (...names: string[]) => names.every((n) => existsSync(f.expr(n)))
   // 표정 사진이 있는 부위만 만든다 (사용량 한도 등으로 빠진 부위는 앱이 표정 없이 그린다)
   for (const file of ['pant.webp', 'eyes.webp', 'ears.webp', 'morph.png', 'morph.json']) rmSync(join(PUB, file), { force: true })
+  // 입 표정 범위: 표정 사진에서 실제로 바뀐 곳(코 아래, 원본과 색이 다른 곳)을 다 덮도록 늘린다.
+  // 기본 범위는 턱끝 기준이라, 혀를 턱 아래까지 길게 내민 헥헥은 아래가 수평으로 잘렸다. 결과는 expr-pant-region.json (최종 사진 좌표)
+  rmSync(join(SRC, 'expr-pant-region.json'), { force: true })
+  if (has('pantMid', 'pant')) {
+    const D = dist(lm.leftEye, lm.rightEye)
+    const r = spawnSync('python3', ['-c', `
+import sys, json, numpy as np, cv2
+from PIL import Image
+base = np.array(Image.open(sys.argv[1]).convert('RGBA')).astype(np.float32)
+ys0 = int(float(sys.argv[4])); m = np.zeros(base.shape[:2], bool)
+for p in sys.argv[2:4]:
+    e = np.array(Image.open(p).convert('RGBA')).astype(np.float32)
+    d = np.abs(e[:, :, :3] - base[:, :, :3]).sum(axis=2) * (e[:, :, 3] > 128) * (base[:, :, 3] > 128)
+    m |= cv2.GaussianBlur((d > 60).astype(np.float32), (0, 0), 3) > 0.3
+m[:ys0] = False
+n, lab, st, _ = cv2.connectedComponentsWithStats(m.astype(np.uint8))
+keep = [i for i in range(1, n) if st[i, 4] > 400]
+if not keep: print('{}'); sys.exit()
+ys, xs = np.where(np.isin(lab, keep))
+print(json.dumps({'x0': int(xs.min()), 'y0': int(ys.min()), 'x1': int(xs.max()), 'y1': int(ys.max())}))`, f.base, f.expr('pantMid'), f.expr('pant'), String(lm.nose.y + face.offsetY - D * 0.1)], { encoding: 'utf8' })
+    const ch = r.status === 0 ? JSON.parse(r.stdout.trim() || '{}') : {}
+    if (ch.x1) {
+      // 바뀐 곳(최종 사진 좌표)을 감싸는 타원: 가장자리 30%가 섞이는 띠라 바뀐 곳이 타원의 75% 안에 들게
+      const c = { x0: ch.x0 - face.offsetX, y0: ch.y0 - face.offsetY, x1: ch.x1 - face.offsetX, y1: ch.y1 - face.offsetY }
+      const def = expressionLayers(lm, b, { pant: '', eyes: '', ears: '' }, [0, 0, 0]).pant.mask[0]
+      const ell = {
+        x: Math.round((c.x0 + c.x1) / 2),
+        y: Math.round((c.y0 + c.y1) / 2),
+        rx: Math.round(Math.max((c.x1 - c.x0) / 2 / 0.75, def.rx)),
+        ry: Math.round(Math.max((c.y1 - c.y0) / 2 / 0.75, def.ry)),
+      }
+      // 기본 타원보다 아래로 더 내려갔을 때만 바꾼다 (위로는 코가 있어 그대로)
+      if (ell.y + ell.ry > def.y + def.ry) {
+        const nb = {
+          x0: Math.max(0, Math.min(b.pant.x0, ell.x - ell.rx)),
+          y0: b.pant.y0,
+          x1: Math.min(face.width, Math.max(b.pant.x1, ell.x + ell.rx)),
+          y1: Math.min(face.height, Math.max(b.pant.y1, ell.y + ell.ry)),
+        }
+        b.pant = nb
+        writeJson(join(SRC, 'expr-pant-region.json'), { box: nb, mask: { ...ell, y: Math.max(ell.y, def.y) } })
+        console.log(`   입 범위를 바뀐 곳에 맞춰 늘렸어요: 아래 끝 ${def.y + def.ry} → ${ell.y + ell.ry}`)
+      }
+    }
+  }
   if (has('pantMid', 'pant')) py('prepare-expression.py', f.base, join(PUB, 'pant'), ...box(b.pant), f.expr('pantMid'), f.expr('pant'), '--match-color')
   if (has('eyesHalf', 'eyesClosed'))
     py('prepare-expression.py', f.base, join(PUB, 'eyes'), ...box(b.eyes), f.expr('eyesHalf'), f.expr('eyesClosed'), '--eyes-frames', '0', '--eyes', ...eyes)
@@ -517,15 +562,16 @@ if (run('register')) {
   const face = readJson(join(PUB, 'face.json'))
   const morph = existsSync(join(PUB, 'morph.json')) ? readJson(join(PUB, 'morph.json')) : null
   const rel = (name: string) => `pets/${id}/${name}`
+  const region = existsSync(join(SRC, 'expr-pant-region.json')) ? readJson(join(SRC, 'expr-pant-region.json')) : null
   const layers = expressionLayers(
     lm,
-    expressionBoxes(lm, face),
+    region ? { ...expressionBoxes(lm, face), pant: region.box } : expressionBoxes(lm, face),
     { pant: rel('pant.webp'), eyes: rel('eyes.webp'), ears: rel('ears.webp') },
     morph?.fills.ears ?? [0.45, 0.28, 0.18],
   )
   const made = (file: string) => existsSync(join(PUB, file))
   const expressions = {
-    ...(made('pant.webp') && { pant: layers.pant }),
+    ...(made('pant.webp') && { pant: region ? { ...layers.pant, mask: [region.mask] } : layers.pant }),
     ...(made('eyes.webp') && { eyesClosed: layers.eyesClosed }),
     ...(made('ears.webp') && { earsBack: layers.earsBack }),
     ...(morph && { morph: { src: rel('morph.png'), range: morph.range, sdfRange: morph.sdfRange, rects: morph.rects } }),

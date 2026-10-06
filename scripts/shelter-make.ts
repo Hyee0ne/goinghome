@@ -465,7 +465,10 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
   let expressions: Record<string, unknown> | undefined
   if ((made('eyes.webp') || made('pant.webp')) && made('morph.json')) {
     const morph = readJson(join(PUB, 'morph.json'))
-    const layers = expressionLayers(lm, expressionBoxes(lm, face), { pant: `${base}/pant.webp`, eyes: `${base}/eyes.webp`, ears: `${base}/ears.webp` }, morph.fills.ears ?? [0.45, 0.28, 0.18])
+    // 입 범위를 표정 사진에서 바뀐 곳에 맞춰 늘렸으면 그 범위 (pet-add assets 단계가 남긴다)
+    const region = existsSync(join(SRC, 'expr-pant-region.json')) ? readJson(join(SRC, 'expr-pant-region.json')) : null
+    const layers0 = expressionLayers(lm, region ? { ...expressionBoxes(lm, face), pant: region.box } : expressionBoxes(lm, face), { pant: `${base}/pant.webp`, eyes: `${base}/eyes.webp`, ears: `${base}/ears.webp` }, morph.fills.ears ?? [0.45, 0.28, 0.18])
+    const layers = region ? { ...layers0, pant: { ...layers0.pant, mask: [region.mask] } } : layers0
     for (const f of ['pant.webp', 'eyes.webp', 'ears.webp', 'morph.png']) if (made(f)) copyFileSync(join(PUB, f), join(out, f))
     expressions = {
       ...(made('pant.webp') && { pant: layers.pant }),
