@@ -128,7 +128,7 @@ git checkout images-incoming && git pull
 - 고양이 ears-back: *relaxed "airplane ears": both ears rotated out to the sides and slightly down, ear openings facing sideways, as a content cat being petted (not flattened in fear or anger). Eyes open and mouth closed, unchanged. Where the ears used to be, show only the same plain background color.*
 
 ### 올리기
-- 네 장을 `incoming/<id>/`에 넣고 `images-incoming`에 커밋·push한다. 커밋 메시지 예: `incoming: <id> 웃기·헥헥·눈 감기 (로컬 인페인팅)`
+- 네 장을 `incoming/<id>/`에 넣고 `images-incoming`에 커밋·push한다. 커밋 메시지 예: `incoming: <id> 웃기·헥헥·눈 감기·귀 젖힘 (로컬 인페인팅)`
 - `BATCH-<날짜>.md`의 그 아이 상태 칸을 '표정 완료'로 바꾼다.
 - 공고 데이터가 따로 필요하면(선택) `.env.local`에 `DATA_GO_KR_SERVICE_KEY`를 사용자가 직접 넣고 `npm run data:animals`. 키 값은 채팅·깃·문서에 적지 않는다. 기본 흐름에서는 front.png와 README.txt만 있으면 된다.
 
