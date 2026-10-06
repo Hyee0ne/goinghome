@@ -21,6 +21,12 @@ const SHELTER_LIVE = join(import.meta.dirname, '..', 'public', 'data', 'shelter-
  * 판정은 무료(Apple Vision)라 후보가 늘어도 비용은 없고 시간만 는다
  */
 const CANDIDATES_PER_SPECIES = { dog: 100, cat: 50 } as const
+/**
+ * 후보는 공고 남은 기간이 이 범위인 아이에서 고른다 (2026-10-06 사용자 결정: 주 1회 고퀄 배치).
+ * 강아지 5~14일. 고양이는 성묘가 드물어 모자라면 끝을 늘린다(14 → 21 → 30 → 60일)
+ */
+const WINDOW = { min: 5, max: 14 }
+const CAT_MAX_STEPS = [14, 21, 30, 60]
 /** 한 시도에서 고르는 최대 비율 (지역을 고르게): 후보 수의 15% */
 const PER_SIDO_RATIO = 0.15
 const API = 'https://apis.data.go.kr/1543061/abandonmentPublicService_v2/abandonmentPublic_v2'
@@ -128,13 +134,9 @@ function score(a: Animal): Candidate | null {
   return a.sp === 'dog' ? dogScore(a, y, left) : catScore(a, y, left)
 }
 
-/**
- * 공고가 오래 남은 아이 우선 (2026-10-05 사용자 결정): 실사화한 아이를 오래 보여 줄 수 있어서.
- * 3일마다 +1 (공고는 보통 10일이라 최대 +3)
- */
+/** 남은 기간은 점수 대신 범위(WINDOW)로 거른다. 이유에만 적는다 */
 function addDday(add: (n: number, why: string) => void, left: number) {
-  const n = Math.floor(left / 3)
-  if (n > 0) add(n, `공고 D-${left}`)
+  add(0, `공고 D-${left}`)
 }
 
 function dogScore(a: Animal, y: number, left: number): Candidate {
@@ -175,15 +177,19 @@ function catScore(a: Animal, y: number, left: number): Candidate {
   return { id: a.id, score: s, reasons }
 }
 
-/** 점수순으로 고르되 한 시도에서 count의 PER_SIDO_RATIO까지 (개·고양이 따로) */
-function pickCandidates(animals: Animal[], count: number) {
+/**
+ * 남은 기간이 min~max일인 아이 중 점수순으로 고르되 한 시도에서 count의 PER_SIDO_RATIO까지 (개·고양이 따로).
+ * 같은 점수면 남은 기간이 짧은 아이부터 (급한 아이 먼저)
+ */
+function pickCandidates(animals: Animal[], count: number, max = WINDOW.max) {
   const perSido = Math.max(2, Math.ceil(count * PER_SIDO_RATIO))
   const bySido = new Map<string, number>()
   const byId = new Map(animals.map((a) => [a.id, a]))
   return animals
+    .filter((a) => daysLeft(a) >= WINDOW.min && daysLeft(a) <= max)
     .map(score)
     .filter((c): c is Candidate => !!c)
-    .sort((a, b) => b.score - a.score || daysLeft(byId.get(b.id)!) - daysLeft(byId.get(a.id)!))
+    .sort((a, b) => b.score - a.score || daysLeft(byId.get(a.id)!) - daysLeft(byId.get(b.id)!))
     .filter((c) => {
       const sido = byId.get(c.id)!.sido
       const n = bySido.get(sido) ?? 0
@@ -242,9 +248,16 @@ async function main() {
   writeFileSync(OUT, JSON.stringify({ updated, animals }))
   writeShelterLive(animals)
   const dogs = pickCandidates(animals.filter((a) => a.sp === 'dog'), CANDIDATES_PER_SPECIES.dog)
-  const cats = pickCandidates(animals.filter((a) => a.sp === 'cat'), CANDIDATES_PER_SPECIES.cat)
-  writeFileSync(CANDIDATES, JSON.stringify({ updated, dogs, cats }, null, 1))
-  console.log(`실사화 후보: 강아지 ${dogs.length}마리, 고양이 ${cats.length}마리`)
+  const allCats = animals.filter((a) => a.sp === 'cat')
+  let catMax = CAT_MAX_STEPS[0]
+  let cats = pickCandidates(allCats, CANDIDATES_PER_SPECIES.cat, catMax)
+  for (const m of CAT_MAX_STEPS.slice(1)) {
+    if (cats.length >= CANDIDATES_PER_SPECIES.cat) break
+    catMax = m
+    cats = pickCandidates(allCats, CANDIDATES_PER_SPECIES.cat, catMax)
+  }
+  writeFileSync(CANDIDATES, JSON.stringify({ updated, window: { dog: [WINDOW.min, WINDOW.max], cat: [WINDOW.min, catMax] }, dogs, cats }, null, 1))
+  console.log(`실사화 후보: 강아지 ${dogs.length}마리 (남은 ${WINDOW.min}~${WINDOW.max}일), 고양이 ${cats.length}마리 (남은 ${WINDOW.min}~${catMax}일)`)
   console.log(`공고 중 ${first.total}마리 → 사진 있는 ${animals.length}마리를 ${OUT}에 썼어요`)
 }
 
