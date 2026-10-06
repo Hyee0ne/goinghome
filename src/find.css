@@ -1,52 +1,213 @@
-/* 우리 아이 닮은 친구 찾기 (/find). 나머지는 make.css·form.css를 같이 쓴다 */
-.fd-pick {
-  aspect-ratio: 16 / 9;
-  margin-top: 12px;
-}
+/* 우리 아이 닮은 친구 찾기 (/find). 카드(.mk-look-*)는 make.css를 같이 쓴다 */
 
-.fd-why {
-  margin: -4px 0 12px;
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-.fd-share,
-.fd-again {
-  display: block;
-  width: 100%;
-  margin-top: 12px;
-}
-
-#fd-breed {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  color: var(--ink);
-  font: inherit;
-}
-
-/* 결과 위: 우리 아이 사진 + 제목 */
-.fd-me {
+/* 1. 사진 고르기 */
+.fd-ask {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  text-align: center;
 }
 
-.fd-me img {
-  flex: none;
-  width: 72px;
-  height: 72px;
-  border: 3px solid #fff;
+.fd-ask[hidden] {
+  display: none;
+}
+
+.fd-hero h2 {
+  margin: 8px 0 6px;
+  color: var(--ink);
+  font-size: 23px;
+  line-height: 1.35;
+}
+
+.fd-hero p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+}
+
+.fd-photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 200px;
+  height: 200px;
+  margin: 22px 0 10px;
+  overflow: hidden;
+  border: 3px dashed rgba(255, 138, 61, 0.55);
   border-radius: 50%;
-  box-shadow: 0 3px 10px rgba(80, 50, 20, 0.15);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(80, 50, 20, 0.1);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.fd-photo:active {
+  transform: scale(0.97);
+}
+
+.fd-photo:has(img:not([hidden])) {
+  border: 4px solid #fff;
+}
+
+.fd-photo input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.fd-photo img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
-.fd-me h3 {
-  margin: 0;
+.fd-photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fd-photo-empty b {
+  font-size: 40px;
+}
+
+.fd-status {
+  min-height: 22px;
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.fd-name {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
+
+.fd-species {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fd-species label {
+  position: relative;
+}
+
+.fd-species input {
+  position: absolute;
+  opacity: 0;
+}
+
+.fd-species span {
+  display: block;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fd-species input:checked + span {
+  border-color: var(--accent);
+  background: #fff3ea;
+  color: var(--ink);
+}
+
+.fd-go {
+  width: 100%;
+  margin-top: 18px;
+  font-size: 17px;
+}
+
+.fd-privacy {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+/* 2. 결과 */
+.fd-result {
+  padding: 22px 18px 18px;
+  border-radius: 24px;
+  background: #fff;
+  text-align: center;
+}
+
+.fd-result[hidden] {
+  display: none;
+}
+
+.fd-pair {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.fd-pair img {
+  width: 104px;
+  height: 104px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: var(--bg-2);
+  box-shadow: 0 6px 18px rgba(80, 50, 20, 0.16);
+  object-fit: cover;
+}
+
+.fd-heart {
+  font-size: 28px;
+  animation: fd-beat 1.2s ease-in-out infinite;
+}
+
+@keyframes fd-beat {
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-heart {
+    animation: none;
+  }
+}
+
+.fd-title {
+  margin: 16px 0 4px;
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 1.4;
+}
+
+.fd-why {
+  margin: 0 0 16px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fd-list {
+  text-align: left;
 }
 
 .mk-look-why {
@@ -54,4 +215,20 @@
   color: var(--accent);
   font-size: 11px;
   font-weight: 700;
+}
+
+.fd-share {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.fd-again {
+  margin-top: 12px;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

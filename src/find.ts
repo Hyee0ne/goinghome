@@ -112,6 +112,9 @@ function pickColor(rgb: RGB, name: string, from: 'photo' | 'pick') {
 $<HTMLInputElement>('fd-file').addEventListener('change', async (e) => {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+  const status = $('fd-status')
+  status.textContent = '사진을 살펴보고 있어요…'
+  $<HTMLButtonElement>('fd-go').disabled = true
   try {
     const bmp = await createImageBitmap(file)
     const size = 64
@@ -148,10 +151,12 @@ $<HTMLInputElement>('fd-file').addEventListener('change', async (e) => {
       if (g.sp) (document.querySelector(`input[name=fd-species][value=${g.sp}]`) as HTMLInputElement).checked = true
       guessed = g.breed
     }
+    const animal = species() === 'cat' ? '고양이' : '강아지'
+    status.textContent = guessed && guessed !== breeds()[0] ? `${josa(guessed.label, '을', '를')} 닮은 것 같아요!` : `귀여운 ${animal}네요!`
     bmp.close()
     if (n) pickColor([r / n, gg / n, b / n], '사진 속 털색', 'photo')
   } catch {
-    alert('이 사진은 열 수 없어요. 다른 사진을 골라 주세요.')
+    status.textContent = '이 사진은 열 수 없어요. 다른 사진을 골라 주세요.'
   }
 })
 
@@ -172,6 +177,7 @@ $('fd-go').onclick = async () => {
   picks = findSimilar(await loadAnimals(), sp, mine, mine.size, state.color, 3)
   const name = $<HTMLInputElement>('fd-name').value.trim()
   $<HTMLImageElement>('fd-me-img').src = $<HTMLImageElement>('fd-preview').src
+  $<HTMLImageElement>('fd-top-img').src = picks[0]?.a.photos[0] ?? ''
   $('fd-title').textContent = picks.length
     ? `${name ? josa(name, '이랑', '랑') : '우리 아이랑'} 닮은 친구들이 가족을 기다려요 🐾`
     : '지금은 닮은 친구를 찾지 못했어요'

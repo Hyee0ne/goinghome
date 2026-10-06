@@ -28,43 +28,44 @@
     </header>
 
     <main class="mk-wrap">
-      <!-- 1. 우리 아이 알려 주기: 사진 (기기 안에서 털색만 본다) -->
-      <section id="fd-ask" class="mk-step">
-        <div class="mk-info">
-          <div class="field">
-            <label for="fd-name">이름 <small class="muted">(선택)</small></label>
-            <input id="fd-name" maxlength="10" autocomplete="off" placeholder="예: 보리" />
-          </div>
-          <div class="field">
-            <span class="label">종류</span>
-            <div class="seg" role="radiogroup" aria-label="종류">
-              <label><input type="radio" name="fd-species" value="dog" checked /><span>🐶 강아지</span></label>
-              <label><input type="radio" name="fd-species" value="cat" /><span>🐱 고양이</span></label>
-            </div>
+      <!-- 1. 우리 아이 알려 주기: 사진 한 장 (기기 안에서 털색과 생김새만 본다) -->
+      <section id="fd-ask" class="fd-ask">
+        <div class="fd-hero">
+          <h2>우리 아이랑 닮은 친구,<br />보호소에 있을까요?</h2>
+          <p>사진 한 장이면 찾아 드려요 🐾</p>
+        </div>
+
+        <label class="fd-photo">
+          <input id="fd-file" type="file" accept="image/*" />
+          <img id="fd-preview" alt="우리 아이 사진" hidden />
+          <span id="fd-pick-label" class="fd-photo-empty"><b>📷</b>사진 고르기</span>
+        </label>
+        <p id="fd-status" class="fd-status" aria-live="polite"></p>
+
+        <div class="fd-form">
+          <input id="fd-name" class="fd-name" maxlength="10" autocomplete="off" placeholder="이름 (선택) · 예: 보리" aria-label="이름 (선택)" />
+          <div class="fd-species" role="radiogroup" aria-label="종류">
+            <label><input type="radio" name="fd-species" value="dog" checked /><span>🐶 강아지</span></label>
+            <label><input type="radio" name="fd-species" value="cat" /><span>🐱 고양이</span></label>
           </div>
         </div>
 
-        <label class="mk-pick fd-pick">
-          <input id="fd-file" type="file" accept="image/*" />
-          <img id="fd-preview" alt="" hidden />
-          <span id="fd-pick-label"><b>＋</b>우리 아이 사진 고르기</span>
-        </label>
-        <p class="mk-privacy">🔒 사진은 이 기기 안에서 털색과 생김새만 보고 바로 잊어요. 어디로도 보내지 않아요.</p>
-
-
-        <button id="fd-go" class="btn primary mk-next" type="button" disabled>닮은 친구 찾기</button>
+        <button id="fd-go" class="btn primary fd-go" type="button" disabled>닮은 친구 찾기</button>
+        <p class="fd-privacy">🔒 사진은 이 기기 안에서만 보고 바로 잊어요. 어디로도 보내지 않아요.</p>
       </section>
 
-      <!-- 2. 결과: 닮은 보호소 아이 3마리 -->
-      <section id="fd-result" class="mk-look" hidden>
-        <div class="fd-me">
-          <img id="fd-me-img" alt="우리 아이 사진" />
-          <h3 id="fd-title"></h3>
+      <!-- 2. 결과: [우리 아이 💕 가장 닮은 친구] + 닮은 보호소 아이 3마리 -->
+      <section id="fd-result" class="fd-result" hidden>
+        <div class="fd-pair" aria-hidden="true">
+          <img id="fd-me-img" alt="" />
+          <span class="fd-heart">💕</span>
+          <img id="fd-top-img" alt="" referrerpolicy="no-referrer" />
         </div>
+        <h3 id="fd-title" class="fd-title"></h3>
         <p id="fd-why" class="fd-why"></p>
-        <div id="fd-list" class="mk-look-list"></div>
+        <div id="fd-list" class="mk-look-list fd-list"></div>
         <button id="fd-share" class="btn primary fd-share" type="button">↗ 친구에게 알려 주기</button>
-        <button id="fd-again" class="btn ghost fd-again" type="button">다시 찾기</button>
+        <button id="fd-again" class="fd-again" type="button">다른 사진으로 다시 찾기</button>
       </section>
     </main>
     <footer class="site-footer">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</footer>
