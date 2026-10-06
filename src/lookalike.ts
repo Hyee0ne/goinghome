@@ -58,6 +58,9 @@ export interface MatchAnimal {
   sp: 'dog' | 'cat' | 'etc'
   color: string
   end: string
+  /** 보호소 (같은 보호소에서는 한 마리만 고른다) */
+  care?: { name?: string }
+  org?: string
 }
 
 /** 공고 마감(YYYYMMDD)까지 남은 날 (오늘 마감이면 0, 지났으면 음수) */
@@ -84,6 +87,15 @@ export function findLookalikes<T extends MatchAnimal>(all: T[], species: 'dog' |
       return { a, score: d - (left >= 3 && left <= 7 ? 60 : 0) }
     })
     .sort((x, y) => x.score - y.score || x.a.end.localeCompare(y.a.end))
+    // 같은 보호소에서는 한 마리만 (2026-10-06 사용자 결정: 한 보호소 아이들로 몰리지 않게)
+    .filter(
+      (
+        (seen) => (x: { a: T }) => {
+          const key = x.a.care?.name || x.a.org || x.a.id
+          return !seen.has(key) && !!seen.add(key)
+        }
+      )(new Set<string>()),
+    )
     .slice(0, n)
     .map((x) => x.a)
 }

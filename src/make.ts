@@ -487,6 +487,7 @@ interface LookAnimal {
   age: string
   color: string
   org: string
+  care?: { name?: string }
   end: string
   photos: string[]
 }
