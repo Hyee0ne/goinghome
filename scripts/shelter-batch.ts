@@ -3,7 +3,7 @@
  *
  *   npm run shelter:batch -- --dry-run                      고를 아이와 예상 비용만 보여 준다 (생성·push 없음)
  *   npm run shelter:batch                                   만들고 images-incoming에 push
- *   옵션: --dogs 10 --cats 10 --min-days 7 --max-days 21 --no-push --only id1,id2
+ *   옵션: --dogs 10 --cats 10 --min-days 3 --max-days 7 --no-push --no-upload --only id1,id2 (--only면 이미 고퀄인 아이도)
  *
  * 고르는 기준 (2026-10-06 사용자 확정: 급한 아이를 살리는 데 집중): 공고 남은 3~7일, 남은 기간 짧은 순.
  * 생성에 방해 요소가 있는 아이는 뺀다 = 무료 판정에서 떨어진 아이 (사람 손·얼굴, 여러 마리, 눈·코 흐림, 고개 많이 돌아감, 얼굴 아주 작음).
@@ -11,7 +11,8 @@
  *
  * 그리기: ChatGPT 구독(gpt-image 스킬)을 먼저 쓰고, 실패(사용량 한도 등)한 아이만 OpenAI API로 다시 그린다 (사용자 허락).
  * 비용은 pets-src/shelter-batch-cost.jsonl에 한 줄씩 남긴다 (API만 비용이 든다. 구독은 0).
- * 결과: incoming/<id>/front.png (1024×1536 RGB PNG, 메타데이터 없음, 단색 밝은 회색 배경 — 인페인팅·누끼가 쉽게), README.txt,
+ * 결과: incoming/<id>/front.png (1024×1536 RGB PNG, 메타데이터 없음, 털색과 대비되는 단색 배경 — Windows 인페인팅용),
+ *       front.alpha.png (GPT가 그린 투명 정면 그대로 — 맥이 최종 누끼로 쓴다), README.txt,
  *       incoming/BATCH-<날짜>.md. images-incoming 브랜치만 push한다 (main 금지: 자동 배포).
  */
 import { spawnSync } from 'node:child_process'
@@ -71,6 +72,12 @@ interface Verdict {
   frontal?: number
 }
 
+/** 배경이 투명한 그림인지 (투명한 픽셀이 2% 넘게) */
+function isTransparent(png: string) {
+  const r = spawnSync('python3', ['-c', 'import sys, numpy as np\nfrom PIL import Image\na = np.array(Image.open(sys.argv[1]).convert("RGBA"))[:, :, 3]\nprint(int((a < 10).mean() > 0.02))', png], { encoding: 'utf8' })
+  return r.stdout.trim() === '1'
+}
+
 /** 공고 종료일까지 남은 날 (오늘 0) */
 function daysLeft(end: string) {
   if (!/^\d{8}$/.test(end)) return -1
@@ -89,7 +96,7 @@ const hasHq = (id: string) => existsSync(join(ROOT, 'pets-src', `shelter-${id}-h
 const only = args.only ? String(args.only).split(',') : null
 
 const pool = verdicts
-  .filter((v) => (v.ok || v.layoutOnly) && v.photo !== undefined && animals.has(v.id) && !hasHq(v.id))
+  .filter((v) => (v.ok || v.layoutOnly) && v.photo !== undefined && animals.has(v.id) && (only ? true : !hasHq(v.id)))
   .filter((v) => !only || only.includes(v.id))
   .map((v) => ({ v, a: animals.get(v.id)!, d: daysLeft(animals.get(v.id)!.end) }))
   .filter((x) => only || (x.d >= range(x.v.sp)[0] && x.d <= range(x.v.sp)[1]))
@@ -125,7 +132,7 @@ const prompt = (sp: string) =>
   'Face-focused framing: the head fills most of the frame, including both ears fully, with just the top of the chest visible at the bottom edge. ' +
   'Facing the camera straight on, head centered and level, both eyes open and looking directly into the lens, mouth closed and relaxed. ' +
   'Soft, even, diffuse studio lighting with no harsh shadows, very sharp focus on individual fur strands and whiskers, natural colors, photorealistic. ' +
-  'Plain solid light gray studio background. No collar, no leash, no hands, no text. Vertical 2:3 composition with a small margin above the ears and at the sides.'
+  'Isolated on a fully transparent background. No collar, no leash, no hands, no text. Vertical 2:3 composition with a small margin above the ears and at the sides.'
 const srcOf = (x: (typeof pick)[number]) => join(ROOT, 'pets-src', `shelter-${x.v.id}`, `src-${x.v.photo}.jpg`)
 const rawOf = (id: string) => join(work, `${id}.raw.png`)
 const costLog = join(ROOT, 'pets-src', 'shelter-batch-cost.jsonl')
@@ -135,15 +142,25 @@ const record = (o: Record<string, unknown>) => appendFileSync(costLog, JSON.stri
 const todo = pick.filter((x) => !existsSync(rawOf(x.v.id)))
 if (todo.length && existsSync(GPT_IMAGE)) {
   const manifest = join(work, 'chatgpt-jobs.json')
-  writeFileSync(manifest, JSON.stringify({ version: 1, jobs: todo.map((x) => ({ id: x.v.id, mode: 'edit', edit_target: srcOf(x), prompt: prompt(x.v.sp), size: '1024x1536', quality: 'high', out: rawOf(x.v.id) })) }))
+  writeFileSync(manifest, JSON.stringify({ version: 1, jobs: todo.map((x) => ({ id: x.v.id, mode: 'edit', edit_target: srcOf(x), prompt: prompt(x.v.sp), size: '1024x1536', quality: 'high', background: 'transparent', out: rawOf(x.v.id) })) }))
   log(`\n▶ ChatGPT 구독으로 ${todo.length}장`)
   spawnSync('node', [GPT_IMAGE, 'batch', '--manifest', manifest, '--overwrite', '--concurrency', String(CONC_SUB)], { cwd: ROOT, stdio: 'inherit' })
-  for (const x of todo) if (existsSync(rawOf(x.v.id))) record({ id: x.v.id, via: 'chatgpt', usd: 0 })
+  // 투명 배경으로 오지 않았으면(구독 경로가 가끔 검은 배경·체크무늬를 그린다) 버리고 다시 그린다 (API)
+  for (const x of todo) {
+    if (!existsSync(rawOf(x.v.id))) continue
+    if (!isTransparent(rawOf(x.v.id))) {
+      log(`   ⚠ ${x.v.id}: 투명 배경이 아니라 버려요`)
+      rmSync(rawOf(x.v.id))
+      continue
+    }
+    record({ id: x.v.id, via: 'chatgpt', usd: 0 })
+  }
 }
 
 // 2) 남은 아이는 API (사용자 허락: 구독 한도에 걸리면 API)
 const left = pick.filter((x) => !existsSync(rawOf(x.v.id)))
-if (left.length) {
+if (left.length && args['no-api'] === 'true') log(`\n--no-api: 남은 ${left.length}장은 API로 넘기지 않았어요`)
+else if (left.length) {
   if (existsSync(join(ROOT, '.env.local'))) process.loadEnvFile(join(ROOT, '.env.local'))
   const key = process.env.OPENAI_API_KEY?.trim()
   if (!key) fail(`${left.length}장이 남았는데 OPENAI_API_KEY가 없어요`)
@@ -157,6 +174,7 @@ if (left.length) {
     form.append('quality', 'high')
     form.append('output_format', 'png')
     form.append('input_fidelity', 'high')
+    form.append('background', 'transparent')
     const res = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(300_000) }).catch((e) => e as Error)
     const j = res instanceof Response ? await res.json().catch(() => ({})) : {}
     const b64 = j?.data?.[0]?.b64_json
@@ -173,18 +191,25 @@ if (left.length) {
 }
 
 // 3) 규격 맞추기: 1024×1536 RGB PNG, 메타데이터 없음 (투명이나 다른 크기로 와도 맞춘다)
+// front.alpha.png: GPT가 그린 투명 정면 그대로 (최종 누끼로 쓴다). front.png: 털색과 대비되는 단색 배경에 얹은 RGB (Windows 인페인팅용)
+//   밝은 털(동물 부분 밝기 중앙값 > 0.5)은 진한 회청색, 어두운 털은 밝은 크림색 배경
 const made = pick.filter((x) => existsSync(rawOf(x.v.id)))
 for (const x of made) {
   const r = spawnSync('python3', ['-c', `
-import sys
+import sys, numpy as np
 from PIL import Image
 im = Image.open(sys.argv[1]).convert('RGBA')
-bg = Image.new('RGBA', im.size, (225, 225, 225, 255)); bg.alpha_composite(im)
-im = bg.convert('RGB')
 if im.size != (1024, 1536):
     k = max(1024 / im.width, 1536 / im.height); im = im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
     l, t = (im.width - 1024) // 2, (im.height - 1536) // 2; im = im.crop((l, t, l + 1024, t + 1536))
-clean = Image.new('RGB', im.size); clean.putdata(list(im.getdata())); clean.save(sys.argv[2], 'PNG')`, rawOf(x.v.id), join(work, `${x.v.id}.png`)], { encoding: 'utf8' })
+a = np.array(im).astype(np.float32) / 255
+m = a[:, :, 3] > 0.5
+med = float(np.median((a[:, :, 0] * .299 + a[:, :, 1] * .587 + a[:, :, 2] * .114)[m])) if m.any() else 0.5
+color = (62, 74, 92) if med > 0.5 else (240, 229, 208)
+clean = Image.new('RGBA', im.size); clean.putdata(list(im.getdata())); clean.save(sys.argv[3], 'PNG')
+bg = Image.new('RGBA', im.size, color + (255,)); bg.alpha_composite(clean)
+rgb = Image.new('RGB', im.size); rgb.putdata(list(bg.convert('RGB').getdata())); rgb.save(sys.argv[2], 'PNG')
+print('배경', '진한 회청색' if med > 0.5 else '밝은 크림색', '(털 밝기 %.2f)' % med)`, rawOf(x.v.id), join(work, `${x.v.id}.png`), join(work, `${x.v.id}.alpha.png`)], { encoding: 'utf8' })
   if (r.status !== 0) log(`   ✗ ${x.v.id} 규격 맞추기 실패: ${r.stderr.trim().split('\n').slice(-1)[0]}`)
 }
 const ready = made.filter((x) => existsSync(join(work, `${x.v.id}.png`)))
@@ -194,6 +219,10 @@ log(`이번 배치 비용(추정): $${spent.toFixed(2)}  — 기록: ${costLog}`
 
 // ───────────────────────── images-incoming에 올리기 ─────────────────────────
 
+if (args['no-upload'] === 'true') {
+  log(`\n--no-upload: 올리지 않았어요 (${work})`)
+  process.exit(0)
+}
 const wt = join(ROOT, 'pets-src', 'images-incoming-wt')
 const git = (cwd: string, ...a: string[]) => {
   const r = spawnSync('git', a, { cwd, encoding: 'utf8' })
@@ -208,6 +237,7 @@ for (const x of ready) {
   const d = join(wt, 'incoming', x.v.id)
   mkdirSync(d, { recursive: true })
   copyFileSync(join(work, `${x.v.id}.png`), join(d, 'front.png'))
+  copyFileSync(join(work, `${x.v.id}.alpha.png`), join(d, 'front.alpha.png'))
   writeFileSync(join(d, 'README.txt'), `공고 ${x.v.id}\n공고번호 ${x.a.noticeNo}\n종 ${x.v.sp === 'dog' ? '강아지' : '고양이'} (${x.a.kind})\n마감 ${x.a.end} (배치 날 기준 D-${x.d})\n보호소 ${x.a.care.name}\n`)
   lines.push(`| ${x.v.id} | ${x.v.sp === 'dog' ? '강아지' : '고양이'} | ${x.a.noticeNo} | ${x.a.end} | D-${x.d} |`)
 }

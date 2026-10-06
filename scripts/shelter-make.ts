@@ -558,8 +558,15 @@ async function hq(ids: string[]) {
     try {
       // 1) 정면 새로 그리기 (참고: 무료 판정에서 고른 가장 정면인 공고 사진)
       if (images) {
-        // 받은 정면 이미지로 배경 지우기만 (Apple Vision, 무료)
-        if (!existsSync(join(dir, 'cutout.png'))) add(images[0], '--id', id, '--species', v.sp, '--until', 'cutout')
+        // 정면 옆에 GPT가 그린 투명 정면(front.alpha.png)이 있으면 그 알파를 누끼로 쓴다 (Apple Vision으로 따면 털 끝에 배경색이 남거나 칼로 자른 듯 보였다).
+        // 없으면 받은 정면 이미지로 배경 지우기 (Apple Vision, 무료)
+        const alphaPng = images[0].replace(/\.png$/i, '.alpha.png')
+        if (existsSync(alphaPng)) {
+          mkdirSync(dir, { recursive: true })
+          copyFileSync(alphaPng, join(dir, 'cutout.png'))
+          copyFileSync(images[0], join(dir, 'photo.png'))
+          log('   누끼: GPT 투명 정면 (front.alpha.png)')
+        } else if (!existsSync(join(dir, 'cutout.png'))) add(images[0], '--id', id, '--species', v.sp, '--until', 'cutout')
       } else if (!existsSync(join(dir, 'cutout.png'))) add(join(ROOT, 'pets-src', `shelter-${v.id}`, `src-${v.photo}.jpg`), '--id', id, '--species', v.sp, '--reference', 'true', '--until', 'cutout')
       // 2) 기준점: Apple Vision (무료). 손으로 맞췄으면 그대로
       if (!handTunedDir(dir)) {
