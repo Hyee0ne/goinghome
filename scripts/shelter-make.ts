@@ -565,7 +565,12 @@ print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.
         add('--id', id, '--from', 'expressions', '--until', 'expressions', '--jobs', 'none', '--parts', 'pant')
         const mid = images[1]
         const fin = images[2] ?? images[1]
-        for (const [src, name] of [[mid, 'mid'], [fin, 'final']] as const) squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`))
+        // 주둥이는 따로 맞춘다: 받은 표정 이미지는 주둥이를 살짝 돌려 그리는 일이 많아, 눈 기준으로만 맞추면 코가 두 겹·입이 기울어진다
+        const det = readJson(join(dir, 'cutout.detect.json')) as Detect
+        const e = eyesOf(det)!
+        const nj = J(det, 'nose')!
+        const face = { nx: nj.x * det.width, ny: nj.y * det.height, d: dist(e.l, e.r) }
+        for (const [src, name] of [[mid, 'mid'], [fin, 'final']] as const) squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`), face)
         process.env.PET_NO_ALIGN = '1'
         try {
           add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', 'pant')
@@ -652,7 +657,7 @@ print(int(a[:band].mean() > 0.03 or a[:, :band].mean() > 0.05 or a[:, -band:].me
  * 받은 표정 이미지(정면 이미지와 같은 구도)를 얼굴 정사각형(face-square.png) 자리로 옮긴다.
  * 정면 이미지와 얼굴 정사각형 사이를 특징점으로 맞춘 변환을 표정 이미지에 그대로 쓰고, 투명도는 얼굴 정사각형 것을 쓴다
  */
-function squareFrom(front: string, expr: string, faceSq: string, out: string) {
+function squareFrom(front: string, expr: string, faceSq: string, out: string, face: { nx: number; ny: number; d: number }) {
   const r = spawnSync('python3', ['-c', `
 import sys, cv2, numpy as np
 from PIL import Image
@@ -671,12 +676,48 @@ if M is None: sys.exit('정면 이미지와 얼굴 정사각형을 맞추지 못
 ke, de = orb.detectAndCompute(g(expr), None)
 m2 = sorted(cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True).match(de, d1), key=lambda x: x.distance)[:800]
 E, inl2 = cv2.estimateAffinePartial2D(np.float32([ke[x.queryIdx].pt for x in m2]), np.float32([k1[x.trainIdx].pt for x in m2]), method=cv2.RANSAC, ransacReprojThreshold=3)
+M0 = M.copy()
 if E is not None:
   print('표정→정면: 배율 %.3f, 이동 (%+.0f, %+.0f)' % (np.sqrt(abs(np.linalg.det(E[:, :2]))), E[0, 2], E[1, 2]))
   M = (np.vstack([M, [0, 0, 1]]) @ np.vstack([E, [0, 0, 1]]))[:2]
-w = cv2.warpAffine(expr, M, (sq.shape[1], sq.shape[0]), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REPLICATE)
+# 주둥이 맞춤: 코 둘레(코 위쪽 반, 입은 빼고)를 정면 이미지에 회전·크기·이동으로 맞추고, 그 변환을 주둥이·입 영역에만 쓴다
+nx, ny, D = float(sys.argv[5]), float(sys.argv[6]), float(sys.argv[7])
+H0, W0 = front.shape[:2]
+ex = cv2.warpAffine(expr, E, (W0, H0), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REPLICATE) if E is not None else expr
+nmask = np.zeros((H0, W0), np.uint8)
+cv2.ellipse(nmask, (int(nx), int(ny - D * 0.08)), (int(D * 0.45), int(D * 0.3)), 0, 0, 360, 255, -1)
+cv2.rectangle(nmask, (0, int(ny + D * 0.12)), (W0, H0), 0, -1)
+L = np.eye(2, 3, dtype=np.float32)
+try:
+  # 1) 코 조각으로 위치를 찾고 (템플릿 맞춤), 2) 회전·이동만 다듬는다 (ECC, 크기는 그대로)
+  r = int(D * 0.32)
+  x0, y0 = int(nx - r), int(ny - r * 0.9)
+  tpl = g(front)[y0:y0 + int(r * 1.6), x0:x0 + 2 * r]
+  sx0, sy0 = max(0, x0 - r), max(0, y0 - r)
+  win = g(ex)[sy0:y0 + int(r * 1.6) + r, sx0:x0 + 3 * r]
+  res = cv2.matchTemplate(win, tpl, cv2.TM_CCOEFF_NORMED)
+  _, score, _, loc = cv2.minMaxLoc(res)
+  tx, ty = sx0 + loc[0] - x0, sy0 + loc[1] - y0
+  L = np.float32([[1, 0, tx], [0, 1, ty]])
+  for sig in (4, 2):
+    gf = cv2.GaussianBlur(g(front).astype(np.float32) / 255, (0, 0), sig); ge = cv2.GaussianBlur(g(ex).astype(np.float32) / 255, (0, 0), sig)
+    _, L = cv2.findTransformECC(gf, ge, L, cv2.MOTION_EUCLIDEAN, (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 300, 1e-6), nmask, 5)
+  rot = np.degrees(np.arctan2(L[1, 0], L[0, 0]))
+  # (이동 크기는 코 자리에서 잰다. 그림 모서리 기준 이동은 회전 때문에 커 보인다)
+  mv = L @ np.float32([nx, ny, 1]) - np.float32([nx, ny])
+  if score > 0.5 and abs(rot) < 12 and np.hypot(*mv) < D * 0.4:
+    exm = cv2.warpAffine(ex, L, (W0, H0), flags=cv2.INTER_LANCZOS4 | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REPLICATE)
+    zone = np.zeros((H0, W0), np.float32)
+    # 주둥이 전체(코 위 콧등부터 턱까지)를 덮어야 맞추기 전 코가 비쳐 두 겹이 되지 않는다
+    cv2.ellipse(zone, (int(nx), int(ny + D * 0.15)), (int(D * 0.85), int(D * 0.85)), 0, 0, 360, 1, -1)
+    zone = cv2.GaussianBlur(zone, (0, 0), D * 0.15)[:, :, None]
+    ex = (exm * zone + ex * (1 - zone)).astype(np.uint8)
+    print('주둥이 맞춤: 코 일치 %.2f, 회전 %.1f도, 코 이동 (%+.0f, %+.0f)' % (score, rot, mv[0], mv[1]))
+  else: print('주둥이 맞춤: 믿기 어려워 건너뜀 (코 일치 %.2f, 회전 %.1f)' % (score, rot))
+except cv2.error: print('주둥이 맞춤: 실패해 건너뜀')
+w = cv2.warpAffine(ex, M0, (sq.shape[1], sq.shape[0]), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REPLICATE)
 Image.fromarray(np.dstack([w, sq[:, :, 3]])).save(sys.argv[4])
-print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M[:, :2]))), int(inl.sum())))`, front, expr, faceSq, out], { encoding: 'utf8' })
+print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M0[:, :2]))), int(inl.sum())))`, front, expr, faceSq, out, String(face.nx), String(face.ny), String(face.d)], { encoding: 'utf8' })
   if (r.status !== 0) throw new Error(r.stderr.trim().split('\n').slice(-1)[0])
   log(`   ${r.stdout.trim().replace(/\n/g, ' · ')} (${expr.split('/').pop()})`)
 }
