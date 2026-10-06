@@ -354,7 +354,9 @@ if (run('expressions')) {
   const face = readJson(join(PUB, 'face.json'))
   // --parts eyes: 눈 감기만 (입·귀는 원본 그대로. 보호소 고퀄)
   // --parts eyes: 눈 감기만 / eyes+pant: 눈 감기 + 웃는 입(개) / eyes+lick: 눈 감기 + 츄르 핥는 혀(고양이). 귀는 원본 그대로
-  const partsArg = String(args.parts ?? '')
+  // ...+ears: 받은 귀 젖힘 이미지(expr-earsback-square.png, 알파는 shelter-make가 따로 땀)를 귀 표정으로 쓴다 (보호소 고퀄 --images)
+  const withEars = String(args.parts ?? '').endsWith('+ears')
+  const partsArg = String(args.parts ?? '').replace(/\+ears$/, '')
   const eyesOnly = partsArg.startsWith('eyes')
   const withMouth = partsArg === 'eyes+pant' || partsArg === 'eyes+lick'
   const P0 = prompts(lm.species)
@@ -467,6 +469,12 @@ if (run('expressions')) {
     const full = join(SRC, `expr-${k}.png`)
     py('pet_tools.py', 'paste', f.base, out[k], full, String(sq.x0), String(sq.y0), String(side), JSON.stringify(exclude))
     for (const name of parts[k]) copyFileSync(full, f.expr(name))
+  }
+  // 귀 젖힘은 두 상태(평소 ↔ 젖힘)라 중간 단계도 같은 이미지다
+  const earsSq = join(SRC, 'expr-earsback-square.png')
+  if (withEars && existsSync(earsSq)) {
+    py('pet_tools.py', 'paste', f.base, earsSq, f.expr('earsBack'), String(sq.x0), String(sq.y0), String(side), JSON.stringify(exclude))
+    copyFileSync(f.expr('earsBack'), f.expr('earsMid'))
   }
   // 고양이 입은 간식을 받아먹을 때만 쓴다: 살짝 벌린 입, 크게 벌려 무는 입 2장을 따로 만든다 (약 2장 비용 추가)
   if (cat && !eyesOnly) {
