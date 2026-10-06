@@ -66,8 +66,8 @@ function toProfile(l: LivePet): PetProfile {
     favorite: cat ? 'chin' : 'head',
     shy: false,
     traits: ['보호소 공고 중', a.neuter === 'Y' ? '중성화 완료' : '', a.weight].filter(Boolean),
-    // 갤러리: 실사화한 얼굴 → 가장 정면인 공고 사진 → 나머지 공고 사진 (너무 많지 않게 5장까지)
-    photos: [l.rig.src, ...(l.photo ? [l.photo] : []), ...(import.meta.env.VITE_DEMO === '1' ? [] : a.photos)].slice(0, 5),
+    // 갤러리: 공고 사진만 (우리가 만든 정면 얼굴은 넣지 않는다). 체험판은 바깥 사진을 못 써서 기기에 받아 둔 공고 사진 1장
+    photos: (import.meta.env.VITE_DEMO === '1' ? (l.photo ? [l.photo] : []) : a.photos).slice(0, 5),
     adoption: { shelter: a.care.name, region: a.org, noticeNo: a.noticeNo, tel: a.care.tel, noticeEnd: a.end, fromShelterPhoto: true, aiFrontal: !!l.aiFrontal },
     fur: cat ? '#e8d6c2' : '#9a6a44',
     furDark: cat ? '#c9b29a' : '#6e4a2e',

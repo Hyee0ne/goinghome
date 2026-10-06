@@ -7,7 +7,6 @@ import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
-import { renderAdoptLinks } from './adoptLinks'
 import { isShelter, loadShelterPets } from './shelterPets'
 import { setClipRecorder, sharePet, shareSite, toast } from './share'
 import { ClipRecorder, clipSupport } from './recorder'
@@ -247,13 +246,10 @@ $('share-site').onclick = async () => {
   if (r === 'copied') toast('고잉홈 링크를 복사했어요.')
 }
 
-// 공유 링크(?from=share)로 들어온 사람: 만들기와 입양 사이트를 먼저 보여 준다
+// 공유 링크(?from=share)로 들어온 사람: 인사만 바꾼다 (진입 화면은 카메라 버튼만)
 if (new URLSearchParams(location.search).get('from') === 'share') {
   intro.querySelector('h1')!.textContent = '친구가 고잉홈을 보냈어요'
   intro.querySelector('.card-emoji')!.textContent = '💌'
-  const adopt = $('intro-adopt')
-  adopt.hidden = false
-  renderAdoptLinks(adopt)
 }
 
 // ───────────────────────── 도움말 ─────────────────────────
@@ -472,7 +468,7 @@ function fillInfo(p: PetProfile) {
     adopt.removeAttribute('target')
     adopt.textContent = '전화로 입양 문의'
     $('info-adopt-note').textContent = a.aiFrontal
-      ? 'AI로 정면을 다시 그린 모습이라 실제와 조금 다를 수 있어요. 실제 모습은 사진을 옆으로 넘겨 공고 사진으로 확인해 주세요. 출처: 농림축산식품부 국가동물보호정보시스템'
+      ? '쓰다듬는 화면은 AI로 정면을 다시 그린 모습이라 실제와 조금 다를 수 있어요. 위 사진이 실제 공고 사진이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
       : a.fromShelterPhoto
         ? '보호소 공고 사진으로 만든 모습이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
         : ''

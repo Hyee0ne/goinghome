@@ -1118,15 +1118,6 @@ button {
   font-size: 15px;
 }
 
-.intro-adopt-link {
-  display: block;
-  margin-top: 4px;
-  padding: 6px;
-  color: var(--ink-soft);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-}
 
 @media (max-width: 720px) {
   .adopt-link {
