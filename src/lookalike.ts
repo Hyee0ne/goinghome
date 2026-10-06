@@ -69,8 +69,8 @@ export function daysLeft(end: string, now = new Date()) {
 }
 
 /**
- * 닮은 아이 n마리. 색이 가까운 순인데, 이번 주에 공고가 끝나는 아이(남은 7일 이내)를 앞에 둔다
- * (2026-10-06: 급한 아이를 살리는 데 집중). 같으면 공고가 곧 끝나는 아이 먼저. 마감이 지난 아이는 뺀다.
+ * 닮은 아이 n마리. 색이 가까운 순인데, 공고 남은 3~7일인 아이를 앞에 둔다 (2026-10-06: 급한 아이를 살리는 데 집중.
+ * 실사화 배치와 같은 기준. 2일 이내는 연락할 시간이 거의 없어 앞으로 당기지 않는다). 같으면 공고가 곧 끝나는 아이 먼저. 마감이 지난 아이는 뺀다.
  * 색을 모르면 급한 아이와 마감 순으로 고른다
  */
 export function findLookalikes<T extends MatchAnimal>(all: T[], species: 'dog' | 'cat', color: RGB | null, n: number) {
@@ -79,8 +79,9 @@ export function findLookalikes<T extends MatchAnimal>(all: T[], species: 'dog' |
     .map((a) => {
       const cs = textColors(a.color)
       const d = color && cs.length ? Math.min(...cs.map((c) => dist(color, c))) : 400
-      // 같은 색 계열이면 급한 아이를 앞에 (색 거리 60만큼 이득)
-      return { a, score: d - (daysLeft(a.end) <= 7 ? 60 : 0) }
+      // 같은 색 계열이면 남은 3~7일인 아이를 앞에 (색 거리 60만큼 이득)
+      const left = daysLeft(a.end)
+      return { a, score: d - (left >= 3 && left <= 7 ? 60 : 0) }
     })
     .sort((x, y) => x.score - y.score || x.a.end.localeCompare(y.a.end))
     .slice(0, n)
