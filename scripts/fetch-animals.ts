@@ -22,11 +22,12 @@ const SHELTER_LIVE = join(import.meta.dirname, '..', 'public', 'data', 'shelter-
  */
 const CANDIDATES_PER_SPECIES = { dog: 100, cat: 50 } as const
 /**
- * 후보는 공고 남은 기간이 이 범위인 아이에서 고른다 (2026-10-06 사용자 결정: 주 1회 고퀄 배치).
- * 강아지 5~14일. 고양이는 성묘가 드물어 모자라면 끝을 늘린다(14 → 21 → 30 → 60일)
+ * 후보는 공고 남은 기간이 이 범위인 아이만 (2026-10-06 사용자 결정: 주 1회 갱신이라 이번 주에 마감되는 아이를 살리는 데 집중).
+ * 급한 아이(남은 기간이 짧은 아이)부터 고른다. 생성형으로 정면을 새로 그리니 사진 구도보다 급한 정도가 먼저다
  */
-const WINDOW = { min: 5, max: 14 }
-const CAT_MAX_STEPS = [14, 21, 30, 60]
+const WINDOW = { min: 3, max: 7 }
+/** 고양이도 같은 범위만 (늘리지 않는다) */
+const CAT_MAX_STEPS = [7]
 /** 한 시도에서 고르는 최대 비율 (지역을 고르게): 후보 수의 15% */
 const PER_SIDO_RATIO = 0.15
 const API = 'https://apis.data.go.kr/1543061/abandonmentPublicService_v2/abandonmentPublic_v2'
@@ -178,8 +179,7 @@ function catScore(a: Animal, y: number, left: number): Candidate {
 }
 
 /**
- * 남은 기간이 min~max일인 아이 중 점수순으로 고르되 한 시도에서 count의 PER_SIDO_RATIO까지 (개·고양이 따로).
- * 같은 점수면 남은 기간이 짧은 아이부터 (급한 아이 먼저)
+ * 남은 기간이 min~max일인 아이를 급한 순으로 고르되 (같으면 점수순) 한 시도에서 count의 PER_SIDO_RATIO까지 (개·고양이 따로)
  */
 function pickCandidates(animals: Animal[], count: number, max = WINDOW.max) {
   const perSido = Math.max(2, Math.ceil(count * PER_SIDO_RATIO))
@@ -189,7 +189,7 @@ function pickCandidates(animals: Animal[], count: number, max = WINDOW.max) {
     .filter((a) => daysLeft(a) >= WINDOW.min && daysLeft(a) <= max)
     .map(score)
     .filter((c): c is Candidate => !!c)
-    .sort((a, b) => b.score - a.score || daysLeft(byId.get(a.id)!) - daysLeft(byId.get(b.id)!))
+    .sort((a, b) => daysLeft(byId.get(a.id)!) - daysLeft(byId.get(b.id)!) || b.score - a.score)
     .filter((c) => {
       const sido = byId.get(c.id)!.sido
       const n = bySido.get(sido) ?? 0
