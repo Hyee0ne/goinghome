@@ -15,4 +15,4 @@ export const OG_IMAGE_VERSION = 3
  * 집계 (GoatCounter, 쿠키 없는 무료 집계). 사이트 코드를 넣으면 켜진다. 비어 있으면 아무것도 보내지 않는다.
  * 예: 'goinghome' → https://goinghome.goatcounter.com (계정 만들기는 사용자가 한다)
  */
-export const GOATCOUNTER_CODE = ''
+export const GOATCOUNTER_CODE = 'goinghome'
