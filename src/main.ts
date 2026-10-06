@@ -31,6 +31,8 @@ const hud = $('debug-hud')
 const tracker = new HandTracker(video)
 /** "손!" 하고 말하면 앞발을 준다 (지원하는 브라우저만. 시작 버튼을 누를 때 켠다) */
 const voice = new Voice(() => pet.commandPaw())
+/** 음성 명령('손!') 켜기. 지금은 꺼 둔다: '손' 개인기를 보여 주지 않아 마이크 권한을 묻지 않는다 (2026-10-06, 코드는 남겨 둔다) */
+const VOICE_ENABLED = false
 
 /** 실사 털 셰이더. WebGL을 못 쓰거나 셰이더가 안 되는 기기에서는 null이고 캔버스 그림으로 그린다 */
 const fur = (() => {
@@ -543,7 +545,7 @@ const startBtn = $<HTMLButtonElement>('start-camera')
 
 async function startCamera() {
   // 사용자가 누른 순간에만 마이크를 켤 수 있어서 카메라를 기다리기 전에 켠다
-  voice.start()
+  if (VOICE_ENABLED) voice.start()
   introError.hidden = true
   startBtn.disabled = true
   startBtn.innerHTML = '<b>카메라 준비 중…</b>'
