@@ -1,5 +1,6 @@
 import './style.css'
 import { registerPwa } from './pwa'
+import { landedGen, track } from './analytics'
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand, isPinchHand } from './hand'
 import { Voice } from './voice'
@@ -236,6 +237,12 @@ async function shareThisPet(btn: HTMLButtonElement) {
   }
 }
 $('info-share').onclick = (e) => shareThisPet(e.currentTarget as HTMLButtonElement)
+// 입양 행동 (보호소 전화·공고 보기): 공유만 하고 끝나지 않는지 본다
+for (const id of ['card-call', 'info-adopt'])
+  $(id).addEventListener('click', (e) => {
+    const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href') ?? ''
+    track('adopt_action', { how: href.startsWith('tel:') ? 'call' : 'notice', where: 'home', gen: landedGen() || undefined })
+  })
 $('card-share').onclick = (e) => shareThisPet(e.currentTarget as HTMLButtonElement)
 
 /** 고잉홈(사이트) 공유: 첫 화면 링크 */
@@ -247,6 +254,7 @@ $('share-site').onclick = async () => {
 // 공유 링크(?from=share)로 들어온 사람: 인사를 바꾸고, 쓰다듬기 시작 20초 뒤 '너희 아이도 만들어 봐'를 띄운다
 const fromShare = new URLSearchParams(location.search).get('from') === 'share'
 let invited = false
+let firstPetSent = false
 function inviteToMake() {
   if (!fromShare || invited || import.meta.env.VITE_DEMO === '1') return
   invited = true
@@ -255,6 +263,7 @@ function inviteToMake() {
     el.setAttribute('role', 'status')
     el.innerHTML = '<span>🐾 너희 아이도 손끝으로 쓰다듬어 볼래요?</span><a class="make-invite-go" href="make.html">우리 아이 만들기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
     el.querySelector('button')!.onclick = () => el.remove()
+    el.querySelector('a')!.onclick = () => track('invite_click', { gen: landedGen(), from: 'share' })
     document.querySelector('.stage-wrap')!.append(el)
   }, 20_000)
 }
@@ -793,6 +802,11 @@ function updateFur(dt: number, inputs: PetInput[]) {
     const hit = pet.contactZone(input)
     const zone = input.active || hit === 'chin' ? hit : null
     const touch = !!zone
+    // 공유 링크로 들어온 사람이 처음 쓰다듬은 순간 (한 번만 센다)
+    if (touch && fromShare && !firstPetSent) {
+      firstPetSent = true
+      track('first_pet', { gen: landedGen(), pet: isShelter(pet.p) ? pet.p.id : undefined })
+    }
     // 손끝: 몸에 닿은 손끝마다 털을 가늘게 눕힌다 (손가락으로 긁으면 빗질한 듯한 가는 결)
     const tips: Pt[] = []
     const touched: boolean[] = []

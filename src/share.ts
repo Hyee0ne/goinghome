@@ -3,6 +3,7 @@
  * 공유 링크에는 ?from=share를 붙인다. 우리 아이를 공유하면 링크는 닮은 보호소 아이의 쓰다듬기 화면으로 연다
  * (받은 사람이 영상만 보고 끝나지 않고 들어와서 직접 만져 보게). 받은 사람에게는 쓰다듬은 뒤 '너희 아이도 만들어 봐'를 보여 준다.
  */
+import { shareParams, track } from './analytics'
 import { josa, type PetProfile } from './pets'
 
 /** 녹화 엔진 (기술 쪽). 연결 전에는 링크만 공유한다 */
@@ -13,11 +14,12 @@ export function setClipRecorder(r: ClipRecorder) {
   recorder = r
 }
 
-/** petId가 있으면 받은 사람이 그 아이를 바로 보게 (?pet=) */
-export function shareUrl(petId?: string) {
+/** petId가 있으면 받은 사람이 그 아이를 바로 보게 (?pet=). gen·src는 익명 집계용 (analytics.ts) */
+export function shareUrl(petId?: string, src: 'pet' | 'site' | 'mine' = 'pet') {
   const u = new URL(import.meta.env.BASE_URL, location.origin)
   u.searchParams.set('from', 'share')
   if (petId) u.searchParams.set('pet', petId)
+  for (const [k, v] of Object.entries(shareParams(src))) u.searchParams.set(k, v)
   return u.toString()
 }
 
@@ -40,7 +42,13 @@ export function shareText(p: PetProfile, mine: boolean, linked = false) {
 
 /** 고잉홈(사이트) 공유 */
 export async function shareSite(): Promise<ShareResult> {
-  const url = new URL(import.meta.env.BASE_URL, location.origin).toString()
+  track('share_click', { src: 'site' })
+  const r = await shareSiteInner()
+  if (r !== 'cancelled') track('share_done', { src: 'site', how: r })
+  return r
+}
+async function shareSiteInner(): Promise<ShareResult> {
+  const url = shareUrl(undefined, 'site')
   const text = '고잉홈 · 보호소에서 가족을 기다리는 아이들을 손끝으로 만나 보세요 🏠'
   if (navigator.share) {
     try {
@@ -57,8 +65,15 @@ export async function shareSite(): Promise<ShareResult> {
 export type ShareResult = 'shared' | 'copied' | 'downloaded' | 'cancelled'
 
 export async function sharePet(p: PetProfile, mine: boolean, onRecording?: (on: boolean) => void, linkPet?: string): Promise<ShareResult> {
+  const src = mine ? 'mine' : 'pet'
+  track('share_click', { src })
+  const r = await sharePetInner(p, mine, src, onRecording, linkPet)
+  if (r !== 'cancelled') track('share_done', { src, how: r })
+  return r
+}
+async function sharePetInner(p: PetProfile, mine: boolean, src: 'pet' | 'mine', onRecording?: (on: boolean) => void, linkPet?: string): Promise<ShareResult> {
   const text = shareText(p, mine, !!linkPet)
-  const url = shareUrl(linkPet)
+  const url = shareUrl(linkPet, src)
 
   if (recorder) {
     onRecording?.(true)

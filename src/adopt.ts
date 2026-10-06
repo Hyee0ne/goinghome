@@ -1,4 +1,5 @@
 import './style.css'
+import { landedGen, track } from './analytics'
 import { registerPwa } from './pwa'
 import './form.css'
 import './adopt.css'
@@ -146,6 +147,7 @@ function openDetail(a: Animal) {
   detail.querySelector('.sheet-body')!.scrollTop = 0
 }
 $('ad-d-close').onclick = () => detail.close()
+$('ad-d-call').addEventListener('click', () => track('adopt_action', { how: 'call', where: 'adopt', gen: landedGen() || undefined }))
 detail.addEventListener('click', (e) => {
   if (e.target === detail) detail.close()
 })

@@ -10,3 +10,9 @@ export const SITE_LABEL = SITE_URL.replace(/^https?:\/\//, '').replace(/\/$/, ''
 
 /** 미리보기 이미지 버전: 카톡은 이미지를 캐시해서 디버거로도 안 지워진다. 이미지를 바꾸면 숫자를 올린다 */
 export const OG_IMAGE_VERSION = 1
+
+/**
+ * 집계 (GoatCounter, 쿠키 없는 무료 집계). 사이트 코드를 넣으면 켜진다. 비어 있으면 아무것도 보내지 않는다.
+ * 예: 'goinghome' → https://goinghome.goatcounter.com (계정 만들기는 사용자가 한다)
+ */
+export const GOATCOUNTER_CODE = ''

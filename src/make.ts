@@ -1,4 +1,5 @@
 import './style.css'
+import { landedGen, track } from './analytics'
 import './form.css'
 import './make.css'
 import type { MakerEngine, MaskHandle } from './maker/engineTypes'
@@ -471,6 +472,7 @@ $('mk-face-next').onclick = async () => {
   }
   $('mk-making').hidden = true
   $('mk-made').hidden = false
+  track('make_result', { species: sp, gen: landedGen() || undefined })
   $('mk-share').onclick = async () => {
     // 링크는 닮은 고퀄 보호소 아이의 쓰다듬기 화면으로 (받은 사람이 들어와서 직접 만져 보게)
     const friend = await lookalikeToPet(sp, color)
@@ -508,6 +510,7 @@ async function showLookalikes(name: string, sp: Species, color: [number, number,
         className: 'mk-look-card',
         href: `adopt.html?id=${a.id}`,
       })
+      link.addEventListener('click', () => track('adopt_action', { how: 'notice', where: 'make' }))
       // 사진은 모두 공고 사진 (만든 얼굴을 섞으면 카드끼리 너무 달라 보인다)
       const img = Object.assign(new Image(), { src: a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
       img.referrerPolicy = 'no-referrer'
