@@ -212,3 +212,94 @@
 .ad-pet[hidden] {
   display: none;
 }
+
+/* ═════ D안: 문 갤러리 (2026-10-06) ═════
+   공고 원본 사진을 아치문 모양으로 자른다. 두 줄, 짝수 칸은 조금 내려서 엇갈리게 */
+.ad-page .reg-top {
+  border-bottom: 0;
+}
+
+.ad-page .reg-title h1 {
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.ad-page .seg span {
+  border-radius: 999px;
+}
+
+.ad-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 12px;
+}
+
+@media (min-width: 720px) {
+  .ad-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.ad-grid > li:nth-child(even) {
+  margin-top: 22px;
+}
+
+.ad-card {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: left;
+  overflow: visible;
+}
+
+.ad-door {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 999px 999px 16px 16px;
+}
+
+.ad-door img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  aspect-ratio: auto;
+}
+
+.ad-door .ad-pettable {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  top: auto;
+  right: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.ad-card-text {
+  padding: 8px 2px 0;
+}
+
+.ad-card-text b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.ad-card-text span,
+.ad-card-text small {
+  color: var(--ink-soft);
+}
+
+/* 제목 줄도 본문(980px)과 같은 폭 안에 */
+.ad-page .reg-top {
+  padding-inline: max(16px, calc((100% - 980px) / 2 + 16px));
+}

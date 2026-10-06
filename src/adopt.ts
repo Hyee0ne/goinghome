@@ -45,7 +45,8 @@ let shown = 0
 
 const SEX = { M: '남아', F: '여아', Q: '성별 모름' } as const
 const NEUTER = { Y: '중성화 완료', N: '', U: '' } as const
-const ICON = { dog: '🐶', cat: '🐱', etc: '🐾' } as const
+/** 문 색: 사진이 뜨기 전에 보이는 파스텔 (연분홍 · 하늘 · 민트 · 모래) */
+const DOOR_COLORS = ['#ffd3dc', '#dde4ff', '#d8f1e6', '#f6ead6']
 
 /** 공고 마감까지 남은 날 (D-day) */
 function dday(end: string) {
@@ -58,23 +59,23 @@ function dday(end: string) {
 
 function card(a: Animal) {
   const li = document.createElement('li')
+  // D안 문 갤러리: 공고 원본 사진을 아치문 모양으로 잘라 보여 준다 (대부분 배경을 지우지 않은 원본이라)
   const b = Object.assign(document.createElement('button'), { type: 'button', className: 'ad-card' })
-  const img = Object.assign(new Image(), { src: frontal.get(a.id) ?? a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
+  const door = Object.assign(document.createElement('span'), { className: 'ad-door' })
+  door.style.background = DOOR_COLORS[grid.childElementCount % DOOR_COLORS.length]
+  const img = Object.assign(new Image(), { src: a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
   img.referrerPolicy = 'no-referrer'
+  door.append(img)
+  if (pettable.has(a.id)) door.append(Object.assign(document.createElement('span'), { className: 'ad-pettable', textContent: '쓰다듬기' }))
   const d = dday(a.end)
-  const badge = Object.assign(document.createElement('span'), {
-    className: 'ad-dday' + (d !== null && d <= 3 ? ' soon' : ''),
-    textContent: d === null ? '' : d <= 0 ? '오늘 마감' : `D-${d}`,
-  })
   const text = document.createElement('span')
   text.className = 'ad-card-text'
   text.append(
-    Object.assign(document.createElement('b'), { textContent: `${ICON[a.sp]} ${a.kind}` }),
+    Object.assign(document.createElement('b'), { textContent: a.kind }),
     Object.assign(document.createElement('span'), { textContent: [SEX[a.sex], a.age].filter(Boolean).join(' · ') }),
-    Object.assign(document.createElement('small'), { textContent: a.org }),
+    Object.assign(document.createElement('small'), { textContent: [a.org.split(' ').slice(0, 2).join(' '), d === null ? '' : d <= 0 ? '오늘 마감' : `D-${d}`].filter(Boolean).join(' · ') }),
   )
-  b.append(img, badge, text)
-  if (pettable.has(a.id)) b.append(Object.assign(document.createElement('span'), { className: 'ad-pettable', textContent: vivid.has(a.id) ? '✨ 생생 쓰다듬기' : '✋ 쓰다듬기' }))
+  b.append(door, text)
   b.onclick = () => openDetail(a)
   li.append(b)
   return li
@@ -118,7 +119,7 @@ function openDetail(a: Animal) {
       return img
     }),
   )
-  $('ad-d-name').textContent = `${ICON[a.sp]} ${a.kind}`
+  $('ad-d-name').textContent = a.kind
   $('ad-d-meta').textContent = [SEX[a.sex], a.age, a.weight, a.color].filter(Boolean).join(' · ')
   const d = dday(a.end)
   const tags = [NEUTER[a.neuter], d === null ? '' : d <= 0 ? '오늘 공고 마감' : `공고 마감 D-${d}`].filter(Boolean)
@@ -142,7 +143,7 @@ function openDetail(a: Animal) {
   const call = $<HTMLAnchorElement>('ad-d-call')
   call.hidden = !a.care.tel
   call.href = `tel:${a.care.tel.replace(/[^\d+]/g, '')}`
-  call.textContent = `${a.care.name}에 전화로 입양 문의`
+  call.querySelector('span')!.textContent = `${a.care.name}에 전화로 입양 문의`
   detail.showModal()
   detail.querySelector('.sheet-body')!.scrollTop = 0
 }
