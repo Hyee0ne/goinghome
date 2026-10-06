@@ -434,6 +434,8 @@ if (run('expressions')) {
     .filter((k) => allowed(k) && (args.regen === 'true' || !existsSync(out[k])))
     .map((k) => ({ id: k, mode: 'edit', edit_target: faceSq, prompt: withRefs(P[k]), background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: out[k], ...refJob }))
   const failed = jobs.length ? await gptImage(jobs) : []
+  // ChatGPT 구독 경로는 투명 배경 대신 검은 배경이나 체크무늬를 그려 오기도 한다 → 원본 얼굴 사진의 투명도를 그대로 입힌다 (편집은 구도를 지킨다)
+  for (const k of ['mid', 'final'] as const) fixOpaque(out[k], faceSq)
   if (!jobs.length) console.log('   이미 있는 표정 사진을 씁니다 (새로 만들려면 --regen)')
   if (failed.length) {
     warn(`표정 사진을 만들지 못했어요: ${failed.join(', ')}. 표정 없이 등록합니다 (움직임·털·깜빡임은 동작해요).`)
@@ -469,6 +471,7 @@ if (run('expressions')) {
       .filter((k) => allowed(k === 'pant' ? 'eat' : 'eatMid') && (args.regen === 'true' || !existsSync(eatOut[k])))
       .map((k) => ({ id: `eat-${k}`, mode: 'edit', edit_target: faceSq, prompt: withRefs(k === 'pant' ? P.eat : P.eatMid), background: 'transparent', size: '1024x1024', quality: EXPR_QUALITY, out: eatOut[k], ...refJob }))
     const eatFailed = eatJobs.length ? await gptImage(eatJobs) : []
+    for (const k of ['pantMid', 'pant'] as const) fixOpaque(eatOut[k], faceSq)
     if (eatFailed.length) warn(`간식 먹는 입 사진을 만들지 못했어요: ${eatFailed.join(', ')}. 입은 턱만 조금 움직입니다`)
     for (const k of ['pantMid', 'pant'] as const) {
       rmSync(f.expr(k), { force: true })
@@ -732,6 +735,20 @@ async function apiEdit(job: Record<string, string>) {
   const u = res.usage
   console.log(`   ✓ ${job.id} (${((Date.now() - t0) / 1000).toFixed(0)}초${u ? `, 입력 ${u.input_tokens} · 출력 ${u.output_tokens} 토큰` : ''})`)
   return true
+}
+
+/** 배경이 투명하지 않은 편집 결과에 원본(같은 구도)의 알파를 입힌다. 이미 투명하면 그대로 */
+function fixOpaque(file: string, ref: string) {
+  if (!existsSync(file)) return
+  const r = spawnSync('python3', ['-c', `
+import sys, numpy as np
+from PIL import Image
+im = Image.open(sys.argv[1]).convert('RGBA'); ref = Image.open(sys.argv[2]).convert('RGBA').resize(im.size, Image.LANCZOS)
+a = np.array(im)
+if (a[:, :, 3] < 10).mean() > 0.02: sys.exit(0)
+a[:, :, 3] = np.array(ref)[:, :, 3]
+Image.fromarray(a).save(sys.argv[1]); print('fixed')`, file, ref], { encoding: 'utf8' })
+  if (r.stdout.includes('fixed')) console.log(`   투명 배경이 아니라 원본 투명도를 입혔어요: ${file.split('/').pop()}`)
 }
 
 function mimeOf(path: string) {
