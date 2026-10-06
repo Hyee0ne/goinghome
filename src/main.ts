@@ -269,6 +269,53 @@ if (fromShare) {
   intro.querySelector('.card-emoji')!.textContent = '💌'
 }
 
+// ───────────────────────── 이벤트 배너: 우리 아이 만들기 ─────────────────────────
+// 메뉴에 넣지 않고(이벤트라서) 첫 화면에 하루 한 번 전면 배너로 띄운다. 누르면 우리 아이 만들기(make.html)로.
+// 공유 링크·광고로 들어온 사람은 보던 아이에 집중하게 띄우지 않는다. '오늘 그만 보기'는 이 기기에만 기억한다
+const EVENT_KEY = 'goinghome.eventBanner'
+function showEventBanner() {
+  const q = new URLSearchParams(location.search)
+  if (fromShare || q.get('src') || q.get('pet') || import.meta.env.VITE_DEMO === '1') return
+  const today = new Date().toISOString().slice(0, 10)
+  try {
+    if (localStorage.getItem(EVENT_KEY) === today) return
+  } catch {
+    /* 저장소를 못 쓰면 그냥 띄운다 */
+  }
+  const el = Object.assign(document.createElement('div'), { className: 'event-banner' })
+  el.setAttribute('role', 'dialog')
+  el.setAttribute('aria-modal', 'true')
+  el.setAttribute('aria-label', '우리 아이 만들기 이벤트')
+  el.innerHTML = `
+    <div class="event-card">
+      <button class="event-close" type="button" aria-label="닫기">✕</button>
+      <span class="event-art"><img src="${import.meta.env.BASE_URL}pets/cream/face.webp" alt="" /></span>
+      <div class="event-body">
+        <span class="event-tag">이벤트</span>
+        <h2>우리 아이도<br />손끝으로 쓰다듬어 보세요</h2>
+        <p>사진 한 장이면 우리 아이가 화면 속에서 움직여요.<br />사진은 내 폰 밖으로 나가지 않아요.</p>
+        <a class="event-go" href="make.html">우리 아이 만들기</a>
+        <button class="event-later" type="button">오늘 그만 보기</button>
+      </div>
+    </div>`
+  const close = (later: boolean) => {
+    if (later)
+      try {
+        localStorage.setItem(EVENT_KEY, today)
+      } catch {
+        /* 기억하지 못해도 닫는다 */
+      }
+    el.remove()
+  }
+  el.querySelector<HTMLButtonElement>('.event-close')!.onclick = () => close(false)
+  el.querySelector<HTMLButtonElement>('.event-later')!.onclick = () => close(true)
+  el.addEventListener('click', (e) => e.target === el && close(false))
+  el.querySelector('a')!.addEventListener('click', () => track('invite_click', { from: 'banner' }))
+  document.body.append(el)
+  track('event_banner_view')
+}
+showEventBanner()
+
 // ───────────────────────── 도움말 ─────────────────────────
 
 const help = $('help')
