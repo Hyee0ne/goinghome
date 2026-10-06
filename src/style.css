@@ -1587,7 +1587,7 @@ button {
   background: var(--ink);
 }
 
-body.demo #stage {
+body.touch #stage {
   touch-action: none;
   cursor: grab;
 }
@@ -1612,5 +1612,27 @@ body.demo [hidden] {
 @media (min-width: 721px) {
   .demo-bar .demo-short {
     display: none;
+  }
+}
+
+/* 진입 화면 시작 버튼: 큰 글씨 한 줄 + 작은 설명 한 줄 */
+.start-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.start-btn small {
+  font-weight: 500;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* PC에서는 오른쪽 위 도움말과 겹치지 않게 무대 왼쪽 위에 */
+@media (min-width: 721px) {
+  .demo-bar {
+    left: 16px;
+    transform: none;
   }
 }

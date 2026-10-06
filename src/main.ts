@@ -264,8 +264,8 @@ function renderHelp() {
   const cat = p.species === 'cat'
   $('help-title').textContent = `${josa(p.name, '과', '와')} 교감하는 법`
   const steps: [string, string][] = [
-    demo
-      ? ['✋', '체험판이에요. 손가락이나 마우스로 아이를 살살 문질러 쓰다듬어 주세요. (실제 앱은 카메라로 손을 인식해요)']
+    mouseSim
+      ? ['👆', '손가락이나 마우스로 아이를 살살 문질러 쓰다듬어 주세요. 손짓으로 쓰다듬으면 더 생생해요.']
       : ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
     ...(p.shy
       ? ([
@@ -526,7 +526,7 @@ async function startCamera() {
   voice.start()
   introError.hidden = true
   startBtn.disabled = true
-  startBtn.textContent = '카메라 준비 중…'
+  startBtn.innerHTML = '<b>카메라 준비 중…</b>'
   try {
     await tracker.start()
     overlay.width = video.videoWidth
@@ -543,13 +543,14 @@ async function startCamera() {
             : '카메라를 시작하지 못했어요.'
     introError.textContent = msg
     introError.hidden = false
-    startBtn.textContent = '다시 시도하기'
+    startBtn.innerHTML = '<b>✋ 다시 시도하기</b><small>또는 아래 화면 문지르기로 시작해요</small>'
   } finally {
     startBtn.disabled = false
   }
 }
 
 startBtn.onclick = startCamera
+$('start-touch').onclick = startTouch
 
 /** 보이는 손(최대 2개)마다 손바닥 중심을 펫에 전달한다 */
 function currentInputs(now: number, dt: number): PetInput[] {
@@ -609,7 +610,8 @@ function currentInputs(now: number, dt: number): PetInput[] {
  */
 const demo = import.meta.env.VITE_DEMO === '1'
 let demoPinch = false
-const mouseSim = new URLSearchParams(location.search).get('debug') === 'mouse' || demo
+/** 화면 문지르기(손가락·마우스)로 쓰다듬는 중. 진입 화면에서 고르거나, 체험판·?debug=mouse면 처음부터 */
+let mouseSim = false
 let simPointer: { x: number; y: number; both: boolean; offer: boolean; pinch: boolean } | null = null
 /** 손바닥 중심 기준 편 손 21개 점 (펫 로컬 단위, 손가락이 위) */
 const SIM_HAND: [number, number][] = [
@@ -638,8 +640,12 @@ function simulatedHands() {
   if (simPointer.both) hands.push(hand('Left', -c.x, -1))
   return hands
 }
-if (mouseSim) {
+/** 화면 문지르기로 시작: 손가락·마우스가 손 하나가 되고, 위에 '간식 집기' 버튼을 띄운다 */
+function startTouch() {
+  if (mouseSim) return
+  mouseSim = true
   intro.hidden = true
+  document.body.classList.add('touch')
   const at = (e: PointerEvent) => {
     const r = stage.getBoundingClientRect()
     simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey || demoPinch }
@@ -648,7 +654,24 @@ if (mouseSim) {
   stage.addEventListener('pointermove', (e) => e.buttons && at(e))
   stage.addEventListener('pointerup', () => (simPointer = null))
   stage.addEventListener('pointerleave', () => (simPointer = null))
+  const bar = Object.assign(document.createElement('div'), { className: 'demo-bar' })
+  bar.innerHTML = demo
+    ? '<span class="demo-long">체험판 · 손가락이나 마우스로 문질러 쓰다듬어 보세요 (실제 앱은 카메라로 손을 인식해요)</span><span class="demo-short">체험판 · 손가락으로 문질러요</span>'
+    : '<span class="demo-long">손가락이나 마우스로 살살 문질러 주세요</span><span class="demo-short">살살 문질러 주세요</span>'
+  const pinchBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'demo-pinch' })
+  const label = () => (demoPinch ? '✋ 쓰다듬기로' : pet.p.species === 'cat' ? '🐟 츄르 집기' : '🍗 간식 집기')
+  pinchBtn.textContent = label()
+  pinchBtn.setAttribute('aria-pressed', 'false')
+  pinchBtn.onclick = () => {
+    demoPinch = !demoPinch
+    pinchBtn.setAttribute('aria-pressed', String(demoPinch))
+    pinchBtn.textContent = label()
+  }
+  bar.append(pinchBtn)
+  document.querySelector('.stage-wrap')!.append(bar)
+  renderHelp()
 }
+if (demo || new URLSearchParams(location.search).get('debug') === 'mouse') startTouch()
 
 // ───────────────────────── 루프 ─────────────────────────
 
@@ -1014,17 +1037,6 @@ if (demo) {
   // 공유·전체 공고(바깥 사진)는 체험판에서 쓸 수 없어 숨긴다
   for (const id of ['share-site', 'info-share', 'card-share']) $(id).hidden = true
   document.querySelector<HTMLElement>('.adopt-link')!.hidden = true
-  const bar = Object.assign(document.createElement('div'), { className: 'demo-bar' })
-  bar.innerHTML = '<span class="demo-long">체험판 · 손가락이나 마우스로 문질러 쓰다듬어 보세요 (실제 앱은 카메라로 손을 인식해요)</span><span class="demo-short">체험판 · 손가락으로 문질러요</span>'
-  const pinchBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'demo-pinch', textContent: '🍗 간식 집기' })
-  pinchBtn.setAttribute('aria-pressed', 'false')
-  pinchBtn.onclick = () => {
-    demoPinch = !demoPinch
-    pinchBtn.setAttribute('aria-pressed', String(demoPinch))
-    pinchBtn.textContent = demoPinch ? '✋ 쓰다듬기로' : pet.p.species === 'cat' ? '🐟 츄르 집기' : '🍗 간식 집기'
-  }
-  bar.append(pinchBtn)
-  document.querySelector('.stage-wrap')!.append(bar)
 }
 
 // ───────────────────────── 시작 ─────────────────────────

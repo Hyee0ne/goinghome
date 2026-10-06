@@ -85,13 +85,15 @@
             <h1>고잉홈</h1>
             <p class="card-tag">가족을 기다리는 아이들을 손끝으로 만나요</p>
             <p>
-              전면 카메라에 손바닥을 보여주고, 화면 속 아이를 <b>살살</b> 쓰다듬어 주세요.
+              손짓이나 손가락으로 화면 속 아이를 <b>살살</b> 쓰다듬어 주세요.
               너무 세게 움직이면 깜짝 놀라요.
             </p>
-            <p class="muted">카메라 영상은 기기 안에서만 처리되고, 어디로도 전송되지 않아요.</p>
+            <p class="muted">손짓으로 쓰다듬을 때 카메라 영상은 기기 안에서만 처리되고, 어디로도 전송되지 않아요.</p>
             <p class="muted">"손!" 같은 말을 알아듣도록 마이크도 함께 켜요. 크롬 등 일부 브라우저는 음성 인식을 위해 소리를 브라우저 회사 서버로 보내요.</p>
             <div class="actions">
-              <button id="start-camera" class="btn primary" type="button">카메라로 시작하기</button>
+              <!-- 두 가지 쓰다듬는 법: 손짓(카메라가 손을 알아봄) / 화면 문지르기(손가락·마우스) -->
+              <button id="start-camera" class="btn primary start-btn" type="button"><b>✋ 손짓으로 쓰다듬기</b><small>카메라가 내 손을 알아봐요</small></button>
+              <button id="start-touch" class="btn start-btn" type="button"><b>👆 화면 문질러 쓰다듬기</b><small>손가락이나 마우스로</small></button>
             </div>
             <p id="intro-error" class="error" hidden></p>
           </div>
