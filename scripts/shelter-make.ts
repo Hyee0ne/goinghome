@@ -95,6 +95,8 @@ interface Verdict {
   layoutOnly?: boolean
   /** 원본 사진에서 머리·귀가 사진 밖으로 잘려 AI가 채워 그렸다 */
   aiFill?: boolean
+  /** 밝기 맞춤: 동물 부분 밝기 중앙값 보정 전·후와 감마 */
+  bright?: { before: number; after: number; gamma: number }
   /** 정면도 0~1, 공고 사진 수, 판정을 통과한 사진 수 */
   frontal?: number
   total?: number
@@ -521,7 +523,7 @@ async function hq(ids: string[]) {
   const images = args.images ? String(args.images).split(',').map((p) => resolve(p)) : null
   if (images && pick.length !== 1) fail('--images는 한 마리만 지정해 주세요')
   if (images) for (const p of images) if (!existsSync(p)) fail(`이미지가 없어요: ${p}`)
-  if (cost > 0 && !via && !images && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
+  if (cost > 0 && !via && !images && args.jobs !== 'none' && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
   const add = (...a: string[]) => {
     const r = spawnSync('node', [join(ROOT, 'scripts', 'pet-add.ts'), ...a], { cwd: ROOT, encoding: 'utf8' })
     process.stdout.write((r.stdout ?? '').split('\n').filter((l) => /✓|✗|정렬|이미 있는|정면/.test(l)).map((l) => l + '\n').join(''))
@@ -556,9 +558,15 @@ print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.
         const topN = Math.round(Number(top.stdout.trim()) * 1000)
         if (Number.isFinite(topN) && topN < raw.head_top.y) raw.head_top = { x: raw.head_top.x, y: topN }
         writeJson(join(dir, 'landmarks.raw.json'), raw)
-        add('--id', id, '--from', 'frontal', '--until', 'prepare')
+        add('--id', id, '--from', 'frontal', '--until', 'frame')
+        rmSync(join(dir, 'base.orig.png'), { force: true }) // 자르기를 새로 했으니 보정 전 원본도 새로
+        v.bright = brighten(dir, args['no-brighten'] === 'true')
+        add('--id', id, '--from', 'prepare', '--until', 'prepare')
         writeFileSync(join(dir, 'landmarks.auto.json'), readFileSync(join(dir, 'landmarks.json')))
-      } else add('--id', id, '--from', 'prepare', '--until', 'prepare')
+      } else {
+        v.bright = brighten(dir, args['no-brighten'] === 'true')
+        add('--id', id, '--from', 'prepare', '--until', 'prepare')
+      }
       // 3) 눈 감기 2장 (입·귀는 원본 그대로) + 표정 사이 움직임
       if (images) {
         // 얼굴 정사각형 자리만 먼저 정하고(편집 없음), 받은 표정 이미지를 그 자리에 맞춰 둔다 → 입 표정만 (눈은 앱이 그린다)
@@ -593,13 +601,20 @@ Image.fromarray(out.astype(np.uint8)).save(sys.argv[1])`, join(dir, 'expr-final-
           if (c.status !== 0) throw new Error(`눈 감은 이미지를 합치지 못했어요: ${c.stderr.trim().split('\n').slice(-1)[0]}`)
           log('   최종 장면 = 헥헥 + 눈 감은 이미지의 두 눈')
         }
+        for (const n of ['mid', 'final']) rmSync(join(dir, `expr-${n}-square.orig.png`), { force: true }) // 방금 새로 만든 정사각형
+        brightenSquares(dir, v.bright?.gamma ?? 1)
         process.env.PET_NO_ALIGN = '1'
         try {
           add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', eyesClosed ? 'eyes+pant' : 'pant')
         } finally {
           delete process.env.PET_NO_ALIGN
         }
-      } else add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', partsArg === 'mouth' ? (v.sp === 'cat' ? 'eyes+lick' : 'eyes+pant') : partsArg)
+      } else {
+        // (AI 표정 정사각형은 보정 전 기준으로 만들어졌으니 같은 감마를 건다. 아직 없으면 새로 만든 뒤 다시 돌릴 때 걸린다)
+        brightenSquares(dir, v.bright?.gamma ?? 1)
+        // (--jobs none: 표정 사진을 새로 만들지 않는다. 밝기만 다시 맞출 때)
+        add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', partsArg === 'mouth' ? (v.sp === 'cat' ? 'eyes+lick' : 'eyes+pant') : partsArg, ...(args.jobs ? ['--jobs', args.jobs] : []))
+      }
       const a = animals.get(v.id) ?? ({ id: v.id, sp: v.sp, photos: [], end: v.end ?? '' } as Animal)
       v.rig = rigFor(a, id)
       v.hq = !!(v.rig as { expressions?: unknown }).expressions
@@ -749,6 +764,50 @@ print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M0[:,
   return [v.slice(0, 3), v.slice(3, 6)]
 }
 
+/**
+ * 밝기 맞춤 (고퀄): 아이들끼리 비슷한 밝기가 되도록 정면 사진(base.png)에 약한 감마를 건다.
+ * 동물 부분 밝기 중앙값을 BRIGHT_TARGET 쪽으로: 어두우면 차이의 40%만 밝히고, 너무 밝으면 25%만 낮춘다.
+ * 감마라 흰색(1)과 검정(0)은 그대로라 흰 털이 날아가지 않는다. 보정 전 원본은 base.orig.png에 둔다
+ */
+const BRIGHT_TARGET = 0.68
+function brighten(dir: string, off: boolean) {
+  const base = join(dir, 'base.png')
+  const orig = join(dir, 'base.orig.png')
+  if (!existsSync(orig)) copyFileSync(base, orig)
+  const r = spawnSync('python3', ['-c', `
+import sys, json, numpy as np
+from PIL import Image
+a = np.array(Image.open(sys.argv[1]).convert('RGBA')).astype(np.float32) / 255
+m = a[:, :, 3] > 0.5
+L = (a[:, :, 0] * .299 + a[:, :, 1] * .587 + a[:, :, 2] * .114)[m]
+med = float(np.median(L)); T = float(sys.argv[3])
+want = med + (T - med) * (0.4 if med < T else 0.25)
+g = 1.0 if sys.argv[4] == '1' else float(np.clip(np.log(want) / np.log(med), 0.8, 1.12))
+a[:, :, :3] = np.power(np.clip(a[:, :, :3], 0, 1), g)
+Image.fromarray((a * 255 + 0.5).astype(np.uint8)).save(sys.argv[2])
+print(json.dumps({'before': round(med, 3), 'after': round(float(np.median(L ** g)), 3), 'gamma': round(g, 3)}))`, orig, base, String(BRIGHT_TARGET), off ? '1' : '0'], { encoding: 'utf8' })
+  if (r.status !== 0) throw new Error(`밝기 맞춤 실패: ${r.stderr.trim().split('\n').slice(-1)[0]}`)
+  const b = JSON.parse(r.stdout)
+  log(`   밝기: ${b.before} → ${b.after} (감마 ${b.gamma}${off ? ', --no-brighten' : ''})`)
+  return b as { before: number; after: number; gamma: number }
+}
+
+/** 표정 정사각형(얼굴 편집본)에도 정면 사진과 같은 감마를 건다 (보정 전 원본은 *.orig.png) */
+function brightenSquares(dir: string, gamma: number) {
+  for (const n of ['mid', 'final', 'eat', 'eatmid']) {
+    const f = join(dir, `expr-${n}-square.png`)
+    if (!existsSync(f)) continue
+    const orig = f.replace(/\.png$/, '.orig.png')
+    if (!existsSync(orig)) copyFileSync(f, orig)
+    spawnSync('python3', ['-c', `
+import sys, numpy as np
+from PIL import Image
+a = np.array(Image.open(sys.argv[1]).convert('RGBA')).astype(np.float32) / 255
+a[:, :, :3] = np.power(np.clip(a[:, :, :3], 0, 1), float(sys.argv[3]))
+Image.fromarray((a * 255 + 0.5).astype(np.uint8)).save(sys.argv[2])`, orig, f, String(gamma)])
+  }
+}
+
 function handTunedDir(dir: string) {
   return existsSync(join(dir, 'hand-tuned'))
 }
@@ -766,7 +825,7 @@ function writePreview(verdicts: Verdict[], animals: Map<string, Animal>) {
   <div class="imgs"><img src="${src}" loading="lazy">${v.made ? `<img class="face" src="${v.id}/face.webp" loading="lazy">` : ''}</div>
   <div class="meta">${v.ok ? `<input type="checkbox" value="${v.id}"${preChecked.has(v.id) ? ' checked' : ''}> ` : ''}<b>${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}</b>
  ${!v.ok && v.layoutOnly ? `<div class="pick">${dday(v.end)} · 무료 버전은 머리 잘림 → 고퀄 후보 (AI가 채워 그림)</div>` : ''}
-  ${v.hq ? `<div class="pick">${missingExpr(v)}</div>` : ''}
+  ${v.hq ? `<div class="pick">${missingExpr(v)}${v.bright ? ` · 밝기 ${v.bright.before}→${v.bright.after}` : ''}</div>` : ''}
   ${v.ok ? `<div class="pick">${dday(v.end)} ·${v.aiFill ? ' ✂️ 잘린 부분 AI로 채움 ·' : ''} ${v.hq && v.hand ? '✨ 고퀄 · ✋ 손으로 맞춤' : v.hand ? '✋ 손으로 맞춤' : v.hq ? `✨ 고퀄 (기준점 자동) · <a href="http://localhost:5173/rig.html?id=shelter-${v.id}-hq" target="_blank">기준점 맞추기</a>` : `<a href="http://localhost:5173/rig.html?id=shelter-${v.id}${v.aiFrontal ? '-hq' : ''}" target="_blank">기준점 맞추기</a>`}</div>` : ''}
   ${v.ok ? `<div class="pick">정면도 ${Math.round((v.frontal ?? 0) * 100)}% · ${v.total}장 중 ${(v.photo ?? 0) + 1}번째 (통과 ${v.passed}장)</div>` : ''}
   <small>${v.why.join('<br>')}</small></div>
