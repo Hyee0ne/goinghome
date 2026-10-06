@@ -566,6 +566,7 @@ uniform vec4 uEyesMask1;
 uniform vec4 uEarsMask0;
 uniform vec4 uEarsMask1;
 uniform float uPantW;      // 0~1
+uniform float uPantKeepNose; // 1이면 입 표정을 섞을 때 코 둘레는 원본 그대로
 uniform float uEarsW;      // 0~1
 uniform vec3 uFrames;      // 표정마다 쌓인 단계 수 (입, 눈, 귀)
 // 표정 단계 사이의 움직임 아틀라스 (scripts/prepare-morph.py). 칸마다 RG: 앞→뒤, BA: 뒤→앞 움직임
@@ -817,7 +818,10 @@ void main() {
     vec4 pant = uMorphOn > 0.5
       ? tween(uPantImg, uPantBox, uFrames.x, uPantW, Q, uPantR0, uPantR1)
       : staged(uPantImg, uPantBox, uFrames.x, uPantW, Q, col);
-    col = mix(col, pant, region(Q, uPantMask));
+    // 코는 입 표정에 섞지 않고 원래 코를 둔다 (uPantKeepNose): 주둥이가 긴 개는 코가 입 범위 가장자리에 걸려
+    // 원본 코와 AI 사진의 코가 반씩 섞이며 번져 코가 사라진 것처럼 보였다
+    float keepNose = uPantKeepNose * (1.0 - smoothstep(1.0, 1.45, ellipseDist(Q, uNose)));
+    col = mix(col, pant, region(Q, uPantMask) * (1.0 - keepNose));
   }
   if (uEarsW > 0.001 && uEarsBox.z > 0.0) {
     float m = max(region(Q, uEarsMask0), region(Q, uEarsMask1));
@@ -1352,6 +1356,7 @@ export class FurRenderer {
     const licking = rig.lick && p.chomp > 0.5 ? (Math.sin(p.t * Math.PI * 2 * 3) > 0 ? 1 : 0.5) : 0
     const eatW = rig.lick ? Math.max(licking, this.chewW * 0.5) : Math.max(p.chomp * (p.species === 'dog' ? 0.8 : 0.5), this.chewW * 0.5)
     // 보호소 고퀄(rig.snapFace): 입은 확실히 벌리거나(헥헥) 다물거나 둘 중 하나. 반쯤 열렸다 닫혔다 하면 오물거려 보인다 (입맛 다시기도 뺀다)
+    gl.uniform1f(this.loc('uPantKeepNose'), rig.snapFace ? 1 : 0)
     if (rig.snapFace) {
       // 헥헥은 몇 초 하다가 잠깐 다물고 다시 연다 (계속 열어 두면 사진이 멈춘 듯하다)
       this.pantClock = this.panting ? this.pantClock + dt : 0
