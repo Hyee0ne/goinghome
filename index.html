@@ -22,16 +22,30 @@
     <meta property="og:locale" content="ko_KR" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="description" content="보호소에서 가족을 기다리는 아이를 손끝으로 먼저 만나 보세요" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
     <title>고잉홈 · 가족을 기다리는 아이들</title>
   </head>
   <body>
+    <!-- 선 아이콘 (Lucide, ISC). 이모지 대신 이 한 벌만 쓴다 -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7v.5M12 17h.01"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-5.5v-1a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v5m0-3a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L4 14.5a1.6 1.6 0 0 1 2.4-2.1L8 14"/></symbol>
+      <symbol id="i-pointer" viewBox="0 0 24 24"><path d="M10 14V4.5a1.5 1.5 0 0 1 3 0V12m0-2.5a1.5 1.5 0 0 1 3 0V12m0-1.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-4.8-2.4L4.2 15.6a1.5 1.5 0 0 1 2.3-1.9L8 15"/></symbol>
+    </svg>
     <div id="app">
       <header class="topbar">
         <a class="brand" href="./" aria-label="고잉홈 첫 화면"><img class="brand-logo" src="/logo-goinghome.png" alt="고잉홈" width="88" height="32" /></a>
         <span class="topbar-sp"></span>
-        <a class="adopt-link" href="adopt"><span aria-hidden="true">🏠</span>전체 공고</a>
-        <button id="help-toggle" class="help-toggle" type="button" aria-controls="help" aria-expanded="false" aria-label="도움말">
-          <span aria-hidden="true">?</span><span class="help-label">도움말</span>
+        <!-- PC: 글자 메뉴는 상단에. 휴대폰은 포스터 아래에 같은 메뉴가 있다 -->
+        <nav class="text-menu top-menu" aria-label="메뉴"><a class="on" href="./" aria-current="page">만나기</a><a href="adopt">전체 공고</a><a href="find">닮은 친구</a></nav>
+        <span id="pet-count" class="pet-count" aria-live="polite"></span>
+        <button id="help-toggle" class="icon-btn help-toggle" type="button" aria-controls="help" aria-expanded="false" aria-label="도움말">
+          <svg class="ico" aria-hidden="true"><use href="#i-help" /></svg>
         </button>
       </header>
 
@@ -39,7 +53,12 @@
       <div class="layout">
         <nav id="pet-tabs" class="pet-list" aria-label="가족을 기다리는 아이들"></nav>
 
+      <!-- 입양 포스터: 위는 아치문 앞의 아이(쓰다듬는 무대), 아래는 이름·정보·버튼 -->
+      <section class="poster">
       <main class="stage-wrap">
+        <!-- 아이 뒤의 아치문 (위치·크기는 main.ts resize에서 아이 바닥선에 맞춘다) -->
+        <div id="stage-arch" class="stage-arch" aria-hidden="true"></div>
+        <p id="stage-kicker" class="stage-kicker"></p>
         <canvas id="pet-gl" aria-hidden="true"></canvas>
         <canvas id="stage" aria-label="가상 반려동물 교감 화면"></canvas>
         <pre id="debug-hud" class="debug-hud" hidden></pre>
@@ -63,22 +82,8 @@
 
 
 
-        <!-- 휴대폰 아래 카드: 지금 아이 + 입양 문의 (PC에서는 오른쪽 상세가 대신한다) -->
-        <div id="pet-card" class="pet-card">
-          <div class="card-head">
-            <img id="info-thumb" class="banner-thumb" alt="" />
-            <span class="banner-text">
-              <b id="info-banner-title"></b>
-              <span id="info-banner-sub"></span>
-              <span id="card-due" class="card-due"></span>
-            </span>
-          </div>
-          <div class="card-actions">
-            <a id="card-call" class="btn primary card-call">☎ 입양 문의</a>
-            <button id="card-share" class="btn card-icon" type="button" aria-label="이 아이 입양 정보 공유">↗</button>
-            <button id="info-open" class="btn card-more" type="button" aria-haspopup="dialog">자세히</button>
-          </div>
-        </div>
+        <button id="pet-prev" class="pet-nav prev" type="button" aria-label="이전 아이"><svg class="ico" aria-hidden="true"><use href="#i-left" /></svg></button>
+        <button id="pet-next" class="pet-nav next" type="button" aria-label="다음 아이"><svg class="ico" aria-hidden="true"><use href="#i-right" /></svg></button>
 
         <!-- 카메라 영상은 손 인식에만 쓰고 화면에는 보이지 않는다 (display:none이면 일부 브라우저가 프레임을 멈춰서 투명하게 숨긴다) -->
         <div id="camera-box" class="camera-box camera-hidden">
@@ -108,6 +113,23 @@
 
       </main>
 
+        <!-- 포스터 아래쪽: 큰 이름 · 정보 세 칸 · 자세히 · 입양 문의 -->
+        <div id="pet-card" class="poster-foot">
+          <h2 id="info-banner-title" class="poster-name"></h2>
+          <dl class="poster-facts">
+            <div><dt>나이</dt><dd id="fact-age">-</dd></div>
+            <div><dt>성별</dt><dd id="fact-sex">-</dd></div>
+            <div><dt>몸무게</dt><dd id="fact-kg">-</dd></div>
+          </dl>
+          <button id="info-open" class="poster-more" type="button" aria-haspopup="dialog">자세히 보기</button>
+          <nav class="text-menu foot-menu" aria-label="메뉴"><a class="on" href="./" aria-current="page">만나기</a><a href="adopt">전체 공고</a><a href="find">닮은 친구</a></nav>
+          <div class="poster-cta">
+            <a id="card-call" class="pill pill-primary"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg><span>입양 문의</span></a>
+            <button id="card-share" class="pill pill-icon" type="button" aria-label="이 아이 입양 정보 공유"><svg class="ico" aria-hidden="true"><use href="#i-share" /></svg></button>
+          </div>
+        </div>
+      </section>
+
       <!-- 오른쪽 상세: PC에서는 늘 열려 있는 패널, 휴대폰에서는 '자세히'로 올라오는 시트 -->
       <dialog id="info" class="info-sheet" aria-labelledby="info-name">
         <div class="sheet-body">
@@ -125,12 +147,12 @@
               <p id="info-meta" class="sheet-meta"></p>
               <p id="info-due" class="sheet-due"></p>
             </div>
-            <button id="info-close" class="sheet-close" type="button" aria-label="닫기">✕</button>
+            <button id="info-close" class="icon-btn sheet-close" type="button" aria-label="닫기"><svg class="ico" aria-hidden="true"><use href="#i-x" /></svg></button>
           </header>
           <ul id="info-traits" class="traits"></ul>
           <section id="info-story-wrap">
-            <h3>이야기</h3>
-            <p id="info-story"></p>
+            <h3 class="sr-only">이야기</h3>
+            <blockquote id="info-story" class="story-quote"></blockquote>
           </section>
           <section id="info-shelter-wrap">
             <h3>보호 정보 <span id="info-sample" class="sample-badge">예시</span></h3>
@@ -138,8 +160,8 @@
           </section>
         </div>
         <footer class="sheet-foot">
-          <a id="info-adopt" class="btn primary adopt">입양 공고 보기</a>
-          <button id="info-share" class="btn share-pet" type="button">↗ 이 아이 입양 정보 공유</button>
+          <a id="info-adopt" class="pill pill-primary adopt"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg><span>입양 공고 보기</span></a>
+          <button id="info-share" class="pill pill-line share-pet" type="button"><svg class="ico" aria-hidden="true"><use href="#i-share" /></svg><span>이 아이 입양 정보 공유</span></button>
           <p id="info-adopt-note" class="muted"></p>
         </footer>
       </dialog>

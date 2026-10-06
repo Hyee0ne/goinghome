@@ -1,12 +1,15 @@
 :root {
-  --bg: #fff4e6;
-  --bg-2: #ffe7cc;
-  --ink: #4a3322;
-  --ink-soft: #8a6e58;
-  --accent: #ff8a3d;
+  /* D안 (입양 포스터, 2026-10-06): 흰 바탕 · 먹색 글자 · 코발트 행동 · 파스텔 아치문 */
+  --bg: #ffffff;
+  --bg-2: #f3f5fb;
+  --ink: #12183a;
+  --ink-soft: #5b6283;
+  --accent: #2a45c9;
   --accent-ink: #fff;
-  --card: rgba(255, 255, 255, 0.86);
-  --line: rgba(120, 80, 40, 0.12);
+  --card: #ffffff;
+  --line: #e6e8f2;
+  --pink: #ffd3dc;
+  --pink-ink: #b0264a;
   --heart: #ff6b81;
   font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
   color: var(--ink);
@@ -1743,4 +1746,384 @@ body.demo [hidden] {
   from {
     opacity: 0;
   }
+}
+
+
+/* ═════════════════════ D안: 입양 포스터 (2026-10-06) ═════════════════════
+   아이는 아치문 앞에 서 있고(배경을 지운 고퀄 사진은 문 위로 넘친다), 아래에 큰 이름 · 정보 세 칸 · 버튼.
+   상자·그림자 대신 가는 선, 아이콘은 선 아이콘 한 벌, 강조색(코발트)은 화면당 가장 중요한 버튼 하나에만. */
+.ico {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.topbar {
+  gap: 14px;
+  padding: max(12px, env(safe-area-inset-top)) 18px 10px;
+  border-bottom: 0;
+  background: var(--bg);
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-2);
+  color: var(--ink-soft);
+}
+
+.help-toggle .help-label {
+  display: none;
+}
+
+.pet-count {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 글자 메뉴: 지금 위치는 밑줄 */
+.text-menu {
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+}
+
+.text-menu a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 4px 0;
+}
+
+.text-menu a.on {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.top-menu {
+  display: none;
+}
+
+/* 얼굴 목록은 쓰지 않는다 (포스터를 옆으로 넘긴다) */
+.pet-list,
+.layout .pet-list {
+  display: none;
+}
+
+.poster {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-wrap,
+.layout .stage-wrap {
+  background: var(--bg);
+}
+
+.stage-arch {
+  position: absolute;
+  z-index: 0;
+  border-radius: 999px 999px 22px 22px;
+  background: var(--pink);
+  pointer-events: none;
+  transition: background-color 0.3s ease;
+}
+
+#pet-gl,
+#stage {
+  z-index: 1;
+}
+
+.stage-kicker {
+  position: absolute;
+  z-index: 2;
+  top: 4px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pet-nav {
+  position: absolute;
+  z-index: 3;
+  top: 46%;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink-soft);
+  box-shadow: 0 2px 10px rgba(20, 30, 80, 0.1);
+}
+
+.pet-nav.prev {
+  left: 12px;
+}
+
+.pet-nav.next {
+  right: 12px;
+}
+
+.pet-nav[hidden] {
+  display: none;
+}
+
+/* 간식 접시는 작게, 아치문 오른쪽 아래 */
+.treat-tray {
+  right: 14px;
+  bottom: 16px;
+  transform: scale(0.72);
+  transform-origin: right bottom;
+}
+
+/* 포스터 아래쪽 */
+.poster-foot {
+  flex: none;
+  padding: 6px 18px 14px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.poster-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.poster-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 12px 0 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.poster-facts div {
+  padding: 8px 0;
+}
+
+.poster-facts div + div {
+  border-left: 1px solid var(--line);
+}
+
+.poster-facts dt {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.poster-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.poster-more {
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.foot-menu {
+  justify-content: center;
+  margin: 6px 0 10px;
+}
+
+.poster-cta {
+  display: flex;
+  gap: 8px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pill-primary {
+  flex: 1;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.pill-icon {
+  flex: none;
+  width: 48px;
+  padding: 0;
+  background: var(--bg-2);
+  color: var(--ink);
+}
+
+.site-footer {
+  border-top: 1px solid var(--line);
+}
+
+/* 휴대폰: 무대를 조금 낮게, 포스터 아래쪽이 한 화면에 들어오게 */
+@media (max-width: 959px) {
+  .poster-name {
+    font-size: 26px;
+  }
+
+  .pill {
+    height: 46px;
+  }
+}
+
+/* PC: 가운데 포스터 + 오른쪽 '포스터 뒷면'(자세히) */
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+
+  .top-menu {
+    display: flex;
+  }
+
+  .foot-menu {
+    display: none;
+  }
+
+  .poster-foot {
+    width: min(520px, 100%);
+    margin: 0 auto;
+  }
+
+  .poster-more {
+    display: none;
+  }
+}
+
+/* 휴대폰 안내 띠는 위쪽 문구 아래로 */
+@media (max-width: 720px) {
+  .demo-bar {
+    top: 30px;
+  }
+}
+
+/* 포스터 뒷면 (아이 정보: PC 오른쪽 패널, 휴대폰 아래 시트) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+#info .sheet-emoji,
+#info .sheet-due:empty {
+  display: none;
+}
+
+#info .sheet-head h2 {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+#info .sheet-meta {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+#info .traits li {
+  background: var(--bg-2);
+  border: 0;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.story-quote {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+#info .shelter {
+  border-top: 1px solid var(--line);
+}
+
+#info .shelter dt,
+#info .shelter dd {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+#info .shelter dd {
+  font-weight: 700;
+  text-align: right;
+}
+
+#info h3 {
+  color: var(--ink-soft);
+}
+
+#info .gallery {
+  border-radius: 0 0 18px 18px;
+}
+
+.pill-line {
+  flex: 1;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+#info .sheet-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* PC 패널에서는 버튼을 포스터 아래쪽에만 두고, 여기서는 안내 문구만 */
+@media (min-width: 960px) {
+  #info:not(:modal) #info-adopt,
+  #info:not(:modal) #info-share {
+    display: none;
+  }
+}
+
+#info .shelter {
+  gap: 0 14px;
 }

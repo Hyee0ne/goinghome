@@ -114,6 +114,11 @@ function resize() {
   scale = Math.min(W / 560, H / 660)
   cx = W / 2
   cy = H * 0.56
+  // 아치문: 아이 바닥선(FLOOR_Y)에 아래를 맞추고, 눈높이쯤까지 (귀·머리는 문 위로 넘친다)
+  const arch = $('stage-arch')
+  const aw = 400 * scale
+  const ah = 440 * scale
+  Object.assign(arch.style, { width: `${aw}px`, height: `${ah}px`, left: `${cx - aw / 2}px`, top: `${cy + (FLOOR_Y - 20) * scale - ah}px` })
 }
 window.addEventListener('resize', resize)
 
@@ -133,10 +138,11 @@ function landmarkToStage(lm: NormalizedLandmark) {
 function renderTabs() {
   // 고를 수 있는 아이: 실제 공고 아이(실사화한 아이)만. 예시 아이(초코·삼식)는 넣지 않는다 (2026-10-06)
   // 고퀄(✨) 먼저, 같으면 공고가 오래 남은 아이 먼저. 우리 아이(이벤트)는 목록에 넣지 않는다
-  const shelter = PETS.filter(isShelter).sort(
-    (a, b) => Number(!!b.adoption?.aiFrontal) - Number(!!a.adoption?.aiFrontal) || (b.adoption?.noticeEnd ?? '').localeCompare(a.adoption?.noticeEnd ?? ''),
-  )
-  const list = shelter
+  const list = petList()
+  const at = list.findIndex((p) => p.id === pet.p.id)
+  $('pet-count').textContent = at >= 0 ? `${at + 1} / ${list.length}` : ''
+  $('stage-arch').style.background = ARCH_COLORS[Math.max(0, at) % ARCH_COLORS.length]
+  for (const id of ['pet-prev', 'pet-next']) $(id).hidden = list.length < 2
   tabs.replaceChildren(
     ...list.map((p) => {
       const b = Object.assign(document.createElement('button'), { type: 'button', className: 'face' + (p.id === pet.p.id ? ' active' : '') })
@@ -423,26 +429,35 @@ function renderBanner() {
   treatTray.setTreat(assetUrl(churu ? 'pets/churu.webp' : 'pets/treat.webp'), churu ? 'churu' : 'cube')
   // 휴대폰 아래 카드: 이름 · 정보 · 마감 + 입양 문의
   const a = p.adoption
-  $('info-banner-title').innerHTML = ''
-  $('info-banner-title').append(p.name)
-  $('info-banner-sub').textContent = [p.sex, p.age, a?.region.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · ')
-  $('card-due').textContent = a?.noticeEnd ? `${Number(a.noticeEnd.slice(4, 6))}월 ${Number(a.noticeEnd.slice(6, 8))}일까지 가족을 찾아요` : ''
+  // 포스터 아래쪽: 큰 이름 · 정보 세 칸(나이·성별·몸무게) · 위쪽 한 줄(어디서 기다리는지)
+  $('info-banner-title').textContent = p.name
+  $('fact-age').textContent = p.age || '-'
+  $('fact-sex').textContent = p.sex || '-'
+  $('fact-kg').textContent = p.traits?.find((t) => /kg$/i.test(t)) ?? '-'
+  const region = a?.region.split(' ').slice(0, 2).join(' ')
+  $('stage-kicker').textContent = region ? `${region}에서 가족을 기다려요` : ''
   const call = $<HTMLAnchorElement>('card-call')
-  if (a?.tel) {
-    call.href = `tel:${a.tel.replace(/[^\d+]/g, '')}`
-    call.removeAttribute('target')
-    call.textContent = '☎ 입양 문의'
-  } else {
-    call.href = a?.url ?? ADOPT_URL
-    call.removeAttribute('target')
-    call.textContent = '입양 공고 보기'
-  }
-  const thumb = $<HTMLImageElement>('info-thumb')
-  // 썸네일은 셰이더가 이미 불러온 얼굴 사진을 써서 따로 내려받지 않는다
-  const src = p.photo?.src ?? (p.photos?.length ? assetUrl(p.photos[0]) : undefined)
-  thumb.hidden = !src
-  if (src) thumb.src = src
+  call.removeAttribute('target')
+  call.querySelector('span')!.textContent = a?.tel ? '입양 문의' : '입양 공고 보기'
+  call.href = a?.tel ? `tel:${a.tel.replace(/[^\d+]/g, '')}` : (a?.url ?? ADOPT_URL)
 }
+
+/** 아치문 색: 아이마다 연분홍 · 하늘 · 민트 · 모래 중 하나 (목록 순서대로 돌아가며) */
+const ARCH_COLORS = ['#ffd3dc', '#dde4ff', '#d8f1e6', '#f6ead6']
+/** 지금 고를 수 있는 아이 목록 (얼굴 목록과 같은 순서) */
+const petList = () =>
+  PETS.filter(isShelter).sort(
+    (a, b) => Number(!!b.adoption?.aiFrontal) - Number(!!a.adoption?.aiFrontal) || (b.adoption?.noticeEnd ?? '').localeCompare(a.adoption?.noticeEnd ?? ''),
+  )
+/** 포스터 넘기기: 이전·다음 아이 (끝에서는 처음으로) */
+function stepPet(d: number) {
+  const list = petList()
+  if (!list.length) return
+  const i = list.findIndex((p) => p.id === pet.p.id)
+  selectPet(list[(i + d + list.length) % list.length])
+}
+$('pet-prev').onclick = () => stepPet(-1)
+$('pet-next').onclick = () => stepPet(1)
 
 // 아이 정보 → 입양 문의. 시트를 열 때만 DOM을 채워서 매 프레임 루프에는 영향이 없다
 const info = $<HTMLDialogElement>('info')
@@ -499,9 +514,9 @@ function fillInfo(p: PetProfile) {
   $('info-emoji').textContent = p.species === 'dog' ? '🐶' : '🐱'
   $('info-name').textContent = p.name
   // 공고 아이는 이름이 곧 품종이라 겹치지 않게
-  $('info-meta').textContent = [p.breed !== p.name ? p.breed : '', p.sex, p.age].filter(Boolean).join(' · ')
-  const end = p.adoption?.noticeEnd
-  $('info-due').textContent = end ? `${Number(end.slice(4, 6))}월 ${Number(end.slice(6, 8))}일까지 가족을 찾아요` : ''
+  // 포스터 뒷면: 이름 아래에 공고번호(진짜 공고라는 표시), 마감일은 아래 표에만 담담하게
+  $('info-meta').textContent = p.adoption?.noticeNo ?? [p.breed !== p.name ? p.breed : '', p.sex, p.age].filter(Boolean).join(' · ')
+  $('info-due').textContent = ''
 
   const traits = [...(p.traits ?? []), `${FAVORITE_LABEL[p.favorite]} 좋아해요`]
   if (canGivePaw(p)) traits.push("'손' 할 줄 알아요 🐾")
@@ -511,7 +526,7 @@ function fillInfo(p: PetProfile) {
   )
 
   $('info-story-wrap').hidden = !p.story
-  $('info-story').textContent = p.story
+  $('info-story').textContent = p.story ? `“${p.story}”` : ''
 
   const a = p.adoption
   $('info-shelter-wrap').hidden = !a
@@ -530,7 +545,7 @@ function fillInfo(p: PetProfile) {
     // 공고 아이: 보호소에 바로 전화
     adopt.href = `tel:${a.tel.replace(/[^\d+]/g, '')}`
     adopt.removeAttribute('target')
-    adopt.textContent = '전화로 입양 문의'
+    adopt.querySelector('span')!.textContent = '보호소에 전화하기'
     $('info-adopt-note').textContent = a.aiFrontal
       ? '쓰다듬는 화면은 AI로 정면을 다시 그린 모습이라 실제와 조금 다를 수 있어요. 위 사진이 실제 공고 사진이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
       : a.fromShelterPhoto
@@ -539,7 +554,7 @@ function fillInfo(p: PetProfile) {
   } else {
     adopt.href = a?.url ?? ADOPT_URL
     adopt.removeAttribute('target')
-    adopt.textContent = '입양 공고 보기'
+    adopt.querySelector('span')!.textContent = '입양 공고 보기'
     $('info-adopt-note').textContent = a?.url
       ? `${josa(p.name, '이의', '의')} 입양 공고를 열어요. 출처: 농림축산식품부 국가동물보호정보시스템`
       : `${josa(p.name, '은', '는')} 예시 아이라 전체 입양 공고 화면이 열려요. 출처: 농림축산식품부 국가동물보호정보시스템`
