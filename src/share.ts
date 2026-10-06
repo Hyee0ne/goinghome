@@ -1,6 +1,7 @@
 /**
  * 공유: 쓰다듬는 장면을 짧은 영상으로 녹화해 보내거나(녹화 엔진이 있을 때), 링크를 보낸다.
- * 공유 링크에는 ?from=share를 붙여, 받은 사람에게는 '너도 만들어 봐'와 입양 사이트를 먼저 보여 준다.
+ * 공유 링크에는 ?from=share를 붙인다. 우리 아이를 공유하면 링크는 닮은 보호소 아이의 쓰다듬기 화면으로 연다
+ * (받은 사람이 영상만 보고 끝나지 않고 들어와서 직접 만져 보게). 받은 사람에게는 쓰다듬은 뒤 '너희 아이도 만들어 봐'를 보여 준다.
  */
 import { josa, type PetProfile } from './pets'
 
@@ -21,8 +22,11 @@ export function shareUrl(petId?: string) {
 }
 
 /** 이 아이 입양 정보 글: 이름 · 지역 · 마감 · 보호소 전화 */
-export function shareText(p: PetProfile, mine: boolean) {
-  if (mine) return `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾`
+export function shareText(p: PetProfile, mine: boolean, linked = false) {
+  if (mine)
+    return linked
+      ? `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾\n${josa(p.name, '이랑', '랑')} 닮은 친구가 기다리고 있어요. 링크를 눌러 손끝으로 만나 보세요 👆`
+      : `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾`
   const a = p.adoption
   const due = a?.noticeEnd ? `${Number(a.noticeEnd.slice(4, 6))}월 ${Number(a.noticeEnd.slice(6, 8))}일까지` : ''
   const lines = [
@@ -53,7 +57,7 @@ export async function shareSite(): Promise<ShareResult> {
 export type ShareResult = 'shared' | 'copied' | 'downloaded' | 'cancelled'
 
 export async function sharePet(p: PetProfile, mine: boolean, onRecording?: (on: boolean) => void, linkPet?: string): Promise<ShareResult> {
-  const text = shareText(p, mine)
+  const text = shareText(p, mine, !!linkPet)
   const url = shareUrl(linkPet)
 
   if (recorder) {

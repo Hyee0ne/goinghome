@@ -472,7 +472,9 @@ $('mk-face-next').onclick = async () => {
   $('mk-making').hidden = true
   $('mk-made').hidden = false
   $('mk-share').onclick = async () => {
-    const r = await sharePet({ id, name, species: sp } as PetProfile, true)
+    // 링크는 닮은 고퀄 보호소 아이의 쓰다듬기 화면으로 (받은 사람이 들어와서 직접 만져 보게)
+    const friend = await lookalikeToPet(sp, color)
+    const r = await sharePet({ id, name, species: sp } as PetProfile, true, undefined, friend)
     if (r !== 'cancelled') toast(r === 'copied' ? '링크를 복사했어요' : '공유했어요')
   }
   showLookalikes(name, sp, color)
@@ -521,6 +523,18 @@ async function showLookalikes(name: string, sp: Species, color: [number, number,
     }),
   )
   box.hidden = false
+}
+
+/** 공유 링크로 열 아이: 쓰다듬을 수 있는 보호소 아이 중 닮은 아이 (고퀄 먼저). 없으면 undefined (사이트 첫 화면) */
+async function lookalikeToPet(sp: Species, color: [number, number, number] | null) {
+  const live = await fetch(`${import.meta.env.BASE_URL}data/shelter-live.json`)
+    .then((r) => (r.ok ? r.json() : { pets: [] }))
+    .catch(() => ({ pets: [] }))
+  const pets = (live.pets ?? []) as { id: string; sp: 'dog' | 'cat'; aiFrontal?: boolean; profile?: { color?: string; end?: string; care?: { name?: string } } }[]
+  const pool = (hq: boolean) =>
+    pets.filter((p) => !hq || p.aiFrontal).map((p) => ({ id: p.id, sp: p.sp, color: p.profile?.color ?? '', end: p.profile?.end ?? '', care: p.profile?.care }))
+  const pick = findLookalikes(pool(true), sp, color, 1)[0] ?? findLookalikes(pool(false), sp, color, 1)[0]
+  return pick ? `shelter-${pick.id}` : undefined
 }
 
 /** 카드의 마감 줄: '10월 12일까지 가족을 찾아요', 이번 주에 끝나면 빨갛게 */

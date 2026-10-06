@@ -246,8 +246,21 @@ $('share-site').onclick = async () => {
   if (r === 'copied') toast('고잉홈 링크를 복사했어요.')
 }
 
-// 공유 링크(?from=share)로 들어온 사람: 인사만 바꾼다 (진입 화면은 카메라 버튼만)
-if (new URLSearchParams(location.search).get('from') === 'share') {
+// 공유 링크(?from=share)로 들어온 사람: 인사를 바꾸고, 쓰다듬기 시작 20초 뒤 '너희 아이도 만들어 봐'를 띄운다
+const fromShare = new URLSearchParams(location.search).get('from') === 'share'
+let invited = false
+function inviteToMake() {
+  if (!fromShare || invited || import.meta.env.VITE_DEMO === '1') return
+  invited = true
+  setTimeout(() => {
+    const el = Object.assign(document.createElement('div'), { className: 'make-invite' })
+    el.setAttribute('role', 'status')
+    el.innerHTML = '<span>🐾 너희 아이도 손끝으로 쓰다듬어 볼래요?</span><a class="make-invite-go" href="make.html">우리 아이 만들기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
+    el.querySelector('button')!.onclick = () => el.remove()
+    document.querySelector('.stage-wrap')!.append(el)
+  }, 20_000)
+}
+if (fromShare) {
   intro.querySelector('h1')!.textContent = '친구가 고잉홈을 보냈어요'
   intro.querySelector('.card-emoji')!.textContent = '💌'
 }
@@ -532,6 +545,7 @@ async function startCamera() {
     overlay.width = video.videoWidth
     overlay.height = video.videoHeight
     intro.hidden = true
+    inviteToMake()
   } catch (err) {
     const msg =
       err instanceof DOMException && err.name === 'NotAllowedError'
@@ -646,6 +660,7 @@ function startTouch() {
   mouseSim = true
   intro.hidden = true
   document.body.classList.add('touch')
+  inviteToMake()
   const at = (e: PointerEvent) => {
     const r = stage.getBoundingClientRect()
     simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey || demoPinch }

@@ -1555,3 +1555,75 @@ body.demo [hidden] {
     transform: none;
   }
 }
+
+/* 공유 링크로 들어온 사람에게: 쓰다듬은 뒤 '너희 아이도 만들어 봐' (무대 아래 가운데, 휴대폰은 아래 카드 위) */
+.make-invite {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 8px 8px 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 20px rgba(80, 50, 20, 0.18);
+  font-size: 14px;
+  color: var(--ink);
+  transform: translateX(-50%);
+  animation: invite-in 0.4s ease-out;
+}
+
+.make-invite span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.make-invite-go {
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.make-invite-close {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+@keyframes invite-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+@media (max-width: 720px) {
+  .make-invite {
+    left: 12px;
+    right: 12px;
+    bottom: 150px;
+    width: auto;
+    max-width: none;
+    border-radius: 18px;
+    font-size: 13px;
+    transform: none;
+    animation-name: invite-in-m;
+  }
+
+  @keyframes invite-in-m {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+}
