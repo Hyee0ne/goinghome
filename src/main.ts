@@ -172,7 +172,6 @@ const setShareLabel = (t: string | null) => {
 if (clipSupport().ok) {
   setClipRecorder(async (seconds) => {
     const mine = isMine(pet.p)
-    const host = new URL(import.meta.env.BASE_URL, location.origin).host + import.meta.env.BASE_URL.replace(/\/$/, '')
     // 버튼을 누른 손을 들어 쓰다듬을 시간: 3초 세고 녹화한다
     for (let n = 3; n > 0; n--) {
       setShareLabel(`${n}초 뒤 녹화`)
@@ -180,7 +179,8 @@ if (clipSupport().ok) {
       await new Promise((r) => setTimeout(r, 1000))
     }
     setShareLabel('● 녹화 중')
-    const blob = await recorder.record(seconds, { overlay: clipOverlay(pet.p, mine, seconds, host, featured ?? undefined) })
+    // 9:16 세로 (릴스·쇼츠·틱톡·스토리)
+    const blob = await recorder.record(seconds, { width: 720, height: 1280, overlay: clipOverlay(pet.p, mine, seconds, featured ?? undefined) })
     return { blob, ext: clipSupport().ext }
   })
 }
@@ -211,11 +211,9 @@ async function loadFeatured(p: PetProfile | null): Promise<Featured | null> {
   } catch {
     return null
   }
-  const end = p.adoption?.noticeEnd
   return {
     img,
     line: [p.name, p.adoption?.region.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · '),
-    due: end ? `${Number(end.slice(4, 6))}월 ${Number(end.slice(6, 8))}일까지` : undefined,
   }
 }
 
@@ -230,7 +228,7 @@ async function shareThisPet(btn: HTMLButtonElement) {
     featured = await loadFeatured(target)
     const r = await sharePet(pet.p, isMine(pet.p), (on) => (on ? null : setShareLabel(null)), target?.id)
     if (r === 'copied') toast('입양 정보와 링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요.')
-    if (r === 'downloaded') toast('영상을 저장하고 입양 정보와 링크를 복사했어요.')
+    if (r === 'downloaded') toast('영상을 저장했어요. 인스타그램을 열고 릴스나 스토리에 올려 주세요. 입양 정보와 링크도 복사해 뒀어요.')
   } finally {
     setShareLabel(null)
     shareUi = null

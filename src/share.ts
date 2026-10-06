@@ -21,16 +21,16 @@ export function shareUrl(petId?: string) {
   return u.toString()
 }
 
-/** 이 아이 입양 정보 글: 이름 · 지역 · 마감 · 보호소 전화 */
+/** 이 아이 입양 정보 글: 이름 · 지역 · 보호소 전화 (마감일은 넣지 않는다) */
 export function shareText(p: PetProfile, mine: boolean, linked = false) {
   if (mine)
     return linked
       ? `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾\n${josa(p.name, '이랑', '랑')} 닮은 친구가 기다리고 있어요. 링크를 눌러 손끝으로 만나 보세요 👆`
       : `우리 ${p.name} 손끝으로 쓰다듬어 봤어요 🐾`
   const a = p.adoption
-  const due = a?.noticeEnd ? `${Number(a.noticeEnd.slice(4, 6))}월 ${Number(a.noticeEnd.slice(6, 8))}일까지` : ''
+  // 공유 글에는 공고 마감일을 넣지 않는다 (2026-10-06)
   const lines = [
-    `🏠 ${josa(p.name, '이', '가')} 가족을 기다려요${due ? ` (${due})` : ''}`,
+    `🏠 ${josa(p.name, '이', '가')} 가족을 기다려요`,
     [p.sex, p.age, a?.region].filter(Boolean).join(' · '),
     a?.tel ? `입양 문의: ${a.shelter} ${a.tel}` : '',
     '고잉홈에서 손끝으로 먼저 만나 보세요',

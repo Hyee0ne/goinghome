@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import basicSsl from '@vitejs/plugin-basic-ssl'
+import { OG_IMAGE_VERSION, SITE_URL } from './src/site'
 
 const DEV_ONLY_PAGES = ['rig.html', 'maker-spike.html']
 
@@ -10,7 +11,7 @@ const DEV_ONLY_PAGES = ['rig.html', 'maker-spike.html']
 export default defineConfig({
   // 깃허브 페이지는 https://<계정>.github.io/goinghome/ 아래에서 열린다 (배포 워크플로가 GITHUB_PAGES=1로 빌드)
   base: process.env.GITHUB_PAGES ? '/goinghome/' : '/',
-  plugins: [...(process.env.HTTPS ? [basicSsl()] : []), petEditorApi()],
+  plugins: [...(process.env.HTTPS ? [basicSsl()] : []), petEditorApi(), siteMeta()],
   // 손 인식 워커는 MediaPipe의 ES 모듈판 wasm 로더를 동적 import하므로 모듈 워커로 빌드한다
   worker: { format: 'es' },
   // 배포에 넣을 화면: 루트의 *.html 전부 (앱, 우리 아이 만들기, 보호소 등록 …).
@@ -25,6 +26,14 @@ export default defineConfig({
     },
   },
 })
+
+/** HTML의 %SITE_URL%·%OG_IMAGE_VERSION%을 src/site.ts 값으로 바꾼다 (OG 태그는 절대 주소여야 한다) */
+function siteMeta(): Plugin {
+  return {
+    name: 'site-meta',
+    transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', SITE_URL).replaceAll('%OG_IMAGE_VERSION%', String(OG_IMAGE_VERSION)),
+  }
+}
 
 /**
  * 기준점 편집 화면(/rig.html)용 개발 서버 API. 배포 빌드에는 들어가지 않는다.
