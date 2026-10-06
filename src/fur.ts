@@ -1381,8 +1381,9 @@ export class FurRenderer {
       const want = (v: number) => (v > DRAWN_SNAP ? 1 : 0)
       const squintPulse = squint > DRAWN_SNAP && p.t % SQUINT_EVERY_S < SQUINT_HOLD_S ? 1 : 0
       const lidS = Math.max(p.blink * 1.1, squintPulse, p.sigh * 0.35, slow)
-      this.snapLid[0] = step01(this.snapLid[0], want(Math.max(lidS, m.eyeTouchL)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
-      this.snapLid[1] = step01(this.snapLid[1], want(Math.max(lidS, m.eyeTouchR)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      // 두 눈은 늘 같이 감는다 (한쪽만 감기면 윙크로 보인다. 눈가를 만져도 양쪽 다)
+      const both = want(Math.max(lidS, m.eyeTouchL, m.eyeTouchR))
+      this.snapLid[0] = this.snapLid[1] = step01(this.snapLid[0], both, SNAP_CLOSE_S, SNAP_OPEN_S, dt)
       gl.uniform2f(this.loc('uLid'), this.snapLid[0], this.snapLid[1])
     } else if (this.hasEyesPhoto) {
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(lid, m.eyeTouchL)), Math.min(1, Math.max(lid, m.eyeTouchR)))
@@ -1405,8 +1406,8 @@ export class FurRenderer {
       }
       const step = (cur: number, target: number) =>
         target > cur ? Math.min(target, cur + dt / DRAWN_CLOSE_S) : Math.max(target, cur - dt / DRAWN_OPEN_S)
-      this.drawnLid[0] = step(this.drawnLid[0], held(0, m.eyeTouchL))
-      this.drawnLid[1] = step(this.drawnLid[1], held(1, m.eyeTouchR))
+      // 두 눈은 늘 같이 감는다 (한쪽만 감기면 윙크로 보인다)
+      this.drawnLid[0] = this.drawnLid[1] = step(this.drawnLid[0], Math.max(held(0, m.eyeTouchL), held(1, m.eyeTouchR)))
       // 깜빡임은 원래 빠르다 (감기 0.07초·뜨기 0.13초, pet.ts)
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[0])), Math.min(1, Math.max(p.blink * 1.1, this.drawnLid[1])))
     }
