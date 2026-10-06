@@ -38,7 +38,7 @@ export interface Adoption {
   shelter: string
   region: string
   noticeNo?: string
-  /** 포인핸드 공고 주소. 없으면 포인핸드 첫 화면으로 보낸다 */
+  /** 입양 공고 화면 주소 (공공데이터 공고). 없으면 전체 공고 화면으로 보낸다 */
   url?: string
   /** 가상의 아이라 실제 공고가 없다 */
   sample?: boolean
@@ -52,7 +52,8 @@ export interface Adoption {
   aiFrontal?: boolean
 }
 
-export const PAWINHAND_URL = 'https://pawinhand.kr'
+/** 전체 공고 화면 (공공데이터 구조동물 공고만 쓴다. 다른 입양 사이트는 언급하지 않는다, 2026-10-06) */
+export const ADOPT_URL = 'adopt.html'
 
 /** '손' 개인기를 보여 줄 수 있는 아이: 체크된 강아지만 (고양이는 선택지 자체가 없다) */
 export function canGivePaw(p: PetProfile) {
@@ -231,7 +232,7 @@ export function layoutOf(p: PetProfile): Layout {
 
 const BASE = import.meta.env.BASE_URL
 
-/** 가상의 보호 동물. 추후 포인핸드 공고 데이터로 교체할 자리. */
+/** 가상의 보호 동물 (예시). 실제 아이는 공공데이터 공고에서 불러온다. */
 export const PETS: PetProfile[] = [
   {
     id: 'choco',

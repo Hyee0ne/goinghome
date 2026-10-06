@@ -5,7 +5,7 @@ import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand,
 import { Voice } from './voice'
 import { Pet, type PetInput } from './pet'
 import { FurRenderer, type MotionHand } from './fur'
-import { FLOOR_Y, PAWINHAND_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
+import { FLOOR_Y, ADOPT_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
 import { isShelter, loadShelterPets } from './shelterPets'
 import { setClipRecorder, sharePet, shareSite, toast } from './share'
@@ -128,12 +128,12 @@ function landmarkToStage(lm: NormalizedLandmark) {
 // ───────────────────────── 탭 · 프로필 ─────────────────────────
 
 function renderTabs() {
-  // 고를 수 있는 아이: 실제 공고 아이(실사화한 아이). 없을 때만 예시 아이(초코·삼식)
+  // 고를 수 있는 아이: 실제 공고 아이(실사화한 아이)만. 예시 아이(초코·삼식)는 넣지 않는다 (2026-10-06)
   // 고퀄(✨) 먼저, 같으면 공고가 오래 남은 아이 먼저. 우리 아이(이벤트)는 목록에 넣지 않는다
   const shelter = PETS.filter(isShelter).sort(
     (a, b) => Number(!!b.adoption?.aiFrontal) - Number(!!a.adoption?.aiFrontal) || (b.adoption?.noticeEnd ?? '').localeCompare(a.adoption?.noticeEnd ?? ''),
   )
-  const list = shelter.length ? shelter : PETS.filter((p) => !isShelter(p) && !isMine(p))
+  const list = shelter
   tabs.replaceChildren(
     ...list.map((p) => {
       const b = Object.assign(document.createElement('button'), { type: 'button', className: 'face' + (p.id === pet.p.id ? ' active' : '') })
@@ -369,9 +369,9 @@ function renderBanner() {
     call.removeAttribute('target')
     call.textContent = '☎ 입양 문의'
   } else {
-    call.href = a?.url ?? PAWINHAND_URL
-    call.target = '_blank'
-    call.textContent = '입양 문의 ↗'
+    call.href = a?.url ?? ADOPT_URL
+    call.removeAttribute('target')
+    call.textContent = '입양 공고 보기'
   }
   const thumb = $<HTMLImageElement>('info-thumb')
   // 썸네일은 셰이더가 이미 불러온 얼굴 사진을 써서 따로 내려받지 않는다
@@ -473,12 +473,12 @@ function fillInfo(p: PetProfile) {
         ? '보호소 공고 사진으로 만든 모습이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
         : ''
   } else {
-    adopt.href = a?.url ?? PAWINHAND_URL
-    adopt.target = '_blank'
-    adopt.textContent = '포인핸드에서 입양 문의하기'
+    adopt.href = a?.url ?? ADOPT_URL
+    adopt.removeAttribute('target')
+    adopt.textContent = '입양 공고 보기'
     $('info-adopt-note').textContent = a?.url
-      ? `포인핸드에서 ${josa(p.name, '이의', '의')} 공고를 열어요.`
-      : `포인핸드로 이동해요. ${josa(p.name, '은', '는')} 예시 아이라 실제 공고 대신 포인핸드 첫 화면이 열려요.`
+      ? `${josa(p.name, '이의', '의')} 입양 공고를 열어요. 출처: 농림축산식품부 국가동물보호정보시스템`
+      : `${josa(p.name, '은', '는')} 예시 아이라 전체 입양 공고 화면이 열려요. 출처: 농림축산식품부 국가동물보호정보시스템`
   }
 }
 
