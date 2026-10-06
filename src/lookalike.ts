@@ -66,6 +66,18 @@ function dist(a: RGB, b: RGB) {
   return Math.sqrt((2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db)
 }
 
+/**
+ * 털색이 얼마나 닮았는지: tier 0 대표색이 가까움 / 1 애매함(색 모름, 함께 적힌 색만 가까움) / 2 확실히 다름, d 가장 가까운 색 거리.
+ * 닮은 친구 찾기(find.ts)가 품종 점수와 섞어 쓴다
+ */
+export function colorRank(colorText: string, color: RGB | null): { tier: number; d: number } {
+  const main = mainColor(colorText)
+  const cs = textColors(colorText)
+  const d = color && cs.length ? Math.min(...cs.map((c) => dist(color, c))) : Infinity
+  const tier = !color || !main ? 1 : dist(color, main) <= NEAR ? 0 : d <= NEAR ? 1 : 2
+  return { tier, d }
+}
+
 export interface MatchAnimal {
   id: string
   sp: 'dog' | 'cat' | 'etc'

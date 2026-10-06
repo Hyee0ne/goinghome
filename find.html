@@ -28,7 +28,7 @@
     </header>
 
     <main class="mk-wrap">
-      <!-- 1. 우리 아이 알려 주기: 사진(기기 안에서 털색만 본다) 또는 털색 고르기 -->
+      <!-- 1. 우리 아이 알려 주기: 사진 (기기 안에서 털색만 본다) -->
       <section id="fd-ask" class="mk-step">
         <div class="mk-info">
           <div class="field">
@@ -42,6 +42,18 @@
               <label><input type="radio" name="fd-species" value="cat" /><span>🐱 고양이</span></label>
             </div>
           </div>
+          <div class="field">
+            <label for="fd-breed">품종</label>
+            <select id="fd-breed"></select>
+          </div>
+          <div id="fd-size-field" class="field">
+            <span class="label">크기</span>
+            <div class="seg" role="radiogroup" aria-label="크기">
+              <label><input type="radio" name="fd-size" value="small" /><span>소형</span></label>
+              <label><input type="radio" name="fd-size" value="medium" checked /><span>중형</span></label>
+              <label><input type="radio" name="fd-size" value="large" /><span>대형</span></label>
+            </div>
+          </div>
         </div>
 
         <label class="mk-pick fd-pick">
@@ -51,17 +63,16 @@
         </label>
         <p class="mk-privacy">🔒 사진은 이 기기 안에서 털색만 보고 바로 잊어요. 어디로도 보내지 않아요.</p>
 
-        <div class="fd-colors">
-          <span class="label">사진 대신 털색 고르기</span>
-          <div id="fd-color-list" class="fd-color-list" role="radiogroup" aria-label="털색"></div>
-        </div>
 
         <button id="fd-go" class="btn primary mk-next" type="button" disabled>닮은 친구 찾기</button>
       </section>
 
       <!-- 2. 결과: 닮은 보호소 아이 3마리 -->
       <section id="fd-result" class="mk-look" hidden>
-        <h3 id="fd-title"></h3>
+        <div class="fd-me">
+          <img id="fd-me-img" alt="우리 아이 사진" />
+          <h3 id="fd-title"></h3>
+        </div>
         <p id="fd-why" class="fd-why"></p>
         <div id="fd-list" class="mk-look-list"></div>
         <button id="fd-share" class="btn primary fd-share" type="button">↗ 친구에게 알려 주기</button>

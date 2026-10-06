@@ -4,50 +4,6 @@
   margin-top: 12px;
 }
 
-.fd-colors {
-  margin: 14px 0 16px;
-  padding: 14px;
-  border-radius: 16px;
-  background: #fff;
-}
-
-.fd-colors .label {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.fd-color-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.fd-color {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px 6px 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #fff;
-  font-size: 13px;
-}
-
-.fd-color i {
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 50%;
-}
-
-.fd-color[aria-checked='true'] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(255, 138, 61, 0.35);
-}
-
 .fd-why {
   margin: -4px 0 12px;
   color: var(--ink-soft);
@@ -59,4 +15,43 @@
   display: block;
   width: 100%;
   margin-top: 12px;
+}
+
+#fd-breed {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+/* 결과 위: 우리 아이 사진 + 제목 */
+.fd-me {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.fd-me img {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(80, 50, 20, 0.15);
+  object-fit: cover;
+}
+
+.fd-me h3 {
+  margin: 0;
+}
+
+.mk-look-why {
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
 }
