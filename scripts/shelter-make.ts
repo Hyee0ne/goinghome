@@ -51,6 +51,8 @@ const MAX_YAW = 0.18 // 코가 두 눈 가운데에서 옆으로 비껴난 정�
 const MIN_JOINT = 0.5 // 눈·코 관절 확신도
 /** 한 번에 공개하는 최대 수 */
 const MAX_PUBLISH = 20
+/** 사진 맨 위(귀 끝)가 올 수 있는 가장 높은 앱 좌표 (펫 로컬, 바닥선 250 기준) */
+const TOP_SAFE = -300
 /** 공공데이터 서버에서 사진을 받는 간격 (한 번에 하나씩) */
 const DOWNLOAD_GAP_MS = 300
 /** 자른 뒤 앱 화면 배치 (펫 로컬 좌표, FLOOR_Y 250 기준). 폰 세로 화면에서 보이는 위쪽 끝이 약 -370 */
@@ -171,6 +173,20 @@ async function make() {
     if (!v.ok) rmSync(join(STAGE, a.id), { recursive: true, force: true })
     log(`   ${v.ok ? '✓ 통과' : '✗ 탈락'}: ${v.why.join(' · ')}`)
     verdicts.push(v)
+  }
+  // 고퀄로 만든 아이는 이번 후보 목록에 없어도 남긴다 (공고 중이면). 후보 목록이 바뀌어도 고퀄 결과를 잃지 않게
+  // (지난 판정 결과가 아니라 고퀄 작업 폴더를 기준으로 찾는다. 판정 결과에서 이미 빠졌어도 되살린다)
+  for (const dirName of readdirSync(join(ROOT, 'pets-src'))) {
+    const m = dirName.match(/^shelter-(\d+)-hq$/)
+    if (!m || verdicts.some((v) => v.id === m[1] && v.hq)) continue
+    const a = animals.get(m[1])
+    if (!a || a.sp === 'etc' || !existsSync(join(hqDir(m[1]), 'landmarks.json')) || !existsSync(join(ROOT, 'public', 'pets', dirName, 'face.json'))) continue
+    const prev = previous.get(m[1])
+    const rig = rigFor(a, dirName)
+    const v: Verdict = { ...(prev ?? { why: [] }), id: a.id, sp: a.sp as 'dog' | 'cat', ok: true, end: a.end, rig, hq: !!(rig as { expressions?: unknown }).expressions, hand: handTunedDir(hqDir(a.id)), aiFrontal: true, why: ['고퀄 결과 그대로'] }
+    const i = verdicts.findIndex((x) => x.id === a.id)
+    if (i >= 0) verdicts[i] = v
+    else verdicts.push(v)
   }
   writeJson(join(STAGE, 'verdicts.json'), { updated: new Date().toISOString(), judge: JUDGE, verdicts })
   writePreview(verdicts, animals)
@@ -458,8 +474,14 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
       morph: { src: `${base}/morph.png`, range: morph.range, sdfRange: morph.sdfRange, rects: morph.rects },
     }
   }
+  // 귀 끝·정수리 털까지 화면 안에: 사진의 가장 위 털(불투명한 가장 위 줄)이 앱 좌표 TOP_SAFE보다 아래 오도록 크기를 줄인다
+  // (PC 무대는 위쪽 약 -370까지 보이고 위 버튼이 -320까지 덮는다. 휴대폰 세로는 -520 아래까지 보인다)
+  const derived = deriveRig(lm, { src: `${base}/face.webp`, flow: `${base}/flow.png`, ...(hasCatch && { catchlight: `${base}/catch.png` }), width: face.width, height: face.height, bottom: face.bottom })
+  const topRow = Number(spawnSync('python3', ['-c', 'import sys, numpy as np\nfrom PIL import Image\na = np.array(Image.open(sys.argv[1]).convert("RGBA"))[:, :, 3] > 128\nr = np.where(a.mean(axis=1) > 0.002)[0]\nprint(r.min() if len(r) else 0)', join(PUB, 'face.webp')], { encoding: 'utf8' }).stdout.trim())
+  const FLOOR_Y = 250
+  if (topRow < derived.footY) derived.scale = +Math.min(derived.scale, (FLOOR_Y - TOP_SAFE) / (derived.footY - topRow)).toFixed(4)
   return {
-    ...deriveRig(lm, { src: `${base}/face.webp`, flow: `${base}/flow.png`, ...(hasCatch && { catchlight: `${base}/catch.png` }), width: face.width, height: face.height, bottom: face.bottom }),
+    ...derived,
     ...((frame.cutLeft || frame.cutRight) && {
       fadeSides: { ...(frame.cutLeft && { left: -face.offsetX }), ...(frame.cutRight && { right: 1086 - face.offsetX }) },
     }),
@@ -571,6 +593,7 @@ print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.
       if (images) {
         // 얼굴 정사각형 자리만 먼저 정하고(편집 없음), 받은 표정 이미지를 그 자리에 맞춰 둔다 → 입 표정만 (눈은 앱이 그린다)
         add('--id', id, '--from', 'expressions', '--until', 'expressions', '--jobs', 'none', '--parts', 'pant')
+        if (images.length === 1) throw new Skip('정면만 (표정 없이 SAFE로 공개할 수 있어요)')
         const mid = images[1]
         const fin = images[2] ?? images[1]
         // 주둥이는 따로 맞춘다: 받은 표정 이미지는 주둥이를 살짝 돌려 그리는 일이 많아, 눈 기준으로만 맞추면 코가 두 겹·입이 기울어진다
@@ -625,6 +648,14 @@ Image.fromarray(out.astype(np.uint8)).save(sys.argv[1])`, join(dir, 'expr-final-
       v.ok = true
       log(`   ${v.hq ? '✓ 정면 + 눈 감기' : '✗ 눈 감기 표정 파일이 없어요'}${v.hand ? '' : ' (기준점 자동 → 앱은 SAFE. rig.html에서 맞추면 FULL)'}`)
     } catch (e) {
+      if (e instanceof Skip) {
+        // 비상용: 정면만 받았으면 표정 없이 리그를 만든다 (앱은 SAFE: 그린 눈꺼풀·빠른 깜빡임)
+        const a = animals.get(v.id) ?? ({ id: v.id, sp: v.sp, photos: [], end: v.end ?? '' } as Animal)
+        v.rig = rigFor(a, id)
+        Object.assign(v, { hq: false, aiFrontal: true, ok: true })
+        log(`   ✓ ${e.message}`)
+        continue
+      }
       log(`   ✗ 실패: ${(e as Error).message}`)
     }
   }
@@ -808,6 +839,8 @@ Image.fromarray((a * 255 + 0.5).astype(np.uint8)).save(sys.argv[2])`, orig, f, S
   }
 }
 
+class Skip extends Error {}
+
 function handTunedDir(dir: string) {
   return existsSync(join(dir, 'hand-tuned'))
 }
@@ -854,7 +887,47 @@ document.addEventListener('change',upd);upd()
 
 // ───────────────────────── 확정 (로컬 브랜치) ─────────────────────────
 
+/**
+ * --publish auto: 공개 목록을 규칙대로 고른다 (2026-10-06 사용자 확정)
+ *   1) 마감이 지난 아이는 뺀다 (animals.json에 없는 아이도). 3일 남은 아이도 대상 (급한 아이를 살리는 데 집중, 2026-10-06)
+ *   2) 고퀄(표정 완성) 아이를 급한 순(남은 기간 짧은 순)으로 먼저
+ *   3) 남는 자리는 무료 아이를 급한 순으로
+ *   4) 고양이는 최소 PUBLISH_MIN_CATS마리 (있는 만큼)
+ */
+const PUBLISH_MIN_CATS = 4
+function autoPick(): string[] {
+  const v = existsSync(join(STAGE, 'verdicts.json')) ? (readJson(join(STAGE, 'verdicts.json')).verdicts as Verdict[]) : fail('먼저 npm run shelter:make')
+  const animals = new Map((readJson(join(DATA, 'animals.json')).animals as Animal[]).map((a) => [a.id, a]))
+  const left = (x: Verdict) => {
+    const end = animals.get(x.id)?.end
+    if (!end || !/^\d{8}$/.test(end)) return -1
+    const e = Date.UTC(+end.slice(0, 4), +end.slice(4, 6) - 1, +end.slice(6, 8))
+    const n = new Date()
+    return Math.round((e - Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000)
+  }
+  const complete = (x: Verdict) => !!(x.rig as { expressions?: { pant?: unknown } } | undefined)?.expressions?.pant
+  const pool = v.filter((x) => x.ok && x.rig && existsSync(join(STAGE, x.id, 'face.webp')) && left(x) >= 0)
+  const hq = pool.filter((x) => x.hq && complete(x)).sort((a, b) => left(a) - left(b))
+  const free = pool.filter((x) => !(x.hq && complete(x))).sort((a, b) => left(a) - left(b) || (b.frontal ?? 0) - (a.frontal ?? 0))
+  const ordered = [...hq, ...free]
+  let pick = ordered.slice(0, MAX_PUBLISH)
+  // 고양이 최소: 모자라면 뒤쪽 강아지(무료 먼저)를 고양이로 바꾼다
+  const cats = ordered.filter((x) => x.sp === 'cat' && !pick.includes(x))
+  while (pick.filter((x) => x.sp === 'cat').length < PUBLISH_MIN_CATS && cats.length) {
+    const drop = [...pick].reverse().find((x) => x.sp === 'dog' && !(x.hq && complete(x))) ?? [...pick].reverse().find((x) => x.sp === 'dog')
+    if (!drop) break
+    pick = [...pick.filter((x) => x !== drop), cats.shift()!]
+  }
+  log(`자동 공개 목록 ${pick.length}마리 (고퀄 ${pick.filter((x) => x.hq && complete(x)).length}, 고양이 ${pick.filter((x) => x.sp === 'cat').length}):`)
+  for (const x of pick) log(`  ${x.sp === 'dog' ? '🐶' : '🐱'} ${x.id}  D-${left(x)}${x.hq && complete(x) ? '  ✨ 고퀄' : ''}`)
+  return pick.map((x) => x.id)
+}
+
 function publish(ids: string[]) {
+  if (ids.length === 1 && ids[0] === 'auto') {
+    ids = autoPick()
+    if (DRY) return log('\n(--dry-run: 확정하지 않았어요)')
+  }
   if (ids.length > MAX_PUBLISH) fail(`한 번에 ${MAX_PUBLISH}마리까지 공개해요 (${ids.length}마리를 골랐어요)`)
   const v = existsSync(join(STAGE, 'verdicts.json')) ? (readJson(join(STAGE, 'verdicts.json')).verdicts as Verdict[]) : fail('먼저 npm run shelter:make')
   const pick = v.filter((x) => ids.includes(x.id) && x.ok && x.rig && existsSync(join(STAGE, x.id, 'face.webp')))
