@@ -5,8 +5,9 @@
  *   npm run shelter:batch                                   만들고 images-incoming에 push
  *   옵션: --dogs 10 --cats 10 --min-days 7 --max-days 21 --no-push --only id1,id2
  *
- * 고르는 기준 (2026-10-06 사용자 확정): 무료 판정을 통과한 아이(머리 잘림으로만 떨어진 고퀄 후보 포함) 중
- * 공고 남은 기간이 min~max일인 아이를 남은 기간이 짧은 순으로 (같으면 정면도 순). 이미 고퀄 정면이 있는 아이는 뺀다.
+ * 고르는 기준 (2026-10-06 사용자 확정: 급한 아이를 살리는 데 집중): 공고 남은 3~7일, 남은 기간 짧은 순.
+ * 생성에 방해 요소가 있는 아이는 뺀다 = 무료 판정에서 떨어진 아이 (사람 손·얼굴, 여러 마리, 눈·코 흐림, 고개 많이 돌아감, 얼굴 아주 작음).
+ * 머리·귀가 사진 밖으로 잘린 건 생성이 채우니 방해 요소가 아니다 (layoutOnly도 넣는다). 같은 날이면 정면도·얼굴 크기 순. 이미 고퀄인 아이는 뺀다.
  *
  * 그리기: ChatGPT 구독(gpt-image 스킬)을 먼저 쓰고, 실패(사용량 한도 등)한 아이만 OpenAI API로 다시 그린다 (사용자 허락).
  * 비용은 pets-src/shelter-batch-cost.jsonl에 한 줄씩 남긴다 (API만 비용이 든다. 구독은 0).
@@ -26,11 +27,24 @@ for (let i = 0; i < argv.length; i++)
 const DRY = args['dry-run'] === 'true'
 const N_DOG = Number(args.dogs ?? 10)
 const N_CAT = Number(args.cats ?? 10)
-const MIN_D = Number(args['min-days'] ?? 7)
-const MAX_D = Number(args['max-days'] ?? 21)
+// 남은 기간: candidates.json의 window (지금 강아지·고양이 모두 3~7일, 2026-10-06). 없으면 3~7일. --min-days/--max-days로 덮어쓴다
+const win = (() => {
+  try {
+    return (JSON.parse(readFileSync(join(resolve(import.meta.dirname, '..'), 'public', 'data', 'candidates.json'), 'utf8')).window ?? {}) as Record<string, [number, number]>
+  } catch {
+    return {}
+  }
+})()
+const range = (sp: 'dog' | 'cat'): [number, number] => [
+  Number(args['min-days'] ?? win[sp]?.[0] ?? 3),
+  Number(args['max-days'] ?? win[sp]?.[1] ?? 7),
+]
 /** API 한 장 비용 추정 (gpt-image-1.5 high 1024×1536 편집, 지난 실측 토큰 기준) */
 const API_COST = 0.2
 const BRANCH = 'images-incoming'
+/** 동시에 그리는 장 수 (구독은 Codex 작업을 여러 개, API는 요청을 여러 개) */
+const CONC_SUB = Number(args['sub-concurrency'] ?? 4)
+const CONC_API = Number(args['api-concurrency'] ?? 4)
 const GPT_IMAGE = process.env.GPT_IMAGE_SCRIPT ?? join(homedir(), '.claude/skills/gpt-image/scripts/gpt_image.mjs')
 
 const fail = (s: string): never => {
@@ -78,13 +92,19 @@ const pool = verdicts
   .filter((v) => (v.ok || v.layoutOnly) && v.photo !== undefined && animals.has(v.id) && !hasHq(v.id))
   .filter((v) => !only || only.includes(v.id))
   .map((v) => ({ v, a: animals.get(v.id)!, d: daysLeft(animals.get(v.id)!.end) }))
-  .filter((x) => only || (x.d >= MIN_D && x.d <= MAX_D))
+  .filter((x) => only || (x.d >= range(x.v.sp)[0] && x.d <= range(x.v.sp)[1]))
   .sort((x, y) => x.d - y.d || (y.v.frontal ?? 0) - (x.v.frontal ?? 0))
+// (무료 판정 통과·머리 잘림 후보만 들어오므로 방해 요소가 있는 아이는 이미 빠져 있다)
 const pick = only ? pool : [...pool.filter((x) => x.v.sp === 'dog').slice(0, N_DOG), ...pool.filter((x) => x.v.sp === 'cat').slice(0, N_CAT)]
 
-log(`고른 아이: 강아지 ${pick.filter((x) => x.v.sp === 'dog').length}, 고양이 ${pick.filter((x) => x.v.sp === 'cat').length} (남은 기간 ${MIN_D}~${MAX_D}일, 짧은 순. 후보 ${pool.length}마리, 이미 고퀄인 아이 제외)`)
+log(`고른 아이: 강아지 ${pick.filter((x) => x.v.sp === 'dog').length}, 고양이 ${pick.filter((x) => x.v.sp === 'cat').length} (남은 기간 강아지 ${range('dog').join('~')}일·고양이 ${range('cat').join('~')}일, 짧은 순. 후보 ${pool.length}마리, 이미 고퀄인 아이 제외)`)
 for (const x of pick) log(`  ${x.v.sp === 'dog' ? '🐶' : '🐱'} ${x.v.id}  D-${x.d}  ${x.a.noticeNo}  ${x.a.kind}  정면도 ${Math.round((x.v.frontal ?? 0) * 100)}%${x.v.layoutOnly ? '  (머리 잘림 → AI가 채움)' : ''}`)
 log(`예상 비용: ChatGPT 구독으로 다 되면 $0 · 한도에 걸려 전부 API로 가면 약 $${(pick.length * API_COST).toFixed(2)} (한 장 약 $${API_COST}, 추정)`)
+// 시간: 한 장 약 50초 (구독·API 실측 45~55초). 구독 CONC_SUB장, API CONC_API장을 동시에
+const PER = 50
+const rounds = (n: number, c: number) => Math.ceil(n / c)
+log(`예상 시간: 한 장 약 ${PER}초 · 구독만으로 ${pick.length}장(동시 ${CONC_SUB}장) 약 ${Math.ceil((rounds(pick.length, CONC_SUB) * PER) / 60)}분 · ` +
+  `구독 한도로 절반이 API로 넘어가면 약 ${Math.ceil(((rounds(Math.ceil(pick.length / 2), CONC_SUB) + rounds(Math.floor(pick.length / 2), CONC_API)) * PER) / 60)}분 (구독 한도는 대략 10장 안팎에서 걸렸다)`)
 if (DRY) {
   log('\n(--dry-run: 만들지 않았어요)')
   process.exit(0)
@@ -117,7 +137,7 @@ if (todo.length && existsSync(GPT_IMAGE)) {
   const manifest = join(work, 'chatgpt-jobs.json')
   writeFileSync(manifest, JSON.stringify({ version: 1, jobs: todo.map((x) => ({ id: x.v.id, mode: 'edit', edit_target: srcOf(x), prompt: prompt(x.v.sp), size: '1024x1536', quality: 'high', out: rawOf(x.v.id) })) }))
   log(`\n▶ ChatGPT 구독으로 ${todo.length}장`)
-  spawnSync('node', [GPT_IMAGE, 'batch', '--manifest', manifest, '--overwrite', '--concurrency', '3'], { cwd: ROOT, stdio: 'inherit' })
+  spawnSync('node', [GPT_IMAGE, 'batch', '--manifest', manifest, '--overwrite', '--concurrency', String(CONC_SUB)], { cwd: ROOT, stdio: 'inherit' })
   for (const x of todo) if (existsSync(rawOf(x.v.id))) record({ id: x.v.id, via: 'chatgpt', usd: 0 })
 }
 
@@ -128,7 +148,7 @@ if (left.length) {
   const key = process.env.OPENAI_API_KEY?.trim()
   if (!key) fail(`${left.length}장이 남았는데 OPENAI_API_KEY가 없어요`)
   log(`\n▶ API로 ${left.length}장 (약 $${(left.length * API_COST).toFixed(2)})`)
-  for (const x of left) {
+  const one = async (x: (typeof left)[number]) => {
     const form = new FormData()
     form.append('model', process.env.OPENAI_IMAGE_MODEL ?? 'gpt-image-1.5')
     form.append('prompt', prompt(x.v.sp))
@@ -140,14 +160,16 @@ if (left.length) {
     const res = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(300_000) }).catch((e) => e as Error)
     const j = res instanceof Response ? await res.json().catch(() => ({})) : {}
     const b64 = j?.data?.[0]?.b64_json
-    if (!b64) {
-      log(`   ✗ ${x.v.id}: ${res instanceof Response ? `${res.status} ${j?.error?.message ?? ''}` : (res as Error).message}`)
-      continue
-    }
+    if (!b64) return log(`   ✗ ${x.v.id}: ${res instanceof Response ? `${res.status} ${j?.error?.message ?? ''}` : (res as Error).message}`)
     writeFileSync(rawOf(x.v.id), Buffer.from(b64, 'base64'))
     record({ id: x.v.id, via: 'api', usd: API_COST, usage: j.usage })
     log(`   ✓ ${x.v.id}`)
   }
+  // 동시에 CONC_API장씩
+  const queue = [...left]
+  await Promise.all(Array.from({ length: Math.min(CONC_API, queue.length) }, async () => {
+    for (let x = queue.shift(); x; x = queue.shift()) await one(x)
+  }))
 }
 
 // 3) 규격 맞추기: 1024×1536 RGB PNG, 메타데이터 없음 (투명이나 다른 크기로 와도 맞춘다)
@@ -181,7 +203,7 @@ const git = (cwd: string, ...a: string[]) => {
 git(ROOT, 'fetch', 'origin', BRANCH)
 if (!existsSync(wt)) git(ROOT, 'worktree', 'add', '--detach', wt, `origin/${BRANCH}`)
 else git(wt, 'checkout', '--detach', `origin/${BRANCH}`)
-const lines = [`# 고퀄 정면 배치 ${date}`, '', `남은 기간 ${MIN_D}~${MAX_D}일, 짧은 순. Windows: 같은 폴더에 smile.png, pant.png, eyes-closed.png (front.png를 인페인팅, 1024×1536 그대로, PNG)`, '', '| 공고 | 종 | 공고번호 | 마감 | 남은 날 |', '|---|---|---|---|---|']
+const lines = [`# 고퀄 정면 배치 ${date}`, '', `남은 기간 강아지 ${range('dog').join('~')}일·고양이 ${range('cat').join('~')}일, 짧은 순. Windows: 같은 폴더에 smile.png, pant.png, eyes-closed.png (front.png를 인페인팅, 1024×1536 그대로, PNG)`, '', '| 공고 | 종 | 공고번호 | 마감 | 남은 날 |', '|---|---|---|---|---|']
 for (const x of ready) {
   const d = join(wt, 'incoming', x.v.id)
   mkdirSync(d, { recursive: true })
