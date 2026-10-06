@@ -83,14 +83,13 @@ button {
 /* ── 간식 접시 (무대 왼쪽, 세로 가운데) ── */
 .treat-tray {
   position: absolute;
-  left: 20px;
-  top: 50%;
+  right: 20px;
+  bottom: 24px;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 104px;
-  transform: translateY(-50%);
   pointer-events: none;
 }
 
@@ -189,14 +188,13 @@ button {
   color: #fff;
 }
 
-/* 휴대폰은 아이가 폭을 다 채워서, 흐려지는 가슴 아래 왼쪽(배너 위)에 둔다 */
+/* 간식 접시는 오른쪽 아래. 휴대폰은 아래 카드 위 오른쪽에 둔다 */
 @media (max-width: 720px) {
   .treat-tray {
-    left: 10px;
-    top: auto;
+    right: 10px;
     bottom: calc(max(16px, env(safe-area-inset-bottom)) + 84px);
     transform: scale(0.85);
-    transform-origin: left bottom;
+    transform-origin: right bottom;
   }
 }
 
@@ -1200,9 +1198,10 @@ button {
   line-height: 1.2;
 }
 
-.brand b {
-  font-size: 18px;
-  font-weight: 900;
+.brand-logo {
+  display: block;
+  height: 30px;
+  width: auto;
 }
 
 .brand small {
@@ -1382,12 +1381,12 @@ button {
 @media (min-width: 960px) {
   .layout {
     display: grid;
-    grid-template-columns: 172px minmax(0, 1fr) 360px;
+    grid-template-columns: 100px minmax(0, 1fr) 360px;
   }
 
   .pet-list {
     display: grid;
-    grid-template-columns: repeat(2, 64px);
+    grid-template-columns: 64px;
     align-content: start;
     gap: 12px;
     padding: 16px 18px;

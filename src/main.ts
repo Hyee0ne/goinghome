@@ -9,7 +9,7 @@ import { FurRenderer, type MotionHand } from './fur'
 import { FLOOR_Y, ADOPT_URL, PETS, assetUrl, canGivePaw, josa, type PetProfile } from './pets'
 import { TreatTray } from './treatTray'
 import { isShelter, loadShelterPets } from './shelterPets'
-import { setClipRecorder, sharePet, shareSite, toast } from './share'
+import { setClipRecorder, sharePet, toast } from './share'
 import { ClipRecorder, clipSupport } from './recorder'
 import { clipOverlay, type Featured } from './clipOverlay'
 import { findLookalikes } from './lookalike'
@@ -247,11 +247,6 @@ for (const id of ['card-call', 'info-adopt'])
   })
 $('card-share').onclick = (e) => shareThisPet(e.currentTarget as HTMLButtonElement)
 
-/** 고잉홈(사이트) 공유: 첫 화면 링크 */
-$('share-site').onclick = async () => {
-  const r = await shareSite()
-  if (r === 'copied') toast('고잉홈 링크를 복사했어요.')
-}
 
 // 공유 링크(?from=share)로 들어온 사람: 인사를 바꾸고, 쓰다듬기 시작 20초 뒤 '우리 아이도 쓰다듬어 보세요'를 띄운다 (존댓말)
 const fromShare = new URLSearchParams(location.search).get('from') === 'share'
@@ -382,7 +377,6 @@ function renderBanner() {
   const a = p.adoption
   $('info-banner-title').innerHTML = ''
   $('info-banner-title').append(p.name)
-  if (a?.aiFrontal) $('info-banner-title').append(Object.assign(document.createElement('i'), { className: 'hq-badge', textContent: '✨ 생생' }))
   $('info-banner-sub').textContent = [p.sex, p.age, a?.region.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · ')
   $('card-due').textContent = a?.noticeEnd ? `${Number(a.noticeEnd.slice(4, 6))}월 ${Number(a.noticeEnd.slice(6, 8))}일까지 가족을 찾아요` : ''
   const call = $<HTMLAnchorElement>('card-call')
@@ -1064,7 +1058,7 @@ function drawCameraOverlay() {
 if (demo) {
   document.body.classList.add('demo')
   // 공유·전체 공고(바깥 사진)는 체험판에서 쓸 수 없어 숨긴다
-  for (const id of ['share-site', 'info-share', 'card-share']) $(id).hidden = true
+  for (const id of ['info-share', 'card-share']) $(id).hidden = true
   document.querySelector<HTMLElement>('.adopt-link')!.hidden = true
 }
 
