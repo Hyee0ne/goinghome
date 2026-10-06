@@ -1,6 +1,6 @@
 import './style.css'
 import { registerPwa } from './pwa'
-import { landedGen, track } from './analytics'
+import { adChannel, landedGen, track } from './analytics'
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { HandTracker, HAND_CONNECTIONS, PALM_POINTS, isOfferingHand, isOpenHand, isPinchHand } from './hand'
 import { Voice } from './voice'
@@ -802,8 +802,8 @@ function updateFur(dt: number, inputs: PetInput[]) {
     const hit = pet.contactZone(input)
     const zone = input.active || hit === 'chin' ? hit : null
     const touch = !!zone
-    // 공유 링크로 들어온 사람이 처음 쓰다듬은 순간 (한 번만 센다)
-    if (touch && fromShare && !firstPetSent) {
+    // 공유 링크·광고로 들어온 사람이 처음 쓰다듬은 순간 (한 번만 센다)
+    if (touch && !firstPetSent && (fromShare || adChannel())) {
       firstPetSent = true
       track('first_pet', { gen: landedGen(), pet: isShelter(pet.p) ? pet.p.id : undefined })
     }
