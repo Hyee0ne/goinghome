@@ -570,10 +570,32 @@ print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.
         const e = eyesOf(det)!
         const nj = J(det, 'nose')!
         const face = { nx: nj.x * det.width, ny: nj.y * det.height, d: dist(e.l, e.r) }
-        for (const [src, name] of [[mid, 'mid'], [fin, 'final']] as const) squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`), face)
+        const eyesClosed = images[3]
+        const sqs = [[mid, 'mid'], [fin, 'final'], ...(eyesClosed ? [[eyesClosed, 'eyes']] : [])] as [string, string][]
+        const Ms: Record<string, number[][]> = {}
+        for (const [src, name] of sqs) Ms[name] = squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`), face)
+        // 눈 감은 이미지(4번째)가 있으면 최종 장면은 '눈 감고 헥헥': 헥헥 이미지의 두 눈 둘레만 눈 감은 이미지로 바꾼다.
+        // 중간 장면(웃음)은 눈을 뜬 채라, 눈은 뜬 눈 → 감은 눈 두 상태로만 움직인다 (반쯤 감은 눈 없음)
+        if (eyesClosed) {
+          const M = Ms.final
+          const at = (p: Pt) => ({ x: M[0][0] * p.x + M[0][1] * p.y + M[0][2], y: M[1][0] * p.x + M[1][1] * p.y + M[1][2] })
+          const [l, r] = [at(e.l), at(e.r)]
+          const rr = dist(l, r) * 0.42
+          const c = spawnSync('python3', ['-c', `
+import sys, cv2, numpy as np
+from PIL import Image
+fin = np.array(Image.open(sys.argv[1]).convert('RGBA')).astype(np.float32); eye = np.array(Image.open(sys.argv[2]).convert('RGBA')).astype(np.float32)
+m = np.zeros(fin.shape[:2], np.float32); r = float(sys.argv[7])
+for x, y in ((float(sys.argv[3]), float(sys.argv[4])), (float(sys.argv[5]), float(sys.argv[6]))): cv2.ellipse(m, (int(x), int(y)), (int(r), int(r * 0.8)), 0, 0, 360, 1, -1)
+m = cv2.GaussianBlur(m, (0, 0), r * 0.2)[:, :, None]
+out = fin.copy(); out[:, :, :3] = eye[:, :, :3] * m + fin[:, :, :3] * (1 - m)
+Image.fromarray(out.astype(np.uint8)).save(sys.argv[1])`, join(dir, 'expr-final-square.png'), join(dir, 'expr-eyes-square.png'), String(l.x), String(l.y), String(r.x), String(r.y), String(rr)], { encoding: 'utf8' })
+          if (c.status !== 0) throw new Error(`눈 감은 이미지를 합치지 못했어요: ${c.stderr.trim().split('\n').slice(-1)[0]}`)
+          log('   최종 장면 = 헥헥 + 눈 감은 이미지의 두 눈')
+        }
         process.env.PET_NO_ALIGN = '1'
         try {
-          add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', 'pant')
+          add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', eyesClosed ? 'eyes+pant' : 'pant')
         } finally {
           delete process.env.PET_NO_ALIGN
         }
@@ -657,7 +679,7 @@ print(int(a[:band].mean() > 0.03 or a[:, :band].mean() > 0.05 or a[:, -band:].me
  * 받은 표정 이미지(정면 이미지와 같은 구도)를 얼굴 정사각형(face-square.png) 자리로 옮긴다.
  * 정면 이미지와 얼굴 정사각형 사이를 특징점으로 맞춘 변환을 표정 이미지에 그대로 쓰고, 투명도는 얼굴 정사각형 것을 쓴다
  */
-function squareFrom(front: string, expr: string, faceSq: string, out: string, face: { nx: number; ny: number; d: number }) {
+function squareFrom(front: string, expr: string, faceSq: string, out: string, face: { nx: number; ny: number; d: number }): number[][] {
   const r = spawnSync('python3', ['-c', `
 import sys, cv2, numpy as np
 from PIL import Image
@@ -717,9 +739,14 @@ try:
 except cv2.error: print('주둥이 맞춤: 실패해 건너뜀')
 w = cv2.warpAffine(ex, M0, (sq.shape[1], sq.shape[0]), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REPLICATE)
 Image.fromarray(np.dstack([w, sq[:, :, 3]])).save(sys.argv[4])
+print('M0=' + ','.join('%.6f' % v for v in M0.flatten()))
 print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M0[:, :2]))), int(inl.sum())))`, front, expr, faceSq, out, String(face.nx), String(face.ny), String(face.d)], { encoding: 'utf8' })
   if (r.status !== 0) throw new Error(r.stderr.trim().split('\n').slice(-1)[0])
-  log(`   ${r.stdout.trim().replace(/\n/g, ' · ')} (${expr.split('/').pop()})`)
+  const lines = r.stdout.trim().split('\n')
+  const mline = lines.find((l) => l.startsWith('M0='))!
+  log(`   ${lines.filter((l) => !l.startsWith('M0=')).join(' · ')} (${expr.split('/').pop()})`)
+  const v = mline.slice(3).split(',').map(Number)
+  return [v.slice(0, 3), v.slice(3, 6)]
 }
 
 function handTunedDir(dir: string) {
