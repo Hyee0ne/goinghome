@@ -94,7 +94,7 @@ fileInput.addEventListener('change', async () => {
 nameInput.addEventListener('input', updatePhotoNext)
 function updatePhotoNext() {
   const ai = mode() === 'ai'
-  const ready = !!state.img && !!nameInput.value.trim() && (!ai || consent.checked)
+  const ready = !!state.img && !!nameInput.value.trim() && (!ai || consent.checked) && aiCredits.remaining > 0
   $<HTMLButtonElement>('mk-photo-next').disabled = !ready
 }
 
@@ -104,7 +104,7 @@ const consent = $<HTMLInputElement>('mk-consent')
 function onMode() {
   const ai = mode() === 'ai'
   const n = aiCredits.remaining
-  $('mk-ai-credit').textContent = n > 0 ? '하루 1번 · 오늘 쓸 수 있어요' : '오늘은 다 썼어요 · 내일 다시'
+  $('mk-ai-credit').textContent = n > 0 ? '· 오늘 만들 수 있어요' : '· 오늘은 이미 만들었어요. 내일 다시 와 주세요'
   $('mk-ai-extra').hidden = !ai
   $('mk-privacy').textContent = ai
     ? '🔒 배경 지우기와 얼굴 점은 이 기기 안에서 하고, 표정을 만들 때만 사진을 보내요.'
@@ -427,9 +427,14 @@ $('mk-face-next').onclick = async () => {
   const name = nameInput.value.trim()
   const sp = species()
   const taps = state.taps as Taps
-  // 무료 버전을 만드는 동안 (AI를 골랐으면) 보상형 광고를 보여 준다. 끝까지 봐야 AI 신청이 된다
+  // 광고를 끝까지 봐야 만들어진다 (하루 1번, 무료 바로 만들기는 없다). 광고를 보는 동안 기기 안 준비를 같이 한다
   const making = engine.rigFromTaps(state.img!, state.mask!, taps, sp)
-  const wantAi = mode() === 'ai' && (await unlockAi())
+  const wantAi = await unlockAi()
+  if (!wantAi) {
+    $('mk-making').hidden = true
+    go('face')
+    return
+  }
   const result = await making
   const id = newPetId()
   const color = state.preview ? furColor(state.preview) : null
@@ -496,7 +501,7 @@ interface LookAnimal {
   photos: string[]
 }
 
-/** 우리 아이를 닮은 공고 아이 3마리. 모두 입양 공고 화면(adopt.html)의 그 아이로 보낸다 (쓰다듬을 수 있는 아이도) */
+/** 우리 아이를 닮은 공고 아이 3마리. 모두 입양 공고 화면(/adopt)의 그 아이로 보낸다 (쓰다듬을 수 있는 아이도) */
 async function showLookalikes(name: string, sp: Species, color: [number, number, number] | null) {
   const box = $('mk-look')
   const base = import.meta.env.BASE_URL
@@ -508,7 +513,7 @@ async function showLookalikes(name: string, sp: Species, color: [number, number,
     ...picks.map((a) => {
       const link = Object.assign(document.createElement('a'), {
         className: 'mk-look-card',
-        href: `adopt.html?id=${a.id}`,
+        href: `adopt?id=${a.id}`,
       })
       link.addEventListener('click', () => track('adopt_action', { how: 'notice', where: 'make' }))
       // 사진은 모두 공고 사진 (만든 얼굴을 섞으면 카드끼리 너무 달라 보인다)

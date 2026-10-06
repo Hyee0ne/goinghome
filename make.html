@@ -10,7 +10,7 @@
     <meta property="og:site_name" content="고잉홈" />
     <meta property="og:title" content="우리 아이를 손끝으로 쓰다듬어 보세요 · 고잉홈" />
     <meta property="og:description" content="사진 한 장이면 우리 아이가 웃어요. 사진은 내 폰 밖으로 나가지 않아요" />
-    <meta property="og:url" content="%SITE_URL%make.html" />
+    <meta property="og:url" content="%SITE_URL%make" />
     <meta property="og:image" content="%SITE_URL%og/og-800x400.jpg?v=%OG_IMAGE_VERSION%" />
     <meta property="og:image:width" content="800" />
     <meta property="og:image:height" content="400" />
@@ -36,26 +36,8 @@
     <main class="mk-wrap">
       <!-- 1. 사진 고르기 -->
       <section id="step-photo" class="mk-step">
-        <!-- 만들기 방식: 무료(기기 안) / AI 표정 추가(사진 2~3장, 서버) -->
-        <div class="mk-modes" role="radiogroup" aria-label="만들기 방식">
-          <label class="mk-mode">
-            <input type="radio" name="mk-mode" value="free" checked />
-            <span>
-              <b>⚡ 바로 만들기 <i class="mk-tag">무료</i></b>
-              <small>사진 1장 · 1분 · 이 기기 안에서만</small>
-              <small class="mk-mode-feat">털·숨쉬기·고개·눈 깜빡임</small>
-            </span>
-          </label>
-          <label class="mk-mode">
-            <input type="radio" name="mk-mode" value="ai" />
-            <span>
-              <b>✨ AI로 생생하게 <i class="mk-tag ai">광고 보고</i></b>
-              <small>사진 1장 · 광고 1편 · 표정은 2분쯤 뒤 완성</small>
-              <small class="mk-mode-feat">+ 헥헥 웃기·눈 지그시·귀 젖히기</small>
-              <small id="mk-ai-credit" class="mk-credit"></small>
-            </span>
-          </label>
-        </div>
+        <!-- 만들기 방식: 광고를 보고 하루 1번 (무료 바로 만들기는 없앴다, 2026-10-06) -->
+        <input type="radio" name="mk-mode" value="ai" checked hidden />
         <div class="mk-guide">
           <h2>이런 사진이 좋아요</h2>
           <ul class="mk-tips">
@@ -93,6 +75,7 @@
           </label>
         </div>
         <p id="mk-privacy" class="mk-privacy">🔒 사진은 이 기기 안에서만 처리돼요. 어디로도 보내지 않아요.</p>
+        <p class="mk-notice">📺 광고를 보면 <b>하루 1번</b> 만들 수 있어요 <small id="mk-ai-credit" class="mk-credit"></small></p>
         <button id="mk-photo-next" class="btn primary mk-next" type="button" disabled>다음</button>
       </section>
 
@@ -150,7 +133,7 @@
             <ul id="mk-warnings" class="mk-warnings"></ul>
             <div id="mk-ai-status" class="mk-ai-status" hidden>
               <b>✨ AI 표정을 만들고 있어요</b>
-              <p>그동안 기본 버전으로 먼저 쓰다듬을 수 있어요. 완성되면 자동으로 표정이 생겨요.</p>
+              <p>표정이 완성되면 자동으로 웃고 헥헥대요.</p>
               <p class="muted">가안: AI 서버를 연결하기 전이라 지금은 신청만 이 기기에 저장돼요.</p>
             </div>
             <a id="mk-go" class="btn primary mk-next" href="./">쓰다듬으러 가기</a>
@@ -166,8 +149,8 @@
           <div id="mk-look-list" class="mk-look-list"></div>
         </section>
       </section>
-      <p class="copyright">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</p>
     </main>
+    <footer class="site-footer">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</footer>
     <script type="module" src="/src/make.ts"></script>
   </body>
 </html>

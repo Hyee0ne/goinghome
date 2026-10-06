@@ -53,7 +53,7 @@ export interface Adoption {
 }
 
 /** 전체 공고 화면 (공공데이터 구조동물 공고만 쓴다. 다른 입양 사이트는 언급하지 않는다, 2026-10-06) */
-export const ADOPT_URL = 'adopt.html'
+export const ADOPT_URL = 'adopt'
 
 /** '손' 개인기를 보여 줄 수 있는 아이: 체크된 강아지만 (고양이는 선택지 자체가 없다) */
 export function canGivePaw(p: PetProfile) {

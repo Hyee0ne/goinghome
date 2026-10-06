@@ -788,3 +788,19 @@
   font-style: normal;
   font-weight: 700;
 }
+
+/* 만들기 안내: 광고를 보고 하루 1번 */
+.mk-notice {
+  margin: 0 0 10px;
+  text-align: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mk-notice small {
+  color: var(--ink-soft);
+}

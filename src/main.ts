@@ -258,7 +258,7 @@ function inviteToMake() {
   setTimeout(() => {
     const el = Object.assign(document.createElement('div'), { className: 'make-invite' })
     el.setAttribute('role', 'status')
-    el.innerHTML = '<span>🐾 우리 아이도 손끝으로 쓰다듬어 보세요</span><a class="make-invite-go" href="make.html">우리 아이 만들기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
+    el.innerHTML = '<span>🐾 우리 아이도 손끝으로 쓰다듬어 보세요</span><a class="make-invite-go" href="make">우리 아이 만들기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
     el.querySelector('button')!.onclick = () => el.remove()
     el.querySelector('a')!.onclick = () => track('invite_click', { gen: landedGen(), from: 'share' })
     document.querySelector('.stage-wrap')!.append(el)
@@ -270,7 +270,7 @@ if (fromShare) {
 }
 
 // ───────────────────────── 이벤트 배너: 우리 아이 만들기 ─────────────────────────
-// 메뉴에 넣지 않고(이벤트라서) 첫 화면에 하루 한 번 전면 배너로 띄운다. 누르면 우리 아이 만들기(make.html)로.
+// 메뉴에 넣지 않고(이벤트라서) 첫 화면에 하루 한 번 전면 배너로 띄운다. 누르면 우리 아이 만들기(/make)로.
 // 공유 링크·광고로 들어온 사람은 보던 아이에 집중하게 띄우지 않는다. '오늘 그만 보기'는 이 기기에만 기억한다
 const EVENT_KEY = 'goinghome.eventBanner'
 function showEventBanner() {
@@ -294,7 +294,7 @@ function showEventBanner() {
         <span class="event-tag">이벤트</span>
         <h2>우리 아이도<br />손끝으로 쓰다듬어 보세요</h2>
         <p>사진 한 장이면 우리 아이가 화면 속에서 움직여요.<br />사진은 내 폰 밖으로 나가지 않아요.</p>
-        <a class="event-go" href="make.html">우리 아이 만들기</a>
+        <a class="event-go" href="make">우리 아이 만들기</a>
         <button class="event-later" type="button">오늘 그만 보기</button>
       </div>
     </div>`

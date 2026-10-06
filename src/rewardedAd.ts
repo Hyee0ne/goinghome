@@ -10,15 +10,11 @@ const LENGTH = 15
 
 /**
  * AI로 만들기 열기: 오늘 남은 횟수가 있으면 광고를 끝까지 봐야 열린다 (광고는 항상 필수).
- * 다 썼으면 내일 다시라고 알려 주고 무료 버전만 만든다
+ * 다 썼으면 내일 다시라고 알려 준다 (무료 버전은 없다)
  */
 export async function unlockAi(): Promise<boolean> {
   if (aiCredits.remaining <= 0) {
-    await ask(
-      '오늘 AI로 만들기를 다 썼어요',
-      '내일 다시 만들 수 있어요. 이번에는 기본 버전으로 만들게요.',
-      ['확인', '기본 버전으로'],
-    )
+    await ask('오늘은 이미 만들었어요', '광고를 보면 하루 1번 만들 수 있어요. 내일 다시 와 주세요.', ['닫기', '확인'])
     return false
   }
   const watched = await showRewardedAd()
@@ -57,13 +53,13 @@ export function showRewardedAd(): Promise<boolean> {
     const dlg = document.createElement('dialog')
     dlg.className = 'ad-dialog'
     dlg.innerHTML = `
-      <div class="ad-head"><b>광고를 보면 AI 표정을 만들어 드려요</b><span class="ad-timer"></span></div>
+      <div class="ad-head"><b>광고를 끝까지 보면 우리 아이를 만들어 드려요</b><span class="ad-timer"></span></div>
       <div class="ad-slot" role="img" aria-label="광고 자리">
         <span>광고 자리 (가안)</span>
       </div>
       <div class="ad-foot">
-        <button type="button" class="btn ghost ad-skip">무료로만 만들기</button>
-        <button type="button" class="btn primary ad-done" disabled>AI로 만들기</button>
+        <button type="button" class="btn ghost ad-skip">그만두기</button>
+        <button type="button" class="btn primary ad-done" disabled>만들기</button>
       </div>`
     document.body.append(dlg)
     const timer = dlg.querySelector('.ad-timer')!

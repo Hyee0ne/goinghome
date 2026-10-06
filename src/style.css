@@ -1627,16 +1627,18 @@ body.demo [hidden] {
   }
 }
 
-/* 하단 카피라이트 (세 페이지 공통) */
-.copyright {
-  margin: 14px 0 4px;
+/* 하단 풋터: 카피라이트 (세 페이지 공통) */
+.site-footer {
+  flex: none;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--bg);
   color: var(--ink-soft);
   font-size: 11px;
   text-align: center;
-  opacity: 0.8;
 }
 
-.copyright a {
+.site-footer a {
   color: inherit;
   text-decoration: none;
 }
