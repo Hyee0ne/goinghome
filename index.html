@@ -94,7 +94,7 @@
 
         <section id="intro" class="overlay">
           <div class="card">
-            <div class="card-emoji">🏠</div>
+            <span class="intro-arch" aria-hidden="true"></span>
             <h1>고잉홈</h1>
             <p class="card-tag">가족을 기다리는 아이들을 손끝으로 만나요</p>
             <p>
@@ -104,8 +104,8 @@
             <p class="muted">손짓으로 쓰다듬을 때 카메라 영상은 기기 안에서만 처리되고, 어디로도 전송되지 않아요.</p>
             <div class="actions">
               <!-- 두 가지 쓰다듬는 법: 손짓(카메라가 손을 알아봄) / 화면 문지르기(손가락·마우스) -->
-              <button id="start-camera" class="btn primary start-btn" type="button"><b>✋ 손짓으로 쓰다듬기</b><small>카메라가 내 손을 알아봐요</small></button>
-              <button id="start-touch" class="btn start-btn" type="button"><b>👆 화면 문질러 쓰다듬기</b><small>손가락이나 마우스로</small></button>
+              <button id="start-camera" class="btn primary start-btn" type="button"><b><svg class="ico" aria-hidden="true"><use href="#i-hand" /></svg>손짓으로 쓰다듬기</b><small>카메라가 내 손을 알아봐요</small></button>
+              <button id="start-touch" class="btn start-btn" type="button"><b><svg class="ico" aria-hidden="true"><use href="#i-pointer" /></svg>화면 문질러 쓰다듬기</b><small>손가락이나 마우스로</small></button>
             </div>
             <p id="intro-error" class="error" hidden></p>
           </div>

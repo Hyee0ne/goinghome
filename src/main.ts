@@ -264,7 +264,7 @@ function inviteToMake() {
   setTimeout(() => {
     const el = Object.assign(document.createElement('div'), { className: 'make-invite' })
     el.setAttribute('role', 'status')
-    el.innerHTML = '<span>🐾 우리 아이와 닮은 친구도 찾아 보세요</span><a class="make-invite-go" href="find">닮은 친구 찾기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
+    el.innerHTML = '<span>우리 아이와 닮은 친구도 찾아 보세요</span><a class="make-invite-go" href="find">닮은 친구 찾기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
     el.querySelector('button')!.onclick = () => el.remove()
     el.querySelector('a')!.onclick = () => track('invite_click', { gen: landedGen(), from: 'share' })
     document.querySelector('.stage-wrap')!.append(el)
@@ -272,7 +272,6 @@ function inviteToMake() {
 }
 if (fromShare) {
   intro.querySelector('h1')!.textContent = '친구가 고잉홈을 보냈어요'
-  intro.querySelector('.card-emoji')!.textContent = '💌'
 }
 
 // ───────────────────────── 이벤트 배너: 우리 아이 닮은 친구 찾기 ─────────────────────────
@@ -300,7 +299,7 @@ function showEventBanner() {
       <div class="event-body">
         <span class="event-tag">이벤트</span>
         <h2>우리 아이와 닮은 친구를<br />찾아 보세요</h2>
-        <p>우리 아이 사진이나 털색으로 닮은 보호소 친구를 찾아 드려요.<br />사진은 내 폰 밖으로 나가지 않아요.</p>
+        <p>우리 아이 사진 한 장으로 닮은 보호소 친구를 찾아 드려요.<br />사진은 내 폰 밖으로 나가지 않아요.</p>
         <a class="event-go" href="find">닮은 친구 찾기</a>
         <button class="event-later" type="button">오늘 그만 보기</button>
       </div>

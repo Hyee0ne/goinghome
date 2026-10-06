@@ -2127,3 +2127,50 @@ body.demo [hidden] {
 #info .shelter {
   gap: 0 14px;
 }
+
+/* 첫 화면 안내 카드 (D안): 이모지 대신 작은 아치문, 바탕은 흰 반투명 */
+.overlay {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(6px);
+}
+
+#intro .card {
+  box-shadow: 0 12px 34px rgba(20, 30, 80, 0.12);
+}
+
+.intro-arch {
+  display: block;
+  width: 54px;
+  height: 64px;
+  margin: 0 auto 6px;
+  border-radius: 999px 999px 10px 10px;
+  background: var(--pink);
+}
+
+#intro h1 {
+  letter-spacing: -0.02em;
+}
+
+.start-btn {
+  border-radius: 18px;
+}
+
+.start-btn b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.start-btn:not(.primary) {
+  background: var(--bg-2);
+  border-color: transparent;
+}
+
+/* 이벤트 배너 그림도 아치문 */
+.event-art {
+  background: radial-gradient(ellipse 34% 60% at 50% 100%, var(--pink) 0 99%, transparent 100%), var(--bg-2);
+}
+
+.event-tag {
+  background: var(--accent);
+}
