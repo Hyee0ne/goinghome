@@ -471,6 +471,16 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
   }
 }
 
+/**
+ * 고퀄 완성 기준: 정면(입 다묾) + 눈 감기 + 웃는 입·헥헥(개) 또는 츄르 핥는 혀(고양이). 간식은 입 표정으로 먹는다.
+ * 빠진 표정을 미리보기에 보인다
+ */
+function missingExpr(v: Verdict) {
+  const ex = (v.rig as { expressions?: Record<string, unknown> } | undefined)?.expressions ?? {}
+  const miss = [...(ex.eyesClosed ? [] : ['눈 감기']), ...(ex.pant ? [] : [v.sp === 'cat' ? '츄르 핥기' : '웃는 입·헥헥'])]
+  return miss.length ? `<span style="color:#c0392b">⚠ 빠진 표정: ${miss.join(', ')}</span>` : '✅ 표정 완성 (눈 감기 · ' + (v.sp === 'cat' ? '츄르 핥기' : '웃는 입·헥헥·간식') + ')'
+}
+
 /** D-day가 먼 순, 같으면 정면도 순 */
 function byPriority(a: Verdict, b: Verdict) {
   return (b.end ?? '').localeCompare(a.end ?? '') || (b.frontal ?? 0) - (a.frontal ?? 0)
@@ -504,7 +514,9 @@ async function hq(ids: string[]) {
   // --via chatgpt: ChatGPT 구독(gpt-image 스킬)으로 그린다 (API 비용 없음, 구독 사용량을 쓴다)
   const via = args.via === 'chatgpt'
   if (via) process.env.PET_IMAGE_VIA = 'chatgpt'
-  const partsArg = args.parts ?? 'eyes'
+  // 기본은 눈 + 입 (강아지: 눈 감고 웃기·헥헥, 고양이: 츄르 핥기). 고퀄 완성 기준 (2026-10-06).
+  // (눈만으로 다시 돌리면 이미 만든 입 표정이 빠졌다)
+  const partsArg = args.parts ?? 'mouth'
   if (cost > 0 && !via && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
   const add = (...a: string[]) => {
     const r = spawnSync('node', [join(ROOT, 'scripts', 'pet-add.ts'), ...a], { cwd: ROOT, encoding: 'utf8' })
@@ -634,6 +646,7 @@ function writePreview(verdicts: Verdict[], animals: Map<string, Animal>) {
   <div class="imgs"><img src="${src}" loading="lazy">${v.made ? `<img class="face" src="${v.id}/face.webp" loading="lazy">` : ''}</div>
   <div class="meta">${v.ok ? `<input type="checkbox" value="${v.id}"${preChecked.has(v.id) ? ' checked' : ''}> ` : ''}<b>${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}</b>
  ${!v.ok && v.layoutOnly ? `<div class="pick">${dday(v.end)} · 무료 버전은 머리 잘림 → 고퀄 후보 (AI가 채워 그림)</div>` : ''}
+  ${v.hq ? `<div class="pick">${missingExpr(v)}</div>` : ''}
   ${v.ok ? `<div class="pick">${dday(v.end)} ·${v.aiFill ? ' ✂️ 잘린 부분 AI로 채움 ·' : ''} ${v.hq && v.hand ? '✨ 고퀄 · ✋ 손으로 맞춤' : v.hand ? '✋ 손으로 맞춤' : v.hq ? `✨ 고퀄 (기준점 자동) · <a href="http://localhost:5173/rig.html?id=shelter-${v.id}-hq" target="_blank">기준점 맞추기</a>` : `<a href="http://localhost:5173/rig.html?id=shelter-${v.id}${v.aiFrontal ? '-hq' : ''}" target="_blank">기준점 맞추기</a>`}</div>` : ''}
   ${v.ok ? `<div class="pick">정면도 ${Math.round((v.frontal ?? 0) * 100)}% · ${v.total}장 중 ${(v.photo ?? 0) + 1}번째 (통과 ${v.passed}장)</div>` : ''}
   <small>${v.why.join('<br>')}</small></div>
