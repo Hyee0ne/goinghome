@@ -12,6 +12,16 @@ export default defineConfig({
   // 깃허브 페이지는 https://<계정>.github.io/goinghome/ 아래에서 열린다 (배포 워크플로가 GITHUB_PAGES=1로 빌드)
   base: process.env.GITHUB_PAGES ? '/goinghome/' : '/',
   plugins: [...(process.env.HTTPS ? [basicSsl()] : []), petEditorApi(), siteMeta()],
+  // 공고 사진을 캔버스(공유 카드)에 그리려면 같은 주소여야 해서 개발 서버가 대신 받아 온다 (배포는 vercel.json rewrites)
+  server: {
+    proxy: {
+      '/animal-photo': {
+        target: 'https://openapi.animal.go.kr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/animal-photo/, '/openapi/service/rest/fileDownloadSrvc/files'),
+      },
+    },
+  },
   // 손 인식 워커는 MediaPipe의 ES 모듈판 wasm 로더를 동적 import하므로 모듈 워커로 빌드한다
   worker: { format: 'es' },
   // 배포에 넣을 화면: 루트의 *.html 전부 (앱, 우리 아이 만들기, 보호소 등록 …).

@@ -78,6 +78,18 @@
         <button id="fd-again" class="fd-again" type="button">다른 사진으로 다시 찾기</button>
       </section>
     </main>
+
+    <!-- 공유 포스터: 기기 안에서 그린 정사각 카드 미리보기 + 저장 · 공유 -->
+    <dialog id="fd-poster" class="fd-poster" aria-labelledby="fd-poster-title">
+      <h2 id="fd-poster-title" class="sr-only">공유 포스터</h2>
+      <img id="fd-card" class="fd-card" alt="닮은 친구 공유 포스터" />
+      <p class="fd-poster-hint">카톡·인스타 스토리에 맞는 정사각 이미지예요</p>
+      <div class="fd-poster-cta">
+        <a id="fd-save" class="pill pill-line" download="goinghome-닮은친구.png">이미지 저장</a>
+        <button id="fd-send" class="pill pill-primary" type="button"><svg class="ico" aria-hidden="true"><use href="#i-share" /></svg><span>공유하기</span></button>
+      </div>
+      <button id="fd-poster-close" class="fd-again" type="button">닫기</button>
+    </dialog>
     <footer class="site-footer">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</footer>
     <script type="module" src="/src/find.ts"></script>
   </body>

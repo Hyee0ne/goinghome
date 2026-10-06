@@ -5,6 +5,9 @@
   "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "rewrites": [
+    { "source": "/animal-photo/:path*", "destination": "https://openapi.animal.go.kr/openapi/service/rest/fileDownloadSrvc/files/:path*" }
+  ],
   "redirects": [
     { "source": "/make", "destination": "/find", "permanent": false }
   ],

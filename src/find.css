@@ -302,3 +302,48 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* 공유 포스터 미리보기 */
+.fd-poster {
+  width: min(420px, calc(100% - 32px));
+  padding: 18px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.fd-poster::backdrop {
+  background: rgba(18, 24, 58, 0.45);
+}
+
+.fd-card {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(20, 30, 80, 0.14);
+}
+
+.fd-poster-hint {
+  margin: 12px 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.fd-poster-cta {
+  display: flex;
+  gap: 8px;
+}
+
+.fd-poster-cta .pill {
+  flex: 1;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

@@ -16,6 +16,7 @@ import { CAT_BREEDS, DOG_BREEDS, GROUP_LABEL, breedOf, guessFromLabels, sizeOfWe
 import { colorRank, daysLeft, type RGB } from './lookalike'
 import { josa } from './pets'
 import { toast } from './share'
+import { drawShareCard } from './shareCard'
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 
@@ -240,20 +241,76 @@ function moreRow(a: Animal, why: string) {
 }
 
 // 공유: 가장 닮은 아이의 공고로 바로 여는 링크 (마감일은 넣지 않는다)
-$('fd-share').onclick = async () => {
-  const top = picks[0]?.a
-  if (!top) return
-  const name = $<HTMLInputElement>('fd-name').value.trim()
+// 공유: 정사각 포스터(기기 안에서 그림)를 먼저 보여 주고, 저장하거나 공유한다. 링크는 가장 닮은 아이의 공고 (마감일은 넣지 않는다)
+const poster = $<HTMLDialogElement>('fd-poster')
+let card: Blob | null = null
+function shareLink() {
+  const top = picks[0]!.a
   const u = new URL(`${import.meta.env.BASE_URL}adopt`, location.origin)
   u.searchParams.set('id', top.id)
   u.searchParams.set('from', 'share')
   for (const [k, v] of Object.entries(shareParams('find'))) u.searchParams.set(k, v)
-  const text = `${name ? `우리 ${josa(name, '이랑', '랑')}` : '우리 아이랑'} 닮은 친구가 가족을 기다리고 있어요 🐾\n${top.kind} · ${top.org.split(' ').slice(0, 2).join(' ')}\n고잉홈에서 만나 보세요`
+  return u.toString()
+}
+function shareText() {
+  const top = picks[0]!.a
+  const name = $<HTMLInputElement>('fd-name').value.trim()
+  return `${name ? `우리 ${josa(name, '이랑', '랑')}` : '우리 아이랑'} 닮은 친구가 보호소에서 가족을 기다려요 🐾\n${top.kind} · ${shortRegion(top.org)}\n고잉홈에서 만나 보세요`
+}
+$('fd-share').onclick = async () => {
+  const top = picks[0]?.a
+  if (!top) return
   track('share_click', { src: 'find' })
+  const name = $<HTMLInputElement>('fd-name').value.trim()
+  const btn = $<HTMLButtonElement>('fd-share')
+  btn.disabled = true
+  try {
+    card = await drawShareCard({
+      mine: $<HTMLImageElement>('fd-preview').src,
+      mineName: name || '우리 아이',
+      who: name ? `우리 ${josa(name, '이랑', '랑')}` : '우리 아이랑',
+      friend: top.photos[0],
+      friendKind: top.kind,
+      friendWhere: shortRegion(top.org),
+    })
+    const url = URL.createObjectURL(card)
+    $<HTMLImageElement>('fd-card').src = url
+    $<HTMLAnchorElement>('fd-save').href = url
+    poster.showModal()
+  } catch {
+    // 카드를 못 그리면 링크만 공유한다
+    await sendLink()
+  } finally {
+    btn.disabled = false
+  }
+}
+$('fd-save').addEventListener('click', () => track('share_done', { src: 'find', how: 'saved' }))
+$('fd-send').onclick = async () => {
+  const file = card ? new File([card], 'goinghome-닮은친구.png', { type: 'image/png' }) : null
+  if (file && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], text: `${shareText()}\n${shareLink()}` })
+      track('share_done', { src: 'find', how: 'shared_card' })
+      poster.close()
+      return
+    } catch (e) {
+      if ((e as DOMException).name === 'AbortError') return
+    }
+  }
+  await sendLink()
+  poster.close()
+}
+$('fd-poster-close').onclick = () => poster.close()
+poster.addEventListener('click', (e) => e.target === poster && poster.close())
+
+/** 파일 공유가 안 되는 곳: 글과 링크만 공유하거나 복사 */
+async function sendLink() {
+  const text = shareText()
+  const url = shareLink()
   let how = 'copied'
   if (navigator.share) {
     try {
-      await navigator.share({ title: '고잉홈', text, url: u.toString() })
+      await navigator.share({ title: '고잉홈', text, url })
       how = 'shared'
     } catch (e) {
       if ((e as DOMException).name === 'AbortError') return
@@ -261,11 +318,11 @@ $('fd-share').onclick = async () => {
   }
   if (how === 'copied') {
     try {
-      await navigator.clipboard.writeText(`${text}\n${u}`)
+      await navigator.clipboard.writeText(`${text}\n${url}`)
     } catch {
-      prompt('아래 내용을 복사해 보내 주세요', `${text}\n${u}`)
+      prompt('아래 내용을 복사해 보내 주세요', `${text}\n${url}`)
     }
-    toast('링크를 복사했어요. 친구에게 붙여 넣어 보내 주세요.')
+    toast('글과 링크를 복사했어요. 이미지는 저장해서 함께 보내 주세요.')
   }
   track('share_done', { src: 'find', how })
 }
