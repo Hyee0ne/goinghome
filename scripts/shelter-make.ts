@@ -51,6 +51,8 @@ const MAX_YAW = 0.18 // 코가 두 눈 가운데에서 옆으로 비껴난 정�
 const MIN_JOINT = 0.5 // 눈·코 관절 확신도
 /** 한 번에 공개하는 최대 수 */
 const MAX_PUBLISH = 20
+/** 사진 맨 위(귀 끝)가 올 수 있는 가장 높은 앱 좌표 (펫 로컬, 바닥선 250 기준) */
+const TOP_SAFE = -300
 /** 공공데이터 서버에서 사진을 받는 간격 (한 번에 하나씩) */
 const DOWNLOAD_GAP_MS = 300
 /** 자른 뒤 앱 화면 배치 (펫 로컬 좌표, FLOOR_Y 250 기준). 폰 세로 화면에서 보이는 위쪽 끝이 약 -370 */
@@ -472,8 +474,14 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
       morph: { src: `${base}/morph.png`, range: morph.range, sdfRange: morph.sdfRange, rects: morph.rects },
     }
   }
+  // 귀 끝·정수리 털까지 화면 안에: 사진의 가장 위 털(불투명한 가장 위 줄)이 앱 좌표 TOP_SAFE보다 아래 오도록 크기를 줄인다
+  // (PC 무대는 위쪽 약 -370까지 보이고 위 버튼이 -320까지 덮는다. 휴대폰 세로는 -520 아래까지 보인다)
+  const derived = deriveRig(lm, { src: `${base}/face.webp`, flow: `${base}/flow.png`, ...(hasCatch && { catchlight: `${base}/catch.png` }), width: face.width, height: face.height, bottom: face.bottom })
+  const topRow = Number(spawnSync('python3', ['-c', 'import sys, numpy as np\nfrom PIL import Image\na = np.array(Image.open(sys.argv[1]).convert("RGBA"))[:, :, 3] > 128\nr = np.where(a.mean(axis=1) > 0.002)[0]\nprint(r.min() if len(r) else 0)', join(PUB, 'face.webp')], { encoding: 'utf8' }).stdout.trim())
+  const FLOOR_Y = 250
+  if (topRow < derived.footY) derived.scale = +Math.min(derived.scale, (FLOOR_Y - TOP_SAFE) / (derived.footY - topRow)).toFixed(4)
   return {
-    ...deriveRig(lm, { src: `${base}/face.webp`, flow: `${base}/flow.png`, ...(hasCatch && { catchlight: `${base}/catch.png` }), width: face.width, height: face.height, bottom: face.bottom }),
+    ...derived,
     ...((frame.cutLeft || frame.cutRight) && {
       fadeSides: { ...(frame.cutLeft && { left: -face.offsetX }), ...(frame.cutRight && { right: 1086 - face.offsetX }) },
     }),
