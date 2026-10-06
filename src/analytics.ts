@@ -11,7 +11,7 @@
  *
  * 개인 정보·사진 정보는 넣지 않는다. 공유 링크에는 익명 파라미터 두 개만 붙인다:
  *   gen  공유 세대 (처음 공유 1, 받은 링크로 들어와 다시 공유하면 받은 gen + 1)
- *   src  보낸 경로 (pet / site / mine)
+ *   src  보낸 경로 (pet / site / mine / find)
  * 광고 유입 (2026-10-06): 광고 링크는 ?src=ad_yt(유튜브 쇼츠) / ad_dg(당근) / ad_x(X). 들어오면 land_from_ad를 세고,
  * 그 탭 안에서는 채널을 기억해 이후 모든 이벤트 제목에 ch=ad_…를 붙인다 (sessionStorage, 쿠키·개인 정보 없음).
  * 광고 시안은 cr=a|b (A: 우리 아이 만들기 → /make, B: 보호소 아이 → /). ch처럼 기억해 이후 이벤트에 cr=…를 붙인다.
@@ -110,7 +110,7 @@ function referrerName(): string {
 }
 
 /** 공유 링크에 붙일 파라미터 */
-export function shareParams(src: 'pet' | 'site' | 'mine') {
+export function shareParams(src: 'pet' | 'site' | 'mine' | 'find') {
   return { gen: String(landedGen() + 1), src }
 }
 
@@ -121,7 +121,7 @@ if (GOATCOUNTER_CODE) (window.requestIdleCallback ?? ((f: () => void) => setTime
 const q = new URLSearchParams(location.search)
 if (q.get('from') === 'share') track('land_from_share', { gen: landedGen(), src: q.get('src') ?? undefined })
 // 광고 도착 (메인 / 와 /make 모두 이 모듈을 불러서 둘 다 센다)
-else if (/^ad_[a-z]+$/.test(q.get('src') ?? '')) track('land_from_ad', { src: q.get('src')!, page: /\/make(\.html)?$/.test(location.pathname) ? 'make' : 'home' })
+else if (/^ad_[a-z]+$/.test(q.get('src') ?? '')) track('land_from_ad', { src: q.get('src')!, page: /\/make(\.html)?$/.test(location.pathname) ? 'make' : /\/find(\.html)?$/.test(location.pathname) ? 'find' : 'home' })
 // 오가닉: 광고도 공유 링크도 아니고, 이 탭에서 처음 들어온 경우만 (사이트 안 화면 이동은 빼고)
 else if (!adChannel() && !landedGen() && !document.referrer.startsWith(location.origin)) {
   try {
@@ -129,5 +129,5 @@ else if (!adChannel() && !landedGen() && !document.referrer.startsWith(location.
   } catch {
     /* 저장이 막혀도 이번 이벤트는 센다 */
   }
-  track('land_organic', { ref: referrerName(), page: /\/make(\.html)?$/.test(location.pathname) ? 'make' : /\/adopt(\.html)?$/.test(location.pathname) ? 'adopt' : 'home' })
+  track('land_organic', { ref: referrerName(), page: /\/make(\.html)?$/.test(location.pathname) ? 'make' : /\/adopt(\.html)?$/.test(location.pathname) ? 'adopt' : /\/find(\.html)?$/.test(location.pathname) ? 'find' : 'home' })
 }

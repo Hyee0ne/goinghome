@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4e6" />
+    <!-- 공유 미리보기 (카톡·X 등). 주소와 이미지 버전은 src/site.ts에서 바꾼다. 카톡은 JPG/PNG와 절대 주소만 읽는다 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="고잉홈" />
+    <meta property="og:title" content="우리 아이 닮은 친구 찾기 · 고잉홈" />
+    <meta property="og:description" content="우리 아이와 닮은 보호소 친구가 가족을 기다리고 있어요. 사진은 내 폰 밖으로 나가지 않아요" />
+    <meta property="og:url" content="%SITE_URL%find" />
+    <meta property="og:image" content="%SITE_URL%og/og-800x400.jpg?v=%OG_IMAGE_VERSION%" />
+    <meta property="og:image:width" content="800" />
+    <meta property="og:image:height" content="400" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="description" content="우리 아이와 닮은 보호소 친구가 가족을 기다리고 있어요. 사진은 내 폰 밖으로 나가지 않아요" />
+    <title>우리 아이 닮은 친구 찾기 · 고잉홈</title>
+  </head>
+  <body class="mk-page">
+    <header class="mk-top">
+      <a class="reg-back home-btn" href="./" aria-label="고잉홈 첫 화면으로"><span aria-hidden="true">🏠</span></a>
+      <div class="mk-title">
+        <h1>우리 아이 닮은 친구 찾기</h1>
+      </div>
+    </header>
+
+    <main class="mk-wrap">
+      <!-- 1. 우리 아이 알려 주기: 사진(기기 안에서 털색만 본다) 또는 털색 고르기 -->
+      <section id="fd-ask" class="mk-step">
+        <div class="mk-info">
+          <div class="field">
+            <label for="fd-name">이름 <small class="muted">(선택)</small></label>
+            <input id="fd-name" maxlength="10" autocomplete="off" placeholder="예: 보리" />
+          </div>
+          <div class="field">
+            <span class="label">종류</span>
+            <div class="seg" role="radiogroup" aria-label="종류">
+              <label><input type="radio" name="fd-species" value="dog" checked /><span>🐶 강아지</span></label>
+              <label><input type="radio" name="fd-species" value="cat" /><span>🐱 고양이</span></label>
+            </div>
+          </div>
+        </div>
+
+        <label class="mk-pick fd-pick">
+          <input id="fd-file" type="file" accept="image/*" />
+          <img id="fd-preview" alt="" hidden />
+          <span id="fd-pick-label"><b>＋</b>우리 아이 사진 고르기</span>
+        </label>
+        <p class="mk-privacy">🔒 사진은 이 기기 안에서 털색만 보고 바로 잊어요. 어디로도 보내지 않아요.</p>
+
+        <div class="fd-colors">
+          <span class="label">사진 대신 털색 고르기</span>
+          <div id="fd-color-list" class="fd-color-list" role="radiogroup" aria-label="털색"></div>
+        </div>
+
+        <button id="fd-go" class="btn primary mk-next" type="button" disabled>닮은 친구 찾기</button>
+      </section>
+
+      <!-- 2. 결과: 닮은 보호소 아이 3마리 -->
+      <section id="fd-result" class="mk-look" hidden>
+        <h3 id="fd-title"></h3>
+        <p id="fd-why" class="fd-why"></p>
+        <div id="fd-list" class="mk-look-list"></div>
+        <button id="fd-share" class="btn primary fd-share" type="button">↗ 친구에게 알려 주기</button>
+        <button id="fd-again" class="btn ghost fd-again" type="button">다시 찾기</button>
+      </section>
+    </main>
+    <footer class="site-footer">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</footer>
+    <script type="module" src="/src/find.ts"></script>
+  </body>
+</html>

@@ -32,10 +32,10 @@ function siteMeta(): Plugin {
   return {
     name: 'site-meta',
     transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', SITE_URL).replaceAll('%OG_IMAGE_VERSION%', String(OG_IMAGE_VERSION)),
-    // 배포(Vercel cleanUrls)처럼 개발 서버에서도 /make, /adopt 로 열리게
+    // 배포(Vercel cleanUrls)처럼 개발 서버에서도 /make, /adopt, /find 로 열리게
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
-        const m = req.url?.match(/^\/(make|adopt)(\?.*)?$/)
+        const m = req.url?.match(/^\/(make|adopt|find)(\?.*)?$/)
         if (m) req.url = `/${m[1]}.html${m[2] ?? ''}`
         next()
       })
