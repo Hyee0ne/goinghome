@@ -16,6 +16,8 @@
  * 그 탭 안에서는 채널을 기억해 이후 모든 이벤트 제목에 ch=ad_…를 붙인다 (sessionStorage, 쿠키·개인 정보 없음).
  * 광고 시안은 cr=a|b (A: 우리 아이 만들기 → make.html, B: 보호소 아이 → /). ch처럼 기억해 이후 이벤트에 cr=…를 붙인다.
  * 그 사람이 다시 공유한 링크는 평소처럼 gen+1, src=pet/site/mine이다 (cr은 붙이지 않는다).
+ * 오가닉 유입 (2026-10-06): 광고·공유 링크가 아닌 바깥에서 처음 들어오면 land_organic을 세고(ref: 들어온 사이트 이름만),
+ * 그 탭 안에서는 ch=organic을 이후 이벤트에 붙인다. 사이트 안에서 화면을 옮겨 다니는 것은 세지 않는다.
  * 매 프레임 루프에서는 부르지 않는다 (이벤트 때만, 렉 없는 것이 먼저).
  * K = 공유율 × 받은 사람 전환율 → share_done / make_result 와 (invite_click 또는 share_click) / land_from_share 로 본다.
  */
@@ -86,14 +88,25 @@ function remembered(param: string, key: string, ok: RegExp): string | undefined 
   }
 }
 
-/** 광고로 들어온 탭이면 그 채널 (ad_yt / ad_dg / ad_x), 아니면 undefined */
+/** 이 탭이 들어온 길: 광고 채널(ad_yt / ad_dg / ad_x) 또는 organic. 공유 링크로 들어왔으면 undefined (gen으로 본다) */
 export function adChannel(): string | undefined {
   return remembered('src', CHANNEL_KEY, /^ad_[a-z]+$/)
 }
 
 /** 광고 시안 (a / b). 광고로 들어온 탭에서만 */
 function adCreative(): string | undefined {
-  return adChannel() ? remembered('cr', CREATIVE_KEY, /^[ab]$/) : undefined
+  return adChannel()?.startsWith('ad_') ? remembered('cr', CREATIVE_KEY, /^[ab]$/) : undefined
+}
+
+/** 들어온 사이트 이름만 (예: kakao, google, instagram). 없거나 우리 사이트면 direct */
+function referrerName(): string {
+  try {
+    const h = new URL(document.referrer).hostname.replace(/^(www|m|l|lm)\./, '')
+    if (!h || h === location.hostname) return 'direct'
+    return h.split('.').slice(-2, -1)[0] || h
+  } catch {
+    return 'direct'
+  }
 }
 
 /** 공유 링크에 붙일 파라미터 */
@@ -109,3 +122,12 @@ const q = new URLSearchParams(location.search)
 if (q.get('from') === 'share') track('land_from_share', { gen: landedGen(), src: q.get('src') ?? undefined })
 // 광고 도착 (메인 / 와 make.html 모두 이 모듈을 불러서 둘 다 센다)
 else if (/^ad_[a-z]+$/.test(q.get('src') ?? '')) track('land_from_ad', { src: q.get('src')!, page: location.pathname.endsWith('make.html') ? 'make' : 'home' })
+// 오가닉: 광고도 공유 링크도 아니고, 이 탭에서 처음 들어온 경우만 (사이트 안 화면 이동은 빼고)
+else if (!adChannel() && !landedGen() && !document.referrer.startsWith(location.origin)) {
+  try {
+    sessionStorage.setItem(CHANNEL_KEY, 'organic')
+  } catch {
+    /* 저장이 막혀도 이번 이벤트는 센다 */
+  }
+  track('land_organic', { ref: referrerName(), page: location.pathname.endsWith('make.html') ? 'make' : location.pathname.endsWith('adopt.html') ? 'adopt' : 'home' })
+}
