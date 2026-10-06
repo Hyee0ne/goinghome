@@ -983,6 +983,15 @@ export class FurRenderer {
   private pant = 0
   /** 씹기: 살짝 벌린 입 사진으로 넘어간 정도 (0~1) */
   private chewW = 0
+  /**
+   * 차분한 움직임(SAFE)의 고퀄 아이: 숨에 맞춘 아주 작은 끄덕임 (펫 로컬 단위). 머리 전체가 위아래로 반 픽셀 남짓만 움직여
+   * 사진이 멈춘 느낌을 덜고, 기울이지 않아 꿀렁이지 않는다. 헥헥대면 조금 더 빠르고 크게
+   */
+  private nodY(rig: PhotoRig, p: Pose) {
+    if (!rig.snapFace || !this.calmMotion) return 0
+    return Math.sin(this.breathPhase) * (NOD + this.snapPant * NOD) + Math.sin(p.t * Math.PI * 2 * PANT_HZ) * this.snapPant * NOD * 0.5
+  }
+  private pantClock = 0
   /** 보호소 고퀄: 눈·입이 열고 닫는 두 상태 사이를 빠르게 넘어간 정도 */
   private snapLid = [0, 0]
   private snapPant = 0
@@ -1281,7 +1290,8 @@ export class FurRenderer {
     // SAFE: 털 눕기는 튕기지 않고 천천히 돌아온다, 털끝 살랑임·가슴 털 숨쉬기
     if (this.field) this.field.soft = mo.shimmer > 0
     gl.uniform1f(this.loc('uShimmer'), mo.shimmer * toPx)
-    gl.uniform1f(this.loc('uBreathFur'), Math.sin(this.breathPhase) * mo.breathFur * toPx)
+    // (헥헥대는 동안은 가슴 털이 더 크게 빠르게 오르내린다)
+    gl.uniform1f(this.loc('uBreathFur'), Math.sin(this.breathPhase) * mo.breathFur * (1 + this.snapPant) * toPx)
     gl.uniform1f(this.loc('uShrink'), (p.startle * 0.03 + p.flinch * 0.02) * mo.startle)
     gl.uniform1f(this.loc('uShiver'), p.startle * Math.sin(p.t * 60) * 2.5 * toPx * 0.6 * mo.startle)
     // 사진은 크게 비틀면 티가 나므로 몸짓(pose)은 작게, 손에 끌려가는 움직임(motion)은 한계를 두고 더한다
@@ -1294,7 +1304,7 @@ export class FurRenderer {
     gl.uniform2f(
       this.loc('uLean'),
       (p.leanX * 0.08 + soft(m.ox, HEAD_MAX)) * toPx * sway,
-      (p.leanY * 0.08 + soft(m.oy, HEAD_MAX)) * toPx * sway,
+      (p.leanY * 0.08 + soft(m.oy, HEAD_MAX)) * toPx * sway + this.nodY(rig, p) * toPx,
     )
     const flap = Math.sin(p.t * 10) * 0.05 * p.petting
     // 관심이 가면 쫑긋, 기분 좋으면 편하게 늘어지고, 놀라면 뒤로 젖힌다
@@ -1343,7 +1353,10 @@ export class FurRenderer {
     const eatW = rig.lick ? Math.max(licking, this.chewW * 0.5) : Math.max(p.chomp * (p.species === 'dog' ? 0.8 : 0.5), this.chewW * 0.5)
     // 보호소 고퀄(rig.snapFace): 입은 확실히 벌리거나(헥헥) 다물거나 둘 중 하나. 반쯤 열렸다 닫혔다 하면 오물거려 보인다 (입맛 다시기도 뺀다)
     if (rig.snapFace) {
-      this.snapPant = step01(this.snapPant, this.panting ? 1 : 0, SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      // 헥헥은 몇 초 하다가 잠깐 다물고 다시 연다 (계속 열어 두면 사진이 멈춘 듯하다)
+      this.pantClock = this.panting ? this.pantClock + dt : 0
+      const resting = this.panting && this.pantClock % (PANT_ON_S + PANT_REST_S) > PANT_ON_S
+      this.snapPant = step01(this.snapPant, this.panting && !resting ? 1 : 0, SNAP_CLOSE_S, SNAP_OPEN_S, dt)
       gl.uniform1f(this.loc('uPantW'), Math.max(this.snapPant, eatW))
     } else gl.uniform1f(this.loc('uPantW'), p.species === 'dog' ? Math.max(this.pant, p.lick * 0.42, eatW) : eatW)
     gl.uniform1f(this.loc('uEarsW'), this.earsBack)
@@ -1358,9 +1371,12 @@ export class FurRenderer {
     const lid = Math.max(p.blink * 1.1, squint, p.sigh * 0.35, slow)
     if (this.hasEyesPhoto && rig.snapFace) {
       // 보호소 고퀄: 게슴츠레 반쯤 머물지 않는다. 감을 때는 빠르게 끝까지, 뜰 때는 빠르게 동그랗게 (다 감은 채로 있는 건 괜찮다)
+      // 기분 좋은 눈은 계속 감고 있지 않고, 4.5초에 한 번 1.2초쯤 감았다 뜬다 (그사이 빠른 깜빡임도 보인다)
       const want = (v: number) => (v > DRAWN_SNAP ? 1 : 0)
-      this.snapLid[0] = step01(this.snapLid[0], want(Math.max(lid, m.eyeTouchL)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
-      this.snapLid[1] = step01(this.snapLid[1], want(Math.max(lid, m.eyeTouchR)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      const squintPulse = squint > DRAWN_SNAP && p.t % SQUINT_EVERY_S < SQUINT_HOLD_S ? 1 : 0
+      const lidS = Math.max(p.blink * 1.1, squintPulse, p.sigh * 0.35, slow)
+      this.snapLid[0] = step01(this.snapLid[0], want(Math.max(lidS, m.eyeTouchL)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
+      this.snapLid[1] = step01(this.snapLid[1], want(Math.max(lidS, m.eyeTouchR)), SNAP_CLOSE_S, SNAP_OPEN_S, dt)
       gl.uniform2f(this.loc('uLid'), this.snapLid[0], this.snapLid[1])
     } else if (this.hasEyesPhoto) {
       gl.uniform2f(this.loc('uLid'), Math.min(1, Math.max(lid, m.eyeTouchL)), Math.min(1, Math.max(lid, m.eyeTouchR)))
@@ -1397,7 +1413,10 @@ export class FurRenderer {
     gl.uniform2f(this.loc('uBrowLift'), m.browL * BROW_LIFT * toPx * calm.face, m.browR * BROW_LIFT * toPx * calm.face)
     // 헥헥댈 때 아래턱이 숨에 맞춰 들썩인다
     // (보호소 고퀄은 헥헥 입이 숨에 맞춰 들썩이면 오물거려 보여 뺀다)
-    const pantBob = rig.snapFace ? 0 : this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
+    // 헥헥: 입을 활짝 연 채로 아래턱·혀가 빠르고 작게 들썩인다 (고퀄은 반쯤 닫히지 않을 만큼만)
+    const pantBob = rig.snapFace
+      ? this.snapPant * (Math.sin(p.t * Math.PI * 2 * PANT_HZ) * 0.5 + 0.5) * -PANT_BOB
+      : this.pant * (Math.sin(this.breathPhase) * 0.5 + 0.5) * -2.2
     // 간식을 한 입 물 때 아래턱을 벌렸다 다물고, 다 먹고 나면 오물오물 씹는다
     // (입 벌린 사진이 있으면 무는 동작은 사진이 하고, 씹을 때 아래턱만 오르내린다)
     const chewBob = p.chew * (0.5 + 0.5 * Math.sin(p.t * 9)) * CHEW_OPEN
@@ -1544,6 +1563,15 @@ const DRAWN_CLOSE_S = 0.08
 const DRAWN_OPEN_S = 0.15
 const DRAWN_SNAP = 0.3
 /** 보호소 고퀄 눈·입: 닫기(감기)·열기(뜨기) 시간 */
+/** 고퀄 헥헥: 입 열고 있는 시간·쉬는 시간(초), 턱 들썩임 빠르기·크기, 숨 끄덕임 크기 (펫 로컬 단위) */
+const PANT_ON_S = 3.2
+const PANT_REST_S = 1.4
+const PANT_HZ = 2.6
+const PANT_BOB = 1.3
+const NOD = 0.35
+/** 고퀄 기분 좋은 눈: 이만큼마다 이 시간 동안 감는다 (초) */
+const SQUINT_EVERY_S = 4.5
+const SQUINT_HOLD_S = 1.2
 const SNAP_CLOSE_S = 0.09
 const SNAP_OPEN_S = 0.12
 
