@@ -11,7 +11,8 @@
     "pet:add": "node scripts/pet-add.ts",
     "pet:upgrade": "node scripts/pet-upgrade.ts",
     "data:animals": "node scripts/fetch-animals.ts",
-    "shelter:make": "node scripts/shelter-make.ts"
+    "shelter:make": "node scripts/shelter-make.ts",
+    "shelter:batch": "node scripts/shelter-batch.ts"
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
