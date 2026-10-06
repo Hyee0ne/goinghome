@@ -1,6 +1,6 @@
 /**
  * 공유 영상 위에 얹는 그림: 처음부터 작은 워터마크, 마지막 1초는 끝 장면
- * (우리 아이: '너도 쓰다듬어 볼래?' / 보호소 아이: '가족을 기다려요' + 주소).
+ * (우리 아이: '손끝으로 쓰다듬어 보세요' / 보호소 아이: '가족을 기다려요' + 주소). 문구는 모두 존댓말로 쓴다.
  * featured가 있으면 끝 장면 가운데에 실제 보호소 아이(실사화한 아이, 우리 사이트 사진)를 크게 보여 준다.
  * 다른 사이트 사진은 녹화 캔버스에 그리면 녹화가 막혀서 쓰지 않는다.
  * recorder.record의 overlay로 넘긴다. 녹화 캔버스는 9:16 세로(720×1280 기준)다.
@@ -70,7 +70,7 @@ function plainCard(g: CanvasRenderingContext2D, h: number, u: number, cx: number
   lines.forEach((l, i) => g.fillText(l, cx, top + i * 64 * u))
   g.font = `600 ${30 * u}px ${FONT}`
   g.fillStyle = '#8a6e58'
-  g.fillText(mine ? '너도 쓰다듬어 볼래?' : '보호소에 입양 문의할 수 있어요', cx, top + 150 * u)
+  g.fillText(mine ? '손끝으로 쓰다듬어 보세요' : '보호소에 입양 문의할 수 있어요', cx, top + 150 * u)
   addressPill(g, u, cx, h * SAFE_BOTTOM - 130 * u)
 }
 

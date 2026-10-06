@@ -251,7 +251,7 @@ $('share-site').onclick = async () => {
   if (r === 'copied') toast('고잉홈 링크를 복사했어요.')
 }
 
-// 공유 링크(?from=share)로 들어온 사람: 인사를 바꾸고, 쓰다듬기 시작 20초 뒤 '너희 아이도 만들어 봐'를 띄운다
+// 공유 링크(?from=share)로 들어온 사람: 인사를 바꾸고, 쓰다듬기 시작 20초 뒤 '우리 아이도 쓰다듬어 보세요'를 띄운다 (존댓말)
 const fromShare = new URLSearchParams(location.search).get('from') === 'share'
 let invited = false
 let firstPetSent = false
@@ -261,7 +261,7 @@ function inviteToMake() {
   setTimeout(() => {
     const el = Object.assign(document.createElement('div'), { className: 'make-invite' })
     el.setAttribute('role', 'status')
-    el.innerHTML = '<span>🐾 너희 아이도 손끝으로 쓰다듬어 볼래요?</span><a class="make-invite-go" href="make.html">우리 아이 만들기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
+    el.innerHTML = '<span>🐾 우리 아이도 손끝으로 쓰다듬어 보세요</span><a class="make-invite-go" href="make.html">우리 아이 만들기</a><button class="make-invite-close" type="button" aria-label="닫기">✕</button>'
     el.querySelector('button')!.onclick = () => el.remove()
     el.querySelector('a')!.onclick = () => track('invite_click', { gen: landedGen(), from: 'share' })
     document.querySelector('.stage-wrap')!.append(el)
