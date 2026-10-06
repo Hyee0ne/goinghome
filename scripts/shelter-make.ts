@@ -445,13 +445,13 @@ function rigFor(a: Animal, id = `shelter-${a.id}`) {
   // 고퀄: AI 표정 레이어가 있으면 같이 (pet-add assets 단계 결과)
   const made = (f: string) => existsSync(join(PUB, f))
   let expressions: Record<string, unknown> | undefined
-  if (made('eyes.webp') && made('morph.json')) {
+  if ((made('eyes.webp') || made('pant.webp')) && made('morph.json')) {
     const morph = readJson(join(PUB, 'morph.json'))
     const layers = expressionLayers(lm, expressionBoxes(lm, face), { pant: `${base}/pant.webp`, eyes: `${base}/eyes.webp`, ears: `${base}/ears.webp` }, morph.fills.ears ?? [0.45, 0.28, 0.18])
     for (const f of ['pant.webp', 'eyes.webp', 'ears.webp', 'morph.png']) if (made(f)) copyFileSync(join(PUB, f), join(out, f))
     expressions = {
       ...(made('pant.webp') && { pant: layers.pant }),
-      eyesClosed: layers.eyesClosed,
+      ...(made('eyes.webp') && { eyesClosed: layers.eyesClosed }),
       ...(made('ears.webp') && { earsBack: layers.earsBack }),
       morph: { src: `${base}/morph.png`, range: morph.range, sdfRange: morph.sdfRange, rects: morph.rects },
     }
@@ -517,7 +517,11 @@ async function hq(ids: string[]) {
   // 기본은 눈 + 입 (강아지: 눈 감고 웃기·헥헥, 고양이: 츄르 핥기). 고퀄 완성 기준 (2026-10-06).
   // (눈만으로 다시 돌리면 이미 만든 입 표정이 빠졌다)
   const partsArg = args.parts ?? 'mouth'
-  if (cost > 0 && !via && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
+  // --images 정면.png,입살짝.png[,입크게.png]: AI로 만들지 않고 이미 있는 정면·표정 이미지를 쓴다 (한 마리만, 무료)
+  const images = args.images ? String(args.images).split(',').map((p) => resolve(p)) : null
+  if (images && pick.length !== 1) fail('--images는 한 마리만 지정해 주세요')
+  if (images) for (const p of images) if (!existsSync(p)) fail(`이미지가 없어요: ${p}`)
+  if (cost > 0 && !via && !images && !args['yes-paid']) fail(`AI 사진을 새로 만들어야 해요: 약 $${cost.toFixed(2)}. 진행하려면 --yes-paid를 붙이세요`)
   const add = (...a: string[]) => {
     const r = spawnSync('node', [join(ROOT, 'scripts', 'pet-add.ts'), ...a], { cwd: ROOT, encoding: 'utf8' })
     process.stdout.write((r.stdout ?? '').split('\n').filter((l) => /✓|✗|정렬|이미 있는|정면/.test(l)).map((l) => l + '\n').join(''))
@@ -529,7 +533,10 @@ async function hq(ids: string[]) {
     log(`\n▶ ✨ ${v.sp === 'dog' ? '🐶' : '🐱'} ${v.id}`)
     try {
       // 1) 정면 새로 그리기 (참고: 무료 판정에서 고른 가장 정면인 공고 사진)
-      if (!existsSync(join(dir, 'cutout.png'))) add(join(ROOT, 'pets-src', `shelter-${v.id}`, `src-${v.photo}.jpg`), '--id', id, '--species', v.sp, '--reference', 'true', '--until', 'cutout')
+      if (images) {
+        // 받은 정면 이미지로 배경 지우기만 (Apple Vision, 무료)
+        if (!existsSync(join(dir, 'cutout.png'))) add(images[0], '--id', id, '--species', v.sp, '--until', 'cutout')
+      } else if (!existsSync(join(dir, 'cutout.png'))) add(join(ROOT, 'pets-src', `shelter-${v.id}`, `src-${v.photo}.jpg`), '--id', id, '--species', v.sp, '--reference', 'true', '--until', 'cutout')
       // 2) 기준점: Apple Vision (무료). 손으로 맞췄으면 그대로
       if (!handTunedDir(dir)) {
         const det = detectPadded(join(dir, 'cutout.png'), join(dir, 'cutout.detect.json'))
@@ -553,7 +560,19 @@ print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.
         writeFileSync(join(dir, 'landmarks.auto.json'), readFileSync(join(dir, 'landmarks.json')))
       } else add('--id', id, '--from', 'prepare', '--until', 'prepare')
       // 3) 눈 감기 2장 (입·귀는 원본 그대로) + 표정 사이 움직임
-      add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', partsArg === 'mouth' ? (v.sp === 'cat' ? 'eyes+lick' : 'eyes+pant') : partsArg)
+      if (images) {
+        // 얼굴 정사각형 자리만 먼저 정하고(편집 없음), 받은 표정 이미지를 그 자리에 맞춰 둔다 → 입 표정만 (눈은 앱이 그린다)
+        add('--id', id, '--from', 'expressions', '--until', 'expressions', '--jobs', 'none', '--parts', 'pant')
+        const mid = images[1]
+        const fin = images[2] ?? images[1]
+        for (const [src, name] of [[mid, 'mid'], [fin, 'final']] as const) squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`))
+        process.env.PET_NO_ALIGN = '1'
+        try {
+          add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', 'pant')
+        } finally {
+          delete process.env.PET_NO_ALIGN
+        }
+      } else add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', partsArg === 'mouth' ? (v.sp === 'cat' ? 'eyes+lick' : 'eyes+pant') : partsArg)
       const a = animals.get(v.id) ?? ({ id: v.id, sp: v.sp, photos: [], end: v.end ?? '' } as Animal)
       v.rig = rigFor(a, id)
       v.hq = !!(v.rig as { expressions?: unknown }).expressions
@@ -627,6 +646,39 @@ h, w = a.shape
 band = max(2, int(min(h, w) * 0.01))
 print(int(a[:band].mean() > 0.03 or a[:, :band].mean() > 0.05 or a[:, -band:].mean() > 0.05))`, cutout], { encoding: 'utf8' })
   return r.stdout.trim() === '1'
+}
+
+/**
+ * 받은 표정 이미지(정면 이미지와 같은 구도)를 얼굴 정사각형(face-square.png) 자리로 옮긴다.
+ * 정면 이미지와 얼굴 정사각형 사이를 특징점으로 맞춘 변환을 표정 이미지에 그대로 쓰고, 투명도는 얼굴 정사각형 것을 쓴다
+ */
+function squareFrom(front: string, expr: string, faceSq: string, out: string) {
+  const r = spawnSync('python3', ['-c', `
+import sys, cv2, numpy as np
+from PIL import Image
+front = np.array(Image.open(sys.argv[1]).convert('RGB'))
+expr = np.array(Image.open(sys.argv[2]).convert('RGB').resize((front.shape[1], front.shape[0])))
+sq = np.array(Image.open(sys.argv[3]).convert('RGBA'))
+g = lambda a: cv2.cvtColor(a, cv2.COLOR_RGB2GRAY)
+sqg = g((sq[:, :, :3] * (sq[:, :, 3:] / 255) + 128 * (1 - sq[:, :, 3:] / 255)).astype(np.uint8))
+orb = cv2.ORB_create(5000)
+k1, d1 = orb.detectAndCompute(g(front), None)
+k2, d2 = orb.detectAndCompute(sqg, (sq[:, :, 3] > 128).astype(np.uint8) * 255)
+m = sorted(cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True).match(d1, d2), key=lambda x: x.distance)[:800]
+M, inl = cv2.estimateAffinePartial2D(np.float32([k1[x.queryIdx].pt for x in m]), np.float32([k2[x.trainIdx].pt for x in m]), method=cv2.RANSAC, ransacReprojThreshold=3)
+if M is None: sys.exit('정면 이미지와 얼굴 정사각형을 맞추지 못했어요')
+# 표정 이미지도 정면 이미지와 구도가 조금 다를 수 있어(따로 생성한 이미지), 먼저 정면 이미지에 맞춘다 (입·눈 둘레는 빼고)
+ke, de = orb.detectAndCompute(g(expr), None)
+m2 = sorted(cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True).match(de, d1), key=lambda x: x.distance)[:800]
+E, inl2 = cv2.estimateAffinePartial2D(np.float32([ke[x.queryIdx].pt for x in m2]), np.float32([k1[x.trainIdx].pt for x in m2]), method=cv2.RANSAC, ransacReprojThreshold=3)
+if E is not None:
+  print('표정→정면: 배율 %.3f, 이동 (%+.0f, %+.0f)' % (np.sqrt(abs(np.linalg.det(E[:, :2]))), E[0, 2], E[1, 2]))
+  M = (np.vstack([M, [0, 0, 1]]) @ np.vstack([E, [0, 0, 1]]))[:2]
+w = cv2.warpAffine(expr, M, (sq.shape[1], sq.shape[0]), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REPLICATE)
+Image.fromarray(np.dstack([w, sq[:, :, 3]])).save(sys.argv[4])
+print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M[:, :2]))), int(inl.sum())))`, front, expr, faceSq, out], { encoding: 'utf8' })
+  if (r.status !== 0) throw new Error(r.stderr.trim().split('\n').slice(-1)[0])
+  log(`   ${r.stdout.trim().replace(/\n/g, ' · ')} (${expr.split('/').pop()})`)
 }
 
 function handTunedDir(dir: string) {

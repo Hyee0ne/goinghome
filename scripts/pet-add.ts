@@ -451,12 +451,16 @@ if (run('expressions')) {
   ].map((v) => v.map(Math.round))
   // 고양이는 기분이 좋아도 입을 벌리지 않아 위 두 장에서는 입을 그대로 둔다 (입 표정은 아래에서 따로)
   const cat = lm.species === 'cat'
-  const parts = withMouth
+  // --parts pant: 입 표정만 (이미 만든 표정 이미지를 쓸 때. 눈은 앱이 그린다)
+  const parts = partsArg === 'pant'
+    ? { mid: ['pantMid'], final: ['pant'] }
+    : withMouth
     ? { mid: ['eyesHalf', 'pantMid'], final: ['eyesClosed', 'pant'] }
     : eyesOnly
     ? { mid: ['eyesHalf'], final: ['eyesClosed'] }
     : { mid: [...(cat ? [] : ['pantMid']), 'eyesHalf', 'earsMid'], final: [...(cat ? [] : ['pant']), 'eyesClosed', 'earsBack'] }
   if (eyesOnly) for (const name of [...(withMouth ? [] : ['pantMid', 'pant']), 'earsMid', 'earsBack']) rmSync(f.expr(name), { force: true })
+  if (partsArg === 'pant') for (const name of ['eyesHalf', 'eyesClosed', 'earsMid', 'earsBack']) rmSync(f.expr(name), { force: true })
   for (const k of ['mid', 'final'] as const) {
     for (const name of parts[k]) rmSync(f.expr(name), { force: true })
     if (!existsSync(out[k])) continue
@@ -499,10 +503,10 @@ if (run('assets')) {
     `${name}:${x.x0},${x.y0},${x.x1},${x.y1}:${f.expr(a)}:${f.expr(c)}${extra}`
   // 움직임 아틀라스: 눈·귀는 꼭 있어야 하고, 입은 있을 때만 (고양이 입은 간식 먹을 때 쓰는 입)
   // 눈은 꼭 있어야 하고, 입·귀는 있을 때만 (고양이 입은 간식 먹을 때 쓰는 입, 보호소 고퀄은 눈만)
-  if (has('eyesHalf', 'eyesClosed'))
+  if (has('eyesHalf', 'eyesClosed') || has('pantMid', 'pant'))
     py('prepare-morph.py', f.base, join(PUB, 'morph.png'),
       ...(has('pantMid', 'pant') ? [part('pant', b.pant, 'pantMid', 'pant')] : []),
-      part('eyes', b.eyes, 'eyesHalf', 'eyesClosed'),
+      ...(has('eyesHalf', 'eyesClosed') ? [part('eyes', b.eyes, 'eyesHalf', 'eyesClosed')] : []),
       ...(has('earsMid', 'earsBack') ? [part('ears', b.ears, 'earsMid', 'earsBack', ':sdf')] : []))
   else if (has('pant') || has('eyesHalf') || has('earsMid')) warn('표정 사진이 일부만 있어 움직임 아틀라스는 건너뜁니다')
 }

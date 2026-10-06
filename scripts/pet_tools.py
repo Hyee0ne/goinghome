@@ -105,7 +105,13 @@ def paste(base: str, patch: str, out: str, x0: int, y0: int, size: int, exclude:
     p = Image.open(patch).convert('RGBA').resize((size, size), Image.LANCZOS)
     # 편집한 얼굴을 원본 얼굴에 크기·위치까지 맞춘다. 맞춘 뒤 비는 곳(편집 사진 밖)은 원본을 쓴다
     region0 = np.array(im.crop((x0, y0, x0 + size, y0 + size))).astype(np.float32)
-    moved, cover = align(region0, np.array(p).astype(np.float32), exclude)
+    # PET_NO_ALIGN=1: 이미 같은 구도로 맞춘 표정 이미지 (받은 이미지를 쓸 때). 자동 정렬이 표정 변화에 끌려 오히려 어긋난다
+    import os
+    if os.environ.get('PET_NO_ALIGN') == '1':
+        moved, cover = np.array(p).astype(np.float32), np.ones(region0.shape[:2], np.float32)
+        print('정렬: 받은 이미지라 그대로 둡니다')
+    else:
+        moved, cover = align(region0, np.array(p).astype(np.float32), exclude)
     cover = cover[:, :, None]
     pa = moved * cover + region0 * (1 - cover)
     p = Image.fromarray(np.clip(pa, 0, 255).round().astype(np.uint8))

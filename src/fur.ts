@@ -820,7 +820,8 @@ void main() {
       : staged(uPantImg, uPantBox, uFrames.x, uPantW, Q, col);
     // 코는 입 표정에 섞지 않고 원래 코를 둔다 (uPantKeepNose): 주둥이가 긴 개는 코가 입 범위 가장자리에 걸려
     // 원본 코와 AI 사진의 코가 반씩 섞이며 번져 코가 사라진 것처럼 보였다
-    float keepNose = uPantKeepNose * (1.0 - smoothstep(1.0, 1.45, ellipseDist(Q, uNose)));
+    // (코 타원 안쪽만. 넓게 잡으면 입이 코 바로 밑인 개는 벌린 입 윗부분이 원본으로 덮인다)
+    float keepNose = uPantKeepNose * (1.0 - smoothstep(0.85, 1.1, ellipseDist(Q, uNose)));
     col = mix(col, pant, region(Q, uPantMask) * (1.0 - keepNose));
   }
   if (uEarsW > 0.001 && uEarsBox.z > 0.0) {
