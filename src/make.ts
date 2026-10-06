@@ -6,8 +6,7 @@ import { mockEngine } from './maker/mockEngine'
 import { engine as realEngine } from './maker/engine'
 import { myPets, newPetId, type Pt, type Taps } from './myPets'
 import { josa, type PetProfile, type Species } from './pets'
-import { renderAdoptLinks } from './adoptLinks'
-import { findLookalikes, furColor } from './lookalike'
+import { daysLeft, findLookalikes, furColor } from './lookalike'
 import { unlockAi } from './rewardedAd'
 import { aiCredits } from './credits'
 import { sharePet, toast } from './share'
@@ -477,9 +476,6 @@ $('mk-face-next').onclick = async () => {
     if (r !== 'cancelled') toast(r === 'copied' ? '링크를 복사했어요' : '공유했어요')
   }
   showLookalikes(name, sp, color)
-  const adopt = $('mk-adopt')
-  adopt.hidden = false
-  renderAdoptLinks(adopt, `${name}처럼 사랑받을 가족을 기다리는 아이들`)
 }
 
 // ───────────────────────── 닮은 보호소 아이 ─────────────────────────
@@ -491,43 +487,50 @@ interface LookAnimal {
   age: string
   color: string
   org: string
+  care?: { name?: string }
   end: string
   photos: string[]
 }
 
-/** 우리 아이를 닮은 공고 아이 3마리. 쓰다듬을 수 있는 아이는 바로 쓰다듬기로, 아니면 입양 화면의 그 아이로 */
+/** 우리 아이를 닮은 공고 아이 3마리. 모두 입양 공고 화면(adopt.html)의 그 아이로 보낸다 (쓰다듬을 수 있는 아이도) */
 async function showLookalikes(name: string, sp: Species, color: [number, number, number] | null) {
   const box = $('mk-look')
   const base = import.meta.env.BASE_URL
-  const [animals, live] = await Promise.all([
-    fetch(`${base}data/animals.json`).then((r) => (r.ok ? r.json() : { animals: [] })).catch(() => ({ animals: [] })),
-    fetch(`${base}data/shelter-live.json`).then((r) => (r.ok ? r.json() : { pets: [] })).catch(() => ({ pets: [] })),
-  ])
-  const pettable = new Map<string, string | undefined>((live.pets as { id: string; photo?: string }[]).map((p) => [p.id, p.photo]))
-  const picks = findLookalikes(animals.animals as LookAnimal[], sp, color, 3, new Set(pettable.keys()))
+  const animals = await fetch(`${base}data/animals.json`).then((r) => (r.ok ? r.json() : { animals: [] })).catch(() => ({ animals: [] }))
+  const picks = findLookalikes(animals.animals as LookAnimal[], sp, color, 3)
   if (!picks.length) return
   $('mk-look-title').textContent = `${josa(name, '을', '를')} 닮은 아이들이 가족을 기다려요 🐾`
   $('mk-look-list').replaceChildren(
     ...picks.map((a) => {
-      const canPet = pettable.has(a.id)
       const link = Object.assign(document.createElement('a'), {
         className: 'mk-look-card',
-        href: canPet ? `./?pet=shelter-${a.id}` : `adopt.html?id=${a.id}`,
+        href: `adopt.html?id=${a.id}`,
       })
-      const local = pettable.get(a.id)
-      const img = Object.assign(new Image(), { src: local ? `${base}${local}` : a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
+      // 사진은 모두 공고 사진 (만든 얼굴을 섞으면 카드끼리 너무 달라 보인다)
+      const img = Object.assign(new Image(), { src: a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
       img.referrerPolicy = 'no-referrer'
       const text = Object.assign(document.createElement('span'), { className: 'mk-look-text' })
       text.append(
         Object.assign(document.createElement('b'), { textContent: a.kind }),
         Object.assign(document.createElement('small'), { textContent: [a.age, a.org.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · ') }),
-        Object.assign(document.createElement('i'), { textContent: canPet ? '✋ 쓰다듬어 보기' : '자세히 보기 ›' }),
+        dueLine(a.end),
+        Object.assign(document.createElement('i'), { textContent: '입양 공고 보기 ›' }),
       )
       link.append(img, text)
       return link
     }),
   )
   box.hidden = false
+}
+
+/** 카드의 마감 줄: '10월 12일까지 가족을 찾아요', 이번 주에 끝나면 빨갛게 */
+function dueLine(end: string) {
+  const el = Object.assign(document.createElement('em'), { className: 'mk-look-due' })
+  const left = daysLeft(end)
+  if (!Number.isFinite(left)) return el
+  el.textContent = left === 0 ? '오늘까지 가족을 찾아요' : `${Number(end.slice(4, 6))}월 ${Number(end.slice(6, 8))}일까지 가족을 찾아요`
+  if (left <= 7) el.classList.add('soon')
+  return el
 }
 
 $('mk-again').onclick = () => {

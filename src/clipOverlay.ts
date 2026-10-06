@@ -53,7 +53,7 @@ export function clipOverlay(p: PetProfile, mine: boolean, seconds: number, host:
     lines.forEach((l, i) => g.fillText(l, w / 2, h * 0.38 + i * 64 * u))
     g.font = `600 ${30 * u}px ${FONT}`
     g.fillStyle = '#8a6e58'
-    g.fillText(mine ? '너도 우리 아이 사진으로 만들어 봐' : '포인핸드에서 입양 문의할 수 있어요', w / 2, h * 0.38 + 150 * u)
+    g.fillText(mine ? '너도 우리 아이 사진으로 만들어 봐' : '보호소에 입양 문의할 수 있어요', w / 2, h * 0.38 + 150 * u)
     // 주소 알약
     g.font = `700 ${30 * u}px ${FONT}`
     const pill = host
@@ -65,7 +65,7 @@ export function clipOverlay(p: PetProfile, mine: boolean, seconds: number, host:
     g.fillText(pill, w / 2, h * 0.62 + 43 * u)
     g.font = `500 ${24 * u}px ${FONT}`
     g.fillStyle = '#8a6e58'
-    g.fillText('가족을 기다리는 아이들 · 포인핸드 · 국가동물보호정보시스템', w / 2, h * 0.62 + 120 * u)
+    g.fillText('가족을 기다리는 아이들 · 출처: 국가동물보호정보시스템', w / 2, h * 0.62 + 120 * u)
     g.restore()
   }
 }

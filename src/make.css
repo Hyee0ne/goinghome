@@ -449,16 +449,6 @@
   }
 }
 
-.mk-adopt {
-  margin-top: 12px;
-  padding: 18px;
-  border-radius: 20px;
-  background: #fff;
-}
-
-.mk-adopt[hidden] {
-  display: none;
-}
 
 /* 실행 취소 (캔버스 왼쪽 위) */
 .mk-undo {
@@ -777,6 +767,18 @@
 .mk-look-text small {
   color: var(--ink-soft);
   font-size: 11px;
+}
+
+.mk-look-due {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.mk-look-due.soon {
+  color: #e5484d;
 }
 
 .mk-look-text i {
