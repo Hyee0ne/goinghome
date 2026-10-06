@@ -16,6 +16,19 @@
 
 공고 원본 사진(공공데이터 API, `public/data/animals.json`의 `photos`)을 참고해서 만든다.
 
+### Windows에서 공고 목록과 원본 사진 받기
+`public/data/`는 깃에 올라가지 않는다. Windows에서 직접 받는다.
+
+1. 저장소 루트의 `.env.local`에 공공데이터 키를 한 줄 넣는다: `DATA_GO_KR_SERVICE_KEY=<키>`
+   - 키는 사용자가 직접 넣는다. 채팅, 깃, 문서에 키 값을 적거나 출력하지 않는다. (`.env*`는 `.gitignore`에 있다)
+   - 이미지 생성에는 다른 키(OpenAI 등)가 필요 없다.
+2. `npm install` 후 `npm run data:animals` (Node 스크립트라 Windows에서도 돈다)
+   - `public/data/animals.json`(공고 전체), `candidates.json`(실사화 후보: D-day가 먼 순, 강아지 100·고양이 50), `shelter-live.json`이 생긴다.
+3. 만들 아이를 고른다. 사용자가 공고번호를 정해 주면 그 아이, 아니면 `candidates.json`에서 D-day가 먼 아이부터.
+4. 그 아이의 `photos` 주소에서 원본을 내려받아 참고 사진으로 쓴다. 정면에 가까운 사진이 좋다.
+
+> 맥 파이프라인은 그 아이가 맥의 무료 판정 목록(`verdicts.json`)에 있어야 받는다. 없거나 떨어진 아이면 맥에서 `npm run shelter:make`를 먼저 돌린다. 그래도 안 되면 기술 담당에게 말한다.
+
 | 파일 | 내용 | 필수 |
 |---|---|---|
 | `front.png` | 정면 사진. 입 다묾, 두 눈 뜨고 렌즈를 봄 | ✅ |
