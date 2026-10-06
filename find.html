@@ -17,54 +17,64 @@
     <meta property="og:locale" content="ko_KR" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="description" content="우리 아이와 닮은 보호소 친구가 가족을 기다리고 있어요. 사진은 내 폰 밖으로 나가지 않아요" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
     <title>우리 아이 닮은 친구 찾기 · 고잉홈</title>
   </head>
-  <body class="mk-page">
+  <body class="mk-page fd-page">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    </svg>
     <header class="mk-top">
-      <a class="reg-back home-btn" href="./" aria-label="고잉홈 첫 화면으로"><span aria-hidden="true">🏠</span></a>
+      <a class="reg-back home-btn" href="./" aria-label="고잉홈 첫 화면으로"><svg class="ico" aria-hidden="true"><use href="#i-home" /></svg></a>
       <div class="mk-title">
         <h1>우리 아이 닮은 친구 찾기</h1>
       </div>
     </header>
 
     <main class="mk-wrap">
-      <!-- 1. 우리 아이 알려 주기: 사진 한 장 (기기 안에서 털색과 생김새만 본다) -->
+      <!-- 1. 우리 아이 사진 한 장 (기기 안에서 털색과 생김새만 본다) -->
       <section id="fd-ask" class="fd-ask">
-        <div class="fd-hero">
-          <h2>우리 아이랑 닮은 친구,<br />보호소에 있을까요?</h2>
-          <p>사진 한 장이면 찾아 드려요 🐾</p>
-        </div>
+        <h2 class="fd-h">우리 아이랑 닮은 친구,<br />보호소에 있을까요?</h2>
+        <p class="fd-sub">사진 한 장이면 생김새와 털색으로 찾아 드려요</p>
 
         <label class="fd-photo">
           <input id="fd-file" type="file" accept="image/*" />
           <img id="fd-preview" alt="우리 아이 사진" hidden />
-          <span id="fd-pick-label" class="fd-photo-empty"><b>📷</b>사진 고르기</span>
+          <span id="fd-pick-label" class="fd-photo-empty"><svg class="ico" aria-hidden="true"><use href="#i-camera" /></svg>사진 고르기</span>
         </label>
         <p id="fd-status" class="fd-status" aria-live="polite"></p>
 
         <div class="fd-form">
           <input id="fd-name" class="fd-name" maxlength="10" autocomplete="off" placeholder="이름 (선택) · 예: 보리" aria-label="이름 (선택)" />
           <div class="fd-species" role="radiogroup" aria-label="종류">
-            <label><input type="radio" name="fd-species" value="dog" checked /><span>🐶 강아지</span></label>
-            <label><input type="radio" name="fd-species" value="cat" /><span>🐱 고양이</span></label>
+            <label><input type="radio" name="fd-species" value="dog" checked /><span>강아지</span></label>
+            <label><input type="radio" name="fd-species" value="cat" /><span>고양이</span></label>
           </div>
         </div>
 
-        <button id="fd-go" class="btn primary fd-go" type="button" disabled>닮은 친구 찾기</button>
-        <p class="fd-privacy">🔒 사진은 이 기기 안에서만 보고 바로 잊어요. 어디로도 보내지 않아요.</p>
+        <button id="fd-go" class="pill pill-primary fd-go" type="button" disabled>닮은 친구 찾기</button>
+        <p class="fd-privacy"><svg class="ico" aria-hidden="true"><use href="#i-lock" /></svg>사진은 이 기기 안에서만 보고 바로 잊어요. 어디로도 보내지 않아요.</p>
       </section>
 
-      <!-- 2. 결과: [우리 아이 💕 가장 닮은 친구] + 닮은 보호소 아이 3마리 -->
+      <!-- 2. 결과: 우리 아이 문 · 닮은 친구 문 (둘 다 원본 사진을 아치문 모양으로) -->
       <section id="fd-result" class="fd-result" hidden>
-        <div class="fd-pair" aria-hidden="true">
-          <img id="fd-me-img" alt="" />
-          <span class="fd-heart">💕</span>
-          <img id="fd-top-img" alt="" referrerpolicy="no-referrer" />
+        <div class="fd-doors">
+          <figure><span class="fd-door"><img id="fd-me-img" alt="" /></span><figcaption><b id="fd-me-name">우리 아이</b>우리 집</figcaption></figure>
+          <figure><a id="fd-top-link" class="fd-door"><img id="fd-top-img" alt="" referrerpolicy="no-referrer" /></a><figcaption><b id="fd-top-name"></b><span id="fd-top-where"></span></figcaption></figure>
         </div>
         <h3 id="fd-title" class="fd-title"></h3>
-        <p id="fd-why" class="fd-why"></p>
-        <div id="fd-list" class="mk-look-list fd-list"></div>
-        <button id="fd-share" class="btn primary fd-share" type="button">↗ 친구에게 알려 주기</button>
+        <ul id="fd-why" class="fd-why"></ul>
+        <p id="fd-more-label" class="fd-more-label">다른 닮은 친구</p>
+        <div id="fd-list" class="fd-more"></div>
+        <div class="fd-cta">
+          <button id="fd-share" class="pill pill-primary" type="button"><svg class="ico" aria-hidden="true"><use href="#i-share" /></svg><span>친구에게 알려 주기</span></button>
+          <a id="fd-notice" class="pill pill-icon" aria-label="입양 공고 보기"><svg class="ico" aria-hidden="true"><use href="#i-right" /></svg></a>
+        </div>
         <button id="fd-again" class="fd-again" type="button">다른 사진으로 다시 찾기</button>
       </section>
     </main>

@@ -1,4 +1,8 @@
-/* 우리 아이 닮은 친구 찾기 (/find). 카드(.mk-look-*)는 make.css를 같이 쓴다 */
+/* 우리 아이 닮은 친구 찾기 (/find) · D안 (입양 포스터, 2026-10-06)
+   사진 고르는 칸도 결과도 아치문 모양. 사진은 모두 원본(배경 있는 사진)을 문 모양으로 자른다 */
+.fd-page .mk-top {
+  border-bottom: 0;
+}
 
 /* 1. 사진 고르기 */
 .fd-ask {
@@ -8,45 +12,37 @@
   text-align: center;
 }
 
-.fd-ask[hidden] {
+.fd-ask[hidden],
+.fd-result[hidden] {
   display: none;
 }
 
-.fd-hero h2 {
+.fd-h {
   margin: 8px 0 6px;
   color: var(--ink);
-  font-size: 23px;
+  font-size: 24px;
+  font-weight: 700;
   line-height: 1.35;
+  letter-spacing: -0.02em;
 }
 
-.fd-hero p {
+.fd-sub {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .fd-photo {
   position: relative;
   display: grid;
   place-items: center;
-  width: 200px;
-  height: 200px;
+  width: 190px;
+  aspect-ratio: 4 / 5;
   margin: 22px 0 10px;
   overflow: hidden;
-  border: 3px dashed rgba(255, 138, 61, 0.55);
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(80, 50, 20, 0.1);
+  border-radius: 999px 999px 18px 18px;
+  background: var(--pink);
   cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.fd-photo:active {
-  transform: scale(0.97);
-}
-
-.fd-photo:has(img:not([hidden])) {
-  border: 4px solid #fff;
 }
 
 .fd-photo input {
@@ -66,14 +62,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  color: var(--ink-soft);
+  gap: 8px;
+  color: var(--pink-ink);
   font-size: 15px;
   font-weight: 700;
 }
 
-.fd-photo-empty b {
-  font-size: 40px;
+.fd-photo-empty .ico {
+  width: 30px;
+  height: 30px;
 }
 
 .fd-status {
@@ -95,7 +92,7 @@
   width: 100%;
   padding: 13px 14px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 999px;
   background: #fff;
   color: var(--ink);
   font: inherit;
@@ -119,108 +116,181 @@
 
 .fd-species span {
   display: block;
-  padding: 7px 14px;
-  border: 1px solid var(--line);
+  padding: 7px 16px;
   border-radius: 999px;
-  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 600;
 }
 
 .fd-species input:checked + span {
-  border-color: var(--accent);
-  background: #fff3ea;
-  color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+  box-shadow: none;
 }
 
 .fd-go {
+  /* .pill-primary의 flex: 1이 세로 방향에서는 높이를 줄여서 끈다 */
+  flex: none;
   width: 100%;
   margin-top: 18px;
-  font-size: 17px;
+}
+
+.fd-go:disabled {
+  opacity: 0.4;
 }
 
 .fd-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin: 10px 0 0;
   color: var(--ink-soft);
   font-size: 12px;
 }
 
-/* 2. 결과 */
+.fd-privacy .ico {
+  width: 14px;
+  height: 14px;
+}
+
+/* 2. 결과: 이웃한 문 두 개 */
 .fd-result {
-  padding: 22px 18px 18px;
-  border-radius: 24px;
-  background: #fff;
   text-align: center;
 }
 
-.fd-result[hidden] {
-  display: none;
-}
-
-.fd-pair {
+.fd-doors {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 8px;
 }
 
-.fd-pair img {
-  width: 104px;
-  height: 104px;
-  border: 4px solid #fff;
-  border-radius: 50%;
-  background: var(--bg-2);
-  box-shadow: 0 6px 18px rgba(80, 50, 20, 0.16);
+.fd-doors figure {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.fd-door {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 999px 999px 16px 16px;
+  background: var(--pink);
+}
+
+.fd-doors figure + figure .fd-door {
+  background: #dde4ff;
+}
+
+.fd-door img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: 50% 30%;
 }
 
-.fd-heart {
-  font-size: 28px;
-  animation: fd-beat 1.2s ease-in-out infinite;
+.fd-doors figcaption {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
 }
 
-@keyframes fd-beat {
-  50% {
-    transform: scale(1.18);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fd-heart {
-    animation: none;
-  }
+.fd-doors figcaption b {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
 }
 
 .fd-title {
-  margin: 16px 0 4px;
+  margin: 16px 0 8px;
   color: var(--ink);
-  font-size: 19px;
+  font-size: 20px;
+  font-weight: 700;
   line-height: 1.4;
+  letter-spacing: -0.02em;
 }
 
 .fd-why {
-  margin: 0 0 16px;
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.fd-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
   text-align: left;
 }
 
-.mk-look-why {
-  margin-top: 2px;
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
+.fd-why li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
 }
 
-.fd-share {
+.fd-why .ico {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+
+.fd-more-label {
+  margin: 16px 0 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-align: left;
+}
+
+.fd-more-label[hidden] {
+  display: none;
+}
+
+.fd-more {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fd-more-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--bg-2);
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+}
+
+.fd-door.small {
+  flex: none;
+  width: 44px;
+  background: #fff;
+}
+
+.fd-more-row b {
   display: block;
-  width: 100%;
+  font-size: 14px;
+}
+
+.fd-more-row small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.fd-cta {
+  display: flex;
+  gap: 8px;
   margin-top: 18px;
+}
+
+.fd-cta [hidden] {
+  display: none;
 }
 
 .fd-again {

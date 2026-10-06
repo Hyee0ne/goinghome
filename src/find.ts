@@ -176,41 +176,66 @@ $('fd-go').onclick = async () => {
   const mine = guessed && breeds().includes(guessed) ? guessed : breeds()[0]
   picks = findSimilar(await loadAnimals(), sp, mine, mine.size, state.color, 3)
   const name = $<HTMLInputElement>('fd-name').value.trim()
+  const top = picks[0]
+  // 두 문: 우리 아이(사용자 원본 사진) · 가장 닮은 친구(공고 원본 사진)
   $<HTMLImageElement>('fd-me-img').src = $<HTMLImageElement>('fd-preview').src
-  $<HTMLImageElement>('fd-top-img').src = picks[0]?.a.photos[0] ?? ''
-  $('fd-title').textContent = picks.length
-    ? `${name ? josa(name, '이랑', '랑') : '우리 아이랑'} 닮은 친구들이 가족을 기다려요 🐾`
-    : '지금은 닮은 친구를 찾지 못했어요'
-  $('fd-why').textContent = picks.length ? (mine === breeds()[0] ? '털색과 생김새로 찾았어요' : `생김새를 보니 ${josa(mine.label, '을', '를')} 닮았어요`) : ''
-  $('fd-list').replaceChildren(...picks.map((p) => card(p.a, p.why)))
+  $('fd-me-name').textContent = name || '우리 아이'
+  const where = top ? shortRegion(top.a.org) : ''
+  if (top) {
+    $<HTMLImageElement>('fd-top-img').src = top.a.photos[0]
+    $('fd-top-name').textContent = top.a.kind
+    $('fd-top-where').textContent = `${where} 보호소`
+    for (const id of ['fd-top-link', 'fd-notice']) {
+      const el = $<HTMLAnchorElement>(id)
+      el.href = `adopt?id=${top.a.id}`
+      el.onclick = () => track('adopt_action', { how: 'notice', where: 'find' })
+    }
+  }
+  const who = name ? josa(name, '이랑', '랑') : '우리 아이랑'
+  $('fd-title').innerHTML = ''
+  $('fd-title').append(top ? `${who} 꼭 닮은 친구가` : '지금은 닮은 친구를', document.createElement('br'), top ? `${where}에 있어요` : '찾지 못했어요')
+  // 닮은 이유 (줄 목록)
+  const reasons = top ? top.why.split(' · ').map((r) => r.replace(/^털색도/, '털색이')) : []
+  $('fd-why').replaceChildren(
+    ...reasons.map((r) => {
+      const li = document.createElement('li')
+      li.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-check" /></svg>'
+      li.append(r)
+      return li
+    }),
+  )
+  // 다른 닮은 친구
+  const rest = picks.slice(1)
+  $('fd-more-label').hidden = !rest.length
+  $('fd-list').replaceChildren(...rest.map((p) => moreRow(p.a, p.why)))
   $('fd-ask').hidden = true
   $('fd-result').hidden = false
-  $<HTMLButtonElement>('fd-share').hidden = !picks.length
+  for (const id of ['fd-share', 'fd-notice']) $(id).hidden = !top
   window.scrollTo(0, 0)
   track('find_result', { species: sp, breed: mine.label, found: picks.length, gen: landedGen() || undefined })
 }
 
-/** 카드: 공고 사진 · 품종 · 닮은 이유 · 나이·지역 · 마감 → 입양 공고 화면 */
-function card(a: Animal, why: string) {
-  const link = Object.assign(document.createElement('a'), { className: 'mk-look-card', href: `adopt?id=${a.id}` })
+/** 지역을 짧게: '충청남도 아산시' → '충남 아산', '서울특별시 마포구' → '서울 마포' */
+const SIDO: Record<string, string> = { 서울특별시: '서울', 부산광역시: '부산', 대구광역시: '대구', 인천광역시: '인천', 광주광역시: '광주', 대전광역시: '대전', 울산광역시: '울산', 세종특별자치시: '세종', 경기도: '경기', 강원특별자치도: '강원', 강원도: '강원', 충청북도: '충북', 충청남도: '충남', 전북특별자치도: '전북', 전라북도: '전북', 전라남도: '전남', 경상북도: '경북', 경상남도: '경남', 제주특별자치도: '제주' }
+function shortRegion(org: string) {
+  const [sido = '', gu = ''] = org.split(' ')
+  return [SIDO[sido] ?? sido, gu.replace(/(시|군|구)$/, '')].filter(Boolean).join(' ')
+}
+
+/** 다른 닮은 친구 한 줄: 작은 문(공고 원본 사진) · 품종 · 지역과 닮은 이유 → 입양 공고 화면 */
+function moreRow(a: Animal, why: string) {
+  const link = Object.assign(document.createElement('a'), { className: 'fd-more-row', href: `adopt?id=${a.id}` })
   link.addEventListener('click', () => track('adopt_action', { how: 'notice', where: 'find' }))
-  const img = Object.assign(new Image(), { src: a.photos[0], alt: `${a.kind} 사진`, loading: 'lazy', decoding: 'async' })
+  const door = Object.assign(document.createElement('span'), { className: 'fd-door small' })
+  const img = Object.assign(new Image(), { src: a.photos[0], alt: '', loading: 'lazy', decoding: 'async' })
   img.referrerPolicy = 'no-referrer'
-  const text = Object.assign(document.createElement('span'), { className: 'mk-look-text' })
-  const due = Object.assign(document.createElement('em'), { className: 'mk-look-due' })
-  const left = daysLeft(a.end)
-  if (Number.isFinite(left)) {
-    due.textContent = left === 0 ? '오늘까지 가족을 찾아요' : `${Number(a.end.slice(4, 6))}월 ${Number(a.end.slice(6, 8))}일까지 가족을 찾아요`
-    if (left <= 7) due.classList.add('soon')
-  }
+  door.append(img)
+  const text = document.createElement('span')
   text.append(
     Object.assign(document.createElement('b'), { textContent: a.kind }),
-    Object.assign(document.createElement('span'), { className: 'mk-look-why', textContent: why }),
-    Object.assign(document.createElement('small'), { textContent: [a.age, a.org.split(' ').slice(0, 2).join(' ')].filter(Boolean).join(' · ') }),
-    due,
-    Object.assign(document.createElement('i'), { textContent: '입양 공고 보기 ›' }),
+    Object.assign(document.createElement('small'), { textContent: `${shortRegion(a.org)} · ${why.split(' · ')[0]}` }),
   )
-  link.append(img, text)
+  link.append(door, text)
   return link
 }
 
