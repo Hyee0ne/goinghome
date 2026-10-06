@@ -22,8 +22,8 @@
 [Mac]  ① 아이 고르기 (남은 기간 3~7일, 급한 순, 생성 방해 요소 없는 아이, 강아지 10 · 고양이 10)
        ② 정면 생성: GPT high (ChatGPT 구독 먼저 → 한도에 걸리면 API)
        ③ incoming/<id>/front.png + README.txt, incoming/BATCH-<날짜>.md → images-incoming push
-[Win]  ④ git pull → 아이마다 smile.png · pant.png · eyes-closed.png 인페인팅 → images-incoming push
-[Mac]  ⑤ --hq --images 네 장 → 확인 → --publish (최대 20) → 서비스 dev 반영
+[Win]  ④ git pull → 아이마다 smile.png · pant.png · eyes-closed.png · ears-back.png 인페인팅 → images-incoming push
+[Mac]  ⑤ --hq --images 다섯 장 → 확인 → --publish (최대 20) → 서비스 dev 반영
 ```
 
 ### 아이 고르는 기준 (2026-10-06 사용자 결정)
@@ -79,7 +79,7 @@ incoming/
 
 ---
 
-## 3. Windows: ④ 표정 만들기 (세 장 + 귀 젖힘 예정)
+## 3. Windows: ④ 표정 만들기 (네 장: 웃음 · 헥헥 · 눈 감음 · 귀 젖힘)
 
 ```bash
 git checkout images-incoming && git pull
@@ -91,7 +91,16 @@ git checkout images-incoming && git pull
 | `smile.png` | front.png 편집: 입 살짝 벌림, 혀끝만 보임. **눈은 뜬 채 그대로** |
 | `pant.png` | front.png 편집: 강아지는 입 크게 벌리고 혀를 아랫니 위로 내민 헥헥 / 고양이는 츄르 핥듯 혀를 내밀어 살짝 말아 올림. **눈은 뜬 채 그대로** |
 | `eyes-closed.png` | front.png 편집: 두 눈을 **끝까지** 감음. **입은 다문 채 그대로**. 속눈썹은 그리지 않고 감은 선만 (사용자가 다시 만들어 고른 방식) |
-| `ears-back.png` | front.png 편집: 기분 좋을 때 귀를 뒤로 젖힘(강아지) / 옆으로 눕힘, 비행기 귀(고양이). **눈·입은 그대로**. **이미지는 Windows가 만든다.** 귀 부위(귀가 움직여 갈 자리까지)에만 마스크를 씌워 인페인팅한다. 귀가 원래 있던 자리는 배경으로 비워진다. Mac 파이프라인이 다섯 번째 자리로 받는 기능은 기술 담당이 만드는 중이다 |
+| `ears-back.png` | front.png 편집: 쓰다듬어 기분이 좋을 때의 귀. **강아지**는 귀를 뒤로 젖혀 머리에 붙인다(귀 뿌리 자리는 그대로, 귀가 뒤로 눕는다. 접힌 귀는 뒤·아래로 당겨져 머리 옆에 붙는다). **고양이**는 비행기 귀다. 귀가 양옆으로 눕고 귀 구멍이 옆을 향하며, 귀 끝이 정수리 높이쯤으로 내려온다(겁먹거나 화나서 납작하게 뒤로 붙인 귀는 아니다). **눈은 뜬 채, 입은 다문 채 그대로**. 마스크와 배경 규칙은 아래 '귀 젖힘 마스크와 배경'을 따른다 |
+
+### 귀 젖힘 마스크와 배경 (다른 세 장과 다르다)
+- **마스크**: 두 귀 전체, 귀가 새로 갈 자리, 귀가 원래 있던 자리 둘레의 배경까지 씌운다. 귀 뿌리 근처 정수리 털은 조금 들어가도 된다. 눈, 눈썹 아래, 코, 입, 볼, 수염에는 씌우지 않는다.
+- **배경이 중요하다.** Mac은 이 사진의 배경색으로 젖힌 귀의 윤곽(알파)을 따로 딴다. 귀 모양이 바뀌어 front.alpha.png의 윤곽을 쓸 수 없기 때문이다. 그래서 다음을 지킨다.
+  - 귀가 비운 자리는 front.png와 **같은 단색 배경**으로 깨끗이 채운다. 그림자, 빛 번짐, 털 부스러기, 다른 색은 남기지 않는다.
+  - 마스크 밖 배경색은 바꾸지 않는다(배경 전체를 다시 칠하지 않는다).
+  - 새 귀 끝이 사진의 위나 옆 가장자리에 닿지 않게 한다.
+- 크기는 다른 장과 같이 1024×1536 그대로, PNG로 저장한다.
+- Mac은 윤곽이 실제로 바뀐 곳(귀가 비운 자리와 새 자리)에서만 이 사진의 알파를 쓰고, 나머지는 정면 누끼 그대로 둔다. 마스크 밖이 front.png와 같으면 경계가 보이지 않는다.
 
 파이프라인은 앱의 마지막 표정('눈 감고 헥헥')을 `pant.png`에 `eyes-closed.png`의 두 눈만 얹어 만든다. 그래서 **표정 한 장에 한 부위만** 바꾼다.
 
@@ -102,7 +111,7 @@ git checkout images-incoming && git pull
 4. 코는 움직이지 않는다. 코 모양과 위치는 그대로 둔다.
 5. **밝기·색은 만지지 않는다.** Mac 파이프라인이 아이들끼리 밝기를 맞춘다. 꼭 만져야 하면 세 장 모두 똑같이 바꾼다.
 6. 음식, 손, 사람은 넣지 않는다.
-7. **배경은 신경 쓰지 않는다.** front.png 배경은 털색과 대비되는 단색이다(밝은 털은 진한 회청색, 어두운 털은 밝은 크림색). 배경색이 조금 바뀌어도 최종 결과에는 남지 않는다. Mac이 GPT 투명 경계(front.alpha.png)를 다시 씌운다.
+7. **배경은 신경 쓰지 않는다 (ears-back.png만 예외, 위 '귀 젖힘 마스크와 배경').** front.png 배경은 털색과 대비되는 단색이다(밝은 털은 진한 회청색, 어두운 털은 밝은 크림색). 배경색이 조금 바뀌어도 최종 결과에는 남지 않는다. Mac이 GPT 투명 경계(front.alpha.png)를 다시 씌운다.
 8. **사람이 확인한다.** 초기에는 품질 때문에 사용자가 단계마다 직접 본다(자동 감시·자동 처리 금지, 2026-10-06 사용자 결정). 올린 뒤 사용자에게 알린다.
 
 > **잘 된 예 (2026-10-06, 공고 441554202601848)**: FLUX.1 Kontext dev(Q5_K_M)로 입·눈 마스크만 인페인팅했고, 마스크 밖은 정면과 같았다. 파이프라인 정렬은 코 일치 1.00, 회전 0도였고 앱에서 자연스러웠다. 감은 눈꺼풀이 주변 털보다 조금 하얗고 볼록한 점만 아쉬웠다.
@@ -115,9 +124,11 @@ git checkout images-incoming && git pull
 - 고양이 smile: *mouth slightly open with just the tip of the small pink tongue showing, as if about to lick a treat. No food in the image. Eyes unchanged.*
 - 고양이 pant: *pink tongue stuck out and curled slightly upward, licking as if lapping a creamy treat. No food in the image. Eyes unchanged.*
 - eyes-closed: *both eyes gently closed, relaxed and content, eyelids fully shut, same fur color on the eyelids. Mouth and ears unchanged.*
+- 강아지 ears-back: *ears relaxed and folded back against the head, as a happy dog being petted. Ear bases stay in place. Eyes open and mouth closed, unchanged. Where the ears used to be, show only the same plain background color.*
+- 고양이 ears-back: *relaxed "airplane ears": both ears rotated out to the sides and slightly down, ear openings facing sideways, as a content cat being petted (not flattened in fear or anger). Eyes open and mouth closed, unchanged. Where the ears used to be, show only the same plain background color.*
 
 ### 올리기
-- 세 장을 `incoming/<id>/`에 넣고 `images-incoming`에 커밋·push한다. 커밋 메시지 예: `incoming: <id> 웃기·헥헥·눈 감기 (로컬 인페인팅)`
+- 네 장을 `incoming/<id>/`에 넣고 `images-incoming`에 커밋·push한다. 커밋 메시지 예: `incoming: <id> 웃기·헥헥·눈 감기 (로컬 인페인팅)`
 - `BATCH-<날짜>.md`의 그 아이 상태 칸을 '표정 완료'로 바꾼다.
 - 공고 데이터가 따로 필요하면(선택) `.env.local`에 `DATA_GO_KR_SERVICE_KEY`를 사용자가 직접 넣고 `npm run data:animals`. 키 값은 채팅·깃·문서에 적지 않는다. 기본 흐름에서는 front.png와 README.txt만 있으면 된다.
 
@@ -129,9 +140,11 @@ git checkout images-incoming && git pull
 cd /Users/hyewon/pet
 git fetch origin images-incoming
 D=$(mktemp -d) && git archive origin/images-incoming incoming/<id> | tar -x -C $D && D=$D/incoming/<id>
-npm run shelter:make -- --hq <id> --images $D/front.png,$D/smile.png,$D/pant.png,$D/eyes-closed.png
+npm run shelter:make -- --hq <id> --images $D/front.png,$D/smile.png,$D/pant.png,$D/eyes-closed.png,$D/ears-back.png
 ```
-- 무료다. 순서는 정면, 웃음(중간), 헥헥(최종), 눈 감음이다. (귀 젖힘이 생기면 다섯 번째 자리)
+- 무료다. 순서는 정면, 웃음(중간), 헥헥(최종), 눈 감음, 귀 젖힘이다. 자리로 구분하므로 귀 젖힘을 넣으려면 앞의 네 장이 모두 있어야 한다. 귀 젖힘이 없으면 네 장만 넣는다(귀는 젖히지 않고 쫑긋만 한다).
+- 귀 젖힘: 실루엣(알파)은 ears-back.png의 대비 배경(테두리로 맞춘 배경색 지도)으로 따로 딴다. 로그에 `대비 배경(…)으로 알파를 땄어요 · 윤곽이 바뀐 곳 N%`가 나온다. N이 0에 가깝거나 20%를 크게 넘으면 배경이 칠해졌거나 귀가 안 바뀐 것이니 사진을 확인한다.
+- 앱 동작(고퀄): 기분 좋게 0.6초쯤 쓰다듬으면 귀가 0.16초 만에 젖혀지고, 쓰다듬는 동안 그대로 있다가 손을 떼면 0.2초 만에 돌아온다. 젖힌 동안은 귀 쫑긋을 하지 않는다.
 - `front.png` 옆에 `front.alpha.png`가 있으면 Apple Vision 누끼 대신 그 알파를 쓴다 (털 끝 경계가 훨씬 자연스럽다. 회색 배경 + 누끼는 귀 끝이 뭉개져 보였다).
 - 입 표정 범위는 받은 웃음·헥헥 사진에서 실제로 바뀐 곳에 맞춰 아래로 늘어난다 (턱 아래로 내민 혀가 잘리지 않게. 기록: `pets-src/shelter-<id>-hq/expr-pant-region.json`).
 - 무대 크기는 귀 끝·정수리 털이 화면 안에 들어오게 자동으로 맞춘다 (사진 맨 위가 앱 좌표 -300보다 아래).
@@ -176,7 +189,7 @@ npm run data:animals      # ← 꼭 같이 돌린다. 안 돌리면 앱이 옛 �
 - 공개 목록 자동 규칙: `npm run shelter:make -- --publish auto [--dry-run]` (마감 지난 아이 제외 → 고퀄 급한 순 → 무료 아이 → 고양이 최소 4).
 
 ### 진행 중
-- **귀 젖힘(ears-back.png)**: 사용자가 '귀 쫑긋(작게 터는 동작)'을 본 뒤 이미지 방식으로 하기로 했다. **이미지는 Windows가 만든다.** Mac 기술 담당은 `--images` 다섯 번째 자리와 젖힌 귀 실루엣(알파) 처리만 만든다. 귀 쫑긋 코드는 그대로 들어가 있다.
+- **귀 젖힘(ears-back.png)**: 사용자가 '귀 쫑긋(작게 터는 동작)'을 본 뒤 이미지 방식으로 하기로 했다. **이미지는 Windows가 만든다.** Mac 쪽(`--images` 다섯 번째 자리, 젖힌 귀 알파, 앱 동작)은 feature/maker `302a83c`에 들어갔다. 귀 쫑긋은 `ef55973`이다. 첫 배치 7마리의 ears-back.png를 Windows에서 받으면 위 명령으로 다시 돌린다. 맥에서는 거친 합성 이미지로 흐름만 확인했다(실제 공개용 아님).
 
 ### 예전 고퀄 아이 (dev에서는 빠짐)
 
