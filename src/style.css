@@ -907,64 +907,6 @@ button {
   overflow: hidden;
 }
 
-/* ── 입양 사이트 연결 (adoptLinks.ts) ── */
-.adopt-links h3 {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
-
-.adopt-links ul {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.adopt-links a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: var(--bg);
-  color: inherit;
-  text-decoration: none;
-  text-align: left;
-}
-
-.adopt-links a:hover {
-  background: var(--bg-2);
-}
-
-.adopt-icon {
-  flex: none;
-  font-size: 20px;
-}
-
-.adopt-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.35;
-}
-
-.adopt-text b {
-  font-size: 15px;
-}
-
-.adopt-text small {
-  color: var(--ink-soft);
-  font-size: 12px;
-}
-
-.adopt-go {
-  flex: none;
-  color: var(--accent);
-  font-weight: 700;
-}
-
 /* ── 바이럴: 우리 아이 탭, 시작 화면 만들기 버튼, 공유 버튼, 알림 ── */
 .make-tab {
   border-style: dashed;
@@ -981,15 +923,6 @@ button {
 }
 
 
-.intro-adopt {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-.intro-adopt[hidden] {
-  display: none;
-}
 
 /* 공유 버튼: 무대 오른쪽 (간식 접시와 마주 보게) */
 .share-btn {
@@ -1077,20 +1010,6 @@ button {
 .toast.show {
   opacity: 1;
   transform: translate(-50%, 0);
-}
-
-.adopt-links a.adopt-live {
-  background: var(--accent);
-  color: #fff;
-}
-
-.adopt-links a.adopt-live small,
-.adopt-links a.adopt-live .adopt-go {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.adopt-links a.adopt-live:hover {
-  background: #f57a2b;
 }
 
 /* ── 가족을 기다리는 아이들로 가는 길 ── */

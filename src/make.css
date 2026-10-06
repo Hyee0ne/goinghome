@@ -449,16 +449,6 @@
   }
 }
 
-.mk-adopt {
-  margin-top: 12px;
-  padding: 18px;
-  border-radius: 20px;
-  background: #fff;
-}
-
-.mk-adopt[hidden] {
-  display: none;
-}
 
 /* 실행 취소 (캔버스 왼쪽 위) */
 .mk-undo {
@@ -777,13 +767,6 @@
 .mk-look-text small {
   color: var(--ink-soft);
   font-size: 11px;
-}
-
-/* 만든 정면 얼굴(배경 투명): 잘리지 않게 얼굴 위주로, 크림색 바탕 */
-.mk-look-card img.mk-look-face {
-  object-fit: contain;
-  object-position: 50% 20%;
-  background: var(--bg-2, #ffe7cc);
 }
 
 .mk-look-due {
