@@ -231,12 +231,48 @@ export class FaceMotion {
     return { x: this.vx, y: this.vy }
   }
 
+  /**
+   * 귀 파닥(쫑긋): 귀 뿌리를 축으로 귀 부위만 덩어리째 짧게 털었다 돌아온다 (휘지 않는다).
+   * 손이 귀 근처를 스치면 그쪽 귀가, 가끔은 혼자서도. 고양이는 더 자주·더 빠르게
+   */
+  private flickT = [-1, -1]
+  private flickNext = [3 + Math.random() * 8, 5 + Math.random() * 8]
+  private flickCool = [0, 0]
+  private updateFlick(dt: number, hands: MotionHand[], cat: boolean) {
+    for (let k = 0; k < 2; k++) {
+      const e = this.rig.ears[k]
+      if (this.flickT[k] >= 0) {
+        this.flickT[k] += dt
+        if (this.flickT[k] > (cat ? FLICK_S_CAT : FLICK_S)) this.flickT[k] = -1
+      }
+      this.flickCool[k] = Math.max(0, this.flickCool[k] - dt)
+      this.flickNext[k] -= dt
+      const r = Math.max(e.rx, e.ry) * 1.25
+      const near = hands.some((h) => Math.hypot(h.vx, h.vy) > 40 && [h, ...h.tips].some((q) => Math.hypot(q.x - e.x, q.y - e.y) < r))
+      if (this.flickT[k] < 0 && this.flickCool[k] <= 0 && (near || this.flickNext[k] <= 0)) {
+        this.flickT[k] = 0
+        this.flickCool[k] = near ? 0.5 : 0
+        this.flickNext[k] = cat ? 3 + Math.random() * 6 : 5 + Math.random() * 10
+      }
+    }
+  }
+
+  /** 귀 파닥 각도 (라디안, 바깥 위로 +): 빠르게 두 번 털고 잦아든다 */
+  flick(k: 0 | 1, cat: boolean) {
+    const t = this.flickT[k]
+    if (t < 0) return 0
+    const T = cat ? FLICK_S_CAT : FLICK_S
+    const u = t / T
+    return (cat ? FLICK_ANGLE_CAT : FLICK_ANGLE) * Math.sin(u * Math.PI * 2 * 2) * (1 - u) * (1 - u)
+  }
+
   update(dt: number, hands: MotionHand[], pose: Pose) {
     const { rig } = this
     const s = rig.scale
     // 같은 시각의 프레임이 두 번 오면 dt가 0이 되고, 가속도 계산이 0/0이 되어 얼굴 전체가 망가진다
     if (!(dt > 0)) return
     dt = Math.min(dt, 1 / 30)
+    this.updateFlick(dt, hands, pose.species === 'cat')
 
     // ── 머리 ──
     let restX = 0
@@ -524,6 +560,7 @@ uniform vec4 uEarR;
 uniform vec4 uEarPivots;   // 왼쪽 귀 pivot xy, 오른쪽 귀 pivot xy
 uniform float uEarRotL;    // 양수면 귀가 바깥 위로 들린다
 uniform float uEarRotR;
+uniform vec2 uEarFlick;    // 귀 파닥 각도 (왼쪽, 오른쪽)
 
 uniform vec4 uChest;
 uniform float uBreath;
@@ -738,6 +775,14 @@ void main() {
   float mer = 1.0 - smoothstep(0.25, 1.45, ellipseDist(Q, uEarR));
   Q = rotateAround(Q, uEarPivots.xy, -uEarRotL * mel);
   Q = rotateAround(Q, uEarPivots.zw, uEarRotR * mer);
+  // 귀 파닥: 귀 부위만 덩어리째 돈다 (안쪽은 그대로 돌고 가장자리 띠만 짧게 섞는다. 머리통 안은 움직이지 않는다)
+  if (abs(uEarFlick.x) + abs(uEarFlick.y) > 0.0005) {
+    float head = smoothstep(0.8, 1.0, ellipseDist(Q, uSkull));
+    float fl = (1.0 - smoothstep(0.85, 1.05, ellipseDist(Q, uEarL))) * head;
+    float fr = (1.0 - smoothstep(0.85, 1.05, ellipseDist(Q, uEarR))) * head;
+    Q = rotateAround(Q, uEarPivots.xy, -uEarFlick.x * fl);
+    Q = rotateAround(Q, uEarPivots.zw, uEarFlick.y * fr);
+  }
 
   // 턱과 눈썹: 부위를 늘이지 않고 덩어리째 위로 옮긴다 (경계는 넓게 풀어 접히지 않게)
   Q.y += uChinLift * (1.0 - smoothstep(0.3, 1.3, ellipseDist(Q, uChin)));
@@ -1322,6 +1367,8 @@ export class FurRenderer {
     const perkR = p.curious * (p.cockSide < 0 ? 0.1 : 0.03)
     gl.uniform1f(this.loc('uEarRotL'), (ear + m.earL + tuck + perkL - p.flinch * 0.1) * calm.ear)
     gl.uniform1f(this.loc('uEarRotR'), (ear + m.earR + tuck + perkR - p.flinch * 0.1) * calm.ear)
+    // 귀 파닥은 덩어리째 짧게 도는 움직임이라 차분한 움직임(SAFE)에서도 켠다
+    gl.uniform2f(this.loc('uEarFlick'), m.flick(0, p.species === 'cat'), m.flick(1, p.species === 'cat'))
     const dt = Math.min(0.05, Math.max(0, p.t - this.lastT))
     this.lastT = p.t
     // 헥헥댈 때는 숨이 빨라진다
@@ -1569,6 +1616,12 @@ class PawLayer {
 const DRAWN_CLOSE_S = 0.08
 const DRAWN_OPEN_S = 0.15
 const DRAWN_SNAP = 0.3
+/** 귀 파닥: 걸리는 시간(초)과 최대 각도(라디안). 고양이는 더 빠르게 */
+const FLICK_S = 0.22
+const FLICK_S_CAT = 0.16
+const FLICK_ANGLE = 0.07
+const FLICK_ANGLE_CAT = 0.09
+
 /** 보호소 고퀄 눈·입: 닫기(감기)·열기(뜨기) 시간 */
 /** 고퀄 헥헥: 입 열고 있는 시간·쉬는 시간(초), 턱 들썩임 빠르기·크기, 숨 끄덕임 크기 (펫 로컬 단위) */
 const PANT_ON_S = 3.2
