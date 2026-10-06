@@ -544,7 +544,7 @@ async function hq(ids: string[]) {
   // 기본은 눈 + 입 (강아지: 눈 감고 웃기·헥헥, 고양이: 츄르 핥기). 고퀄 완성 기준 (2026-10-06).
   // (눈만으로 다시 돌리면 이미 만든 입 표정이 빠졌다)
   const partsArg = args.parts ?? 'mouth'
-  // --images 정면.png,입살짝.png[,입크게.png]: AI로 만들지 않고 이미 있는 정면·표정 이미지를 쓴다 (한 마리만, 무료)
+  // --images 정면.png,웃음.png[,헥헥.png[,눈감음.png[,귀젖힘.png]]]: AI로 만들지 않고 이미 있는 정면·표정 이미지를 쓴다 (한 마리만, 무료)
   const images = args.images ? String(args.images).split(',').map((p) => resolve(p)) : null
   if (images && pick.length !== 1) fail('--images는 한 마리만 지정해 주세요')
   if (images) for (const p of images) if (!existsSync(p)) fail(`이미지가 없어요: ${p}`)
@@ -612,9 +612,13 @@ print(rows.min() / h if len(rows) else 1)`, join(dir, 'cutout.png'), String(raw.
         const nj = J(det, 'nose')!
         const face = { nx: nj.x * det.width, ny: nj.y * det.height, d: dist(e.l, e.r) }
         const eyesClosed = images[3]
-        const sqs = [[mid, 'mid'], [fin, 'final'], ...(eyesClosed ? [[eyesClosed, 'eyes']] : [])] as [string, string][]
+        // 다섯 번째: 귀 젖힘 (정면에서 귀 부위만 바꾼 이미지). 귀 모양이 바뀌어 실루엣이 달라지므로 알파는 이 이미지의 대비 배경으로 따로 딴다
+        const earsBack = images[4]
+        rmSync(join(dir, 'expr-earsback-square.png'), { force: true })
+        rmSync(join(dir, 'expr-earsback-square.orig.png'), { force: true })
+        const sqs = [[mid, 'mid'], [fin, 'final'], ...(eyesClosed ? [[eyesClosed, 'eyes']] : []), ...(earsBack ? [[earsBack, 'earsback']] : [])] as [string, string][]
         const Ms: Record<string, number[][]> = {}
-        for (const [src, name] of sqs) Ms[name] = squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`), face)
+        for (const [src, name] of sqs) Ms[name] = squareFrom(images[0], src, join(dir, 'face-square.png'), join(dir, `expr-${name}-square.png`), face, name === 'earsback')
         // 눈 감은 이미지(4번째)가 있으면 최종 장면은 '눈 감고 헥헥': 헥헥 이미지의 두 눈 둘레만 눈 감은 이미지로 바꾼다.
         // 중간 장면(웃음)은 눈을 뜬 채라, 눈은 뜬 눈 → 감은 눈 두 상태로만 움직인다 (반쯤 감은 눈 없음)
         if (eyesClosed) {
@@ -638,7 +642,7 @@ Image.fromarray(out.astype(np.uint8)).save(sys.argv[1])`, join(dir, 'expr-final-
         brightenSquares(dir, v.bright?.gamma ?? 1)
         process.env.PET_NO_ALIGN = '1'
         try {
-          add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', eyesClosed ? 'eyes+pant' : 'pant')
+          add('--id', id, '--from', 'expressions', '--until', 'assets', '--parts', (eyesClosed ? 'eyes+pant' : 'pant') + (earsBack ? '+ears' : ''))
         } finally {
           delete process.env.PET_NO_ALIGN
         }
@@ -735,13 +739,41 @@ print(int(a[:band].mean() > 0.03 or a[:, :band].mean() > 0.05 or a[:, -band:].me
  * 받은 표정 이미지(정면 이미지와 같은 구도)를 얼굴 정사각형(face-square.png) 자리로 옮긴다.
  * 정면 이미지와 얼굴 정사각형 사이를 특징점으로 맞춘 변환을 표정 이미지에 그대로 쓰고, 투명도는 얼굴 정사각형 것을 쓴다
  */
-function squareFrom(front: string, expr: string, faceSq: string, out: string, face: { nx: number; ny: number; d: number }): number[][] {
+function squareFrom(front: string, expr: string, faceSq: string, out: string, face: { nx: number; ny: number; d: number }, keyAlpha = false): number[][] {
   const r = spawnSync('python3', ['-c', `
 import sys, cv2, numpy as np
 from PIL import Image
 front = np.array(Image.open(sys.argv[1]).convert('RGB'))
 expr = np.array(Image.open(sys.argv[2]).convert('RGB').resize((front.shape[1], front.shape[0])))
 sq = np.array(Image.open(sys.argv[3]).convert('RGBA'))
+key = sys.argv[8] == '1'
+if key:
+  # 귀 젖힘처럼 윤곽이 바뀐 이미지: 대비 단색 배경(테두리 색)을 기준으로 이 이미지만의 알파를 딴다
+  # (배경은 가장자리가 어두운 그러데이션일 수 있어, 테두리 띠로 2차 곡면을 맞춘 배경색 지도를 쓴다)
+  Hh, Ww = expr.shape[:2]
+  yy, xx = np.mgrid[0:Hh, 0:Ww].astype(np.float32)
+  band = np.zeros((Hh, Ww), bool); bw = max(8, Ww // 40)
+  band[:bw] = band[-bw:] = True; band[:, :bw] = band[:, -bw:] = True
+  # 동물이 테두리에 닿은 곳(아래쪽 몸통 등)은 빼고 맞춘다: 테두리 중앙값과 많이 다른 픽셀 제외
+  med = np.median(expr[band].astype(np.float32), axis=0)
+  band &= np.linalg.norm(expr.astype(np.float32) - med, axis=2) < 40
+  X = lambda x, y: np.stack([np.ones_like(x), x / Ww, y / Hh, (x / Ww) ** 2, (y / Hh) ** 2, x * y / (Ww * Hh)], -1)
+  coef, *_ = np.linalg.lstsq(X(xx[band], yy[band]), expr[band].astype(np.float32), rcond=None)
+  bgc = X(xx, yy) @ coef
+  dist_ = np.linalg.norm(expr.astype(np.float32) - bgc, axis=2)
+  noise = np.percentile(dist_[band], 99)
+  t0 = max(14.0, noise * 1.5)
+  ka = np.clip((dist_ - t0) / 45.0, 0, 1)
+  # 배경에 뜬 점·얼룩은 지운다 (가장 큰 덩어리만)
+  n_, lab, st, _ = cv2.connectedComponentsWithStats((ka > 0.5).astype(np.uint8))
+  if n_ > 1:
+    big = 1 + int(np.argmax(st[1:, 4]))
+    keep = cv2.dilate((lab == big).astype(np.uint8), np.ones((9, 9), np.uint8))
+    ka = ka * keep
+  # 가장자리 털에 섞인 배경색을 걷어낸다
+  aa = np.maximum(ka, 0.05)[:, :, None]
+  expr = np.clip(bgc + (expr.astype(np.float32) - bgc) / aa, 0, 255).astype(np.uint8)
+  print('대비 배경(%s 둘레, 잡음 %.0f)으로 알파를 땄어요' % (','.join('%d' % v for v in med), noise))
 g = lambda a: cv2.cvtColor(a, cv2.COLOR_RGB2GRAY)
 sqg = g((sq[:, :, :3] * (sq[:, :, 3:] / 255) + 128 * (1 - sq[:, :, 3:] / 255)).astype(np.uint8))
 orb = cv2.ORB_create(5000)
@@ -794,9 +826,23 @@ try:
   else: print('주둥이 맞춤: 믿기 어려워 건너뜀 (코 일치 %.2f, 회전 %.1f)' % (score, rot))
 except cv2.error: print('주둥이 맞춤: 실패해 건너뜀')
 w = cv2.warpAffine(ex, M0, (sq.shape[1], sq.shape[0]), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REPLICATE)
-Image.fromarray(np.dstack([w, sq[:, :, 3]])).save(sys.argv[4])
+alpha = sq[:, :, 3]
+if key:
+  # 딴 알파를 같은 변환으로 옮기고, 윤곽이 실제로 바뀐 곳(귀가 비운 자리·새로 온 자리)만 그 알파를 쓴다.
+  # 나머지는 정면 누끼 알파 그대로 (테두리가 정면과 똑같아야 섞을 때 경계가 안 보인다)
+  kw = cv2.warpAffine(ka.astype(np.float32), E, (W0, H0), flags=cv2.INTER_LINEAR) if E is not None else ka.astype(np.float32)
+  kw = cv2.warpAffine(kw, M0, (sq.shape[1], sq.shape[0]), flags=cv2.INTER_LINEAR)
+  sa = sq[:, :, 3].astype(np.float32) / 255
+  ch = (np.abs(kw - sa) > 0.5).astype(np.uint8)
+  ch = cv2.morphologyEx(ch, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+  dm = float(sys.argv[7]) * float(np.sqrt(abs(np.linalg.det(M0[:, :2]))))
+  z = cv2.GaussianBlur(cv2.dilate(ch, np.ones((3, 3), np.uint8), iterations=max(1, int(dm * 0.06))).astype(np.float32), (0, 0), max(1.0, dm * 0.02))
+  z = np.clip(z * 2, 0, 1)
+  alpha = np.clip((sa * (1 - z) + kw * z) * 255, 0, 255).astype(np.uint8)
+  print('윤곽이 바뀐 곳 %.1f%%' % (100 * (ch > 0).mean()))
+Image.fromarray(np.dstack([w, alpha])).save(sys.argv[4])
 print('M0=' + ','.join('%.6f' % v for v in M0.flatten()))
-print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M0[:, :2]))), int(inl.sum())))`, front, expr, faceSq, out, String(face.nx), String(face.ny), String(face.d)], { encoding: 'utf8' })
+print('맞춤: 배율 %.3f, 일치 점 %d개' % (np.sqrt(abs(np.linalg.det(M0[:, :2]))), int(inl.sum())))`, front, expr, faceSq, out, String(face.nx), String(face.ny), String(face.d), keyAlpha ? '1' : '0'], { encoding: 'utf8' })
   if (r.status !== 0) throw new Error(r.stderr.trim().split('\n').slice(-1)[0])
   const lines = r.stdout.trim().split('\n')
   const mline = lines.find((l) => l.startsWith('M0='))!
@@ -835,7 +881,7 @@ print(json.dumps({'before': round(med, 3), 'after': round(float(np.median(L ** g
 
 /** 표정 정사각형(얼굴 편집본)에도 정면 사진과 같은 감마를 건다 (보정 전 원본은 *.orig.png) */
 function brightenSquares(dir: string, gamma: number) {
-  for (const n of ['mid', 'final', 'eat', 'eatmid']) {
+  for (const n of ['mid', 'final', 'eat', 'eatmid', 'earsback']) {
     const f = join(dir, `expr-${n}-square.png`)
     if (!existsSync(f)) continue
     const orig = f.replace(/\.png$/, '.orig.png')

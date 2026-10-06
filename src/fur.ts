@@ -238,8 +238,15 @@ export class FaceMotion {
   private flickT = [-1, -1]
   private flickNext = [3 + Math.random() * 8, 5 + Math.random() * 8]
   private flickCool = [0, 0]
+  /** 귀를 젖힌 동안 (렌더러가 정한다): 파닥을 멈추고 새로 시작하지 않는다 */
+  flickHold = false
   private updateFlick(dt: number, hands: MotionHand[], cat: boolean) {
     for (let k = 0; k < 2; k++) {
+      if (this.flickHold) {
+        this.flickT[k] = -1
+        this.flickCool[k] = 0.4
+        continue
+      }
       const e = this.rig.ears[k]
       if (this.flickT[k] >= 0) {
         this.flickT[k] += dt
@@ -1054,6 +1061,8 @@ export class FurRenderer {
   private earsBack = 0
   private panting = false
   private wary = false
+  private earsHappy = false
+  private earsHappyFor = 0
   private lastT = 0
   private breathPhase = 0
   private breathDepth = 1
@@ -1367,7 +1376,8 @@ export class FurRenderer {
     const perkR = p.curious * (p.cockSide < 0 ? 0.1 : 0.03)
     gl.uniform1f(this.loc('uEarRotL'), (ear + m.earL + tuck + perkL - p.flinch * 0.1) * calm.ear)
     gl.uniform1f(this.loc('uEarRotR'), (ear + m.earR + tuck + perkR - p.flinch * 0.1) * calm.ear)
-    // 귀 파닥은 덩어리째 짧게 도는 움직임이라 차분한 움직임(SAFE)에서도 켠다
+    // 귀 파닥은 덩어리째 짧게 도는 움직임이라 차분한 움직임(SAFE)에서도 켠다. 귀를 젖힌 동안은 하지 않는다 (귀가 원래 자리에 없다)
+    m.flickHold = this.earsBack > 0.001
     gl.uniform2f(this.loc('uEarFlick'), m.flick(0, p.species === 'cat'), m.flick(1, p.species === 'cat'))
     const dt = Math.min(0.05, Math.max(0, p.t - this.lastT))
     this.lastT = p.t
@@ -1392,7 +1402,14 @@ export class FurRenderer {
     else if (this.wary && p.startle < 0.1 && p.wary < 0.3) this.wary = false
     // 일정한 속도로 진행한다 (가속·감속은 셰이더가 단계 사이마다 준다). 초 단위 전환 시간
     this.pant = ramp(this.pant, this.panting, PANT_OPEN, PANT_CLOSE, dt)
-    this.earsBack = ramp(this.earsBack, this.wary, EARS_BACK, EARS_RETURN, dt)
+    if (rig.snapFace) {
+      // 보호소 고퀄 귀 젖힘(기분 좋은 귀, 고양이는 비행기 귀): 쓰다듬어 기분이 좋아지면 젖히고, 쓰다듬는 동안 그대로, 손을 떼면 돌아온다.
+      // 눈·입처럼 두 상태로만 빠르게 넘어간다
+      this.earsHappyFor = p.petting > 0.7 && p.happy > 0.5 && p.startle < 0.2 ? this.earsHappyFor + dt : 0
+      if (!this.earsHappy && this.earsHappyFor > EARS_HAPPY_AFTER_S) this.earsHappy = true
+      else if (this.earsHappy && (p.petting < 0.35 || p.startle > 0.3)) this.earsHappy = false
+      this.earsBack = step01(this.earsBack, this.earsHappy || this.wary ? 1 : 0, EARS_SNAP_S, EARS_SNAP_BACK_S, dt)
+    } else this.earsBack = ramp(this.earsBack, this.wary, EARS_BACK, EARS_RETURN, dt)
     // 입맛 다시기: 입을 살짝 열었다 닫는다 (헥헥 중간 단계까지만)
     // 고양이는 헥헥대지 않고, 간식을 받아먹을 때만 입을 벌린다: 한 입 물 때 크게 벌린 입 사진까지(중간 모양은 구겨져 보여 머물지 않는다)
     // 씹을 때는 살짝 벌린 입(중간 사진)에 머문 채 아래턱만 오르내린다 (닫힌 입과 사이를 오가면 사진 사이 변형만 보여 입이 물결친다)
@@ -1682,6 +1699,10 @@ const PANT_OPEN = 0.45
 const PANT_CLOSE = 0.6
 const EARS_BACK = 0.3
 const EARS_RETURN = 0.7
+/** 보호소 고퀄 귀 젖힘: 이만큼 기분 좋게 쓰다듬으면 젖히고(초), 젖히기·돌아오기 시간(초) */
+const EARS_HAPPY_AFTER_S = 0.6
+const EARS_SNAP_S = 0.16
+const EARS_SNAP_BACK_S = 0.2
 
 function ramp(v: number, on: boolean, upSec: number, downSec: number, dt: number) {
   return on ? Math.min(1, v + dt / upSec) : Math.max(0, v - dt / downSec)
