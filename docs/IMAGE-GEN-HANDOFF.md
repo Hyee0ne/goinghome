@@ -46,7 +46,7 @@
 > `npm run shelter:batch [-- --dogs 10 --cats 10 --min-days 3 --max-days 7 --dry-run]` (기본값이 3~7일)
 > (`--dry-run`이면 고른 목록과 예상 비용만 보여 준다. 첫 실행은 사용자 확인 후에 한다)
 
-생기기 전에는 아이마다 손으로 한다 (`/Users/hyewon/pet`에서):
+배치를 못 쓸 때는 아이마다 손으로 한다 (`/Users/hyewon/pet`에서):
 
 ```bash
 npm run data:animals && npm run shelter:make          # 공고 갱신 + 무료 판정
