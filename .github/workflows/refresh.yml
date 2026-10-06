@@ -1,0 +1,19 @@
+# 유기동물 공고(공공데이터)를 매시간 새로 받기: Vercel Deploy Hook을 불러 다시 빌드한다 (scripts/vercel-build.sh).
+# 저장소 비밀값 VERCEL_DEPLOY_HOOK(Vercel 프로젝트 설정 → Git → Deploy Hooks에서 만든 주소)이 없으면 아무것도 하지 않는다.
+name: Refresh animals (Vercel)
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vercel 다시 빌드
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo 'VERCEL_DEPLOY_HOOK이 없어 건너뜁니다'; exit 0; fi
+          curl -fsS -X POST "$HOOK" > /dev/null && echo '다시 빌드를 요청했어요'
