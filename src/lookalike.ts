@@ -1,7 +1,7 @@
 /**
  * 우리 아이를 닮은 보호소 아이 찾기.
  * 우리 아이는 배경을 지운 사진의 털색(가운데 몸 부분 평균)을, 보호소 아이는 공고의 색상 글('갈색', '흰색/검은색' 등)을
- * 대표 색으로 바꿔 가장 가까운 아이를 고른다. 같은 종만, 쓰다듬을 수 있는 아이(실사화한 아이)를 조금 앞에 둔다.
+ * 대표 색으로 바꿔 가까운 아이를 고른다. 같은 종만.
  */
 
 export type RGB = [number, number, number]
@@ -44,6 +44,19 @@ export function textColors(text: string): RGB[] {
   return WORDS.filter(([re]) => re.test(text)).map(([, c]) => c)
 }
 
+/** 대표색: 공고 색상 글에서 가장 먼저 적힌 색 ('흑색&황색'이면 검정) */
+function mainColor(text: string): RGB | null {
+  let best: { at: number; c: RGB } | null = null
+  for (const [re, c] of WORDS) {
+    const at = text.search(re)
+    if (at >= 0 && (!best || at < best.at)) best = { at, c }
+  }
+  return best?.c ?? null
+}
+
+/** 이 거리 안이면 '닮은 색' (크림↔누렁·연갈 정도는 들어오고, 크림↔검정은 멀다) */
+const NEAR = 160
+
 /** 사람 눈에 가까운 색 거리 (간단한 가중 RGB) */
 function dist(a: RGB, b: RGB) {
   const rm = (a[0] + b[0]) / 2
@@ -72,21 +85,25 @@ export function daysLeft(end: string, now = new Date()) {
 }
 
 /**
- * 닮은 아이 n마리. 색이 가까운 순인데, 공고 남은 3~7일인 아이를 앞에 둔다 (2026-10-06: 급한 아이를 살리는 데 집중.
- * 실사화 배치와 같은 기준. 2일 이내는 연락할 시간이 거의 없어 앞으로 당기지 않는다). 같으면 공고가 곧 끝나는 아이 먼저. 마감이 지난 아이는 뺀다.
- * 색을 모르면 급한 아이와 마감 순으로 고른다
+ * 닮은 아이 n마리 (2026-10-06 사용자 결정: 털색으로 닮은 아이를 고르되, 애매하면 그냥 넣는다).
+ *   1) 대표색(가장 먼저 적힌 색)이 가까운 아이
+ *   2) 애매한 아이: 색을 모르거나, 대표색은 멀어도 함께 적힌 다른 색이 가까운 아이 ('흑색&황색'과 크림색)
+ *   3) 색이 확실히 다른 아이 (모자랄 때만)
+ * 같은 무리 안에서는 공고 남은 3~7일인 아이 먼저(급한 아이 살리기, 실사화 배치와 같은 기준), 그다음 색이 가까운 순, 마감 순.
+ * 마감이 지난 아이는 빼고, 같은 보호소에서는 한 마리만. 우리 아이 색을 모르면 모두 '애매한 아이'로 본다
  */
 export function findLookalikes<T extends MatchAnimal>(all: T[], species: 'dog' | 'cat', color: RGB | null, n: number) {
   return all
     .filter((a) => a.sp === species && daysLeft(a.end) >= 0)
     .map((a) => {
+      const main = mainColor(a.color)
       const cs = textColors(a.color)
-      const d = color && cs.length ? Math.min(...cs.map((c) => dist(color, c))) : 400
-      // 같은 색 계열이면 남은 3~7일인 아이를 앞에 (색 거리 60만큼 이득)
+      const d = color && cs.length ? Math.min(...cs.map((c) => dist(color, c))) : Infinity
+      const tier = !color || !main ? 1 : dist(color, main) <= NEAR ? 0 : d <= NEAR ? 1 : 2
       const left = daysLeft(a.end)
-      return { a, score: d - (left >= 3 && left <= 7 ? 60 : 0) }
+      return { a, tier, urgent: left >= 3 && left <= 7 ? 0 : 1, d }
     })
-    .sort((x, y) => x.score - y.score || x.a.end.localeCompare(y.a.end))
+    .sort((x, y) => x.tier - y.tier || x.urgent - y.urgent || x.d - y.d || x.a.end.localeCompare(y.a.end))
     // 같은 보호소에서는 한 마리만 (2026-10-06 사용자 결정: 한 보호소 아이들로 몰리지 않게)
     .filter(
       (
