@@ -26,6 +26,22 @@
   text-decoration: none;
 }
 
+/* 홈 버튼 (만들기·전체 공고 화면 왼쪽 위) */
+.home-btn {
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(80, 50, 20, 0.1);
+}
+
+/* 넓은 화면: 만들기 화면은 내용이 가운데 좁게 모이므로 홈 버튼만 화면 왼쪽 끝에 둔다 */
+@media (min-width: 720px) {
+  .mk-top .home-btn {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
 .reg-title {
   flex: 1;
   min-width: 0;
