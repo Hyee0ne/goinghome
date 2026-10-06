@@ -58,7 +58,7 @@ export const DOG_BREEDS: Breed[] = [
   { label: '프렌치 불독', match: /불독|퍼그/, group: 'smallShort', size: 'small' },
   { label: '미니어처 핀셔', match: /핀셔/, group: 'smallShort', size: 'small' },
   { label: '비글', match: /비글/, group: 'hound', size: 'medium' },
-  { label: '그레이하운드 · 휘펫', match: /하운드|휘펫/, group: 'hound', size: 'medium' },
+  { label: '그레이하운드', match: /하운드|휘펫/, group: 'hound', size: 'medium' },
   { label: '코카 스파니엘', match: /코카|스파니엘/, group: 'hound', size: 'medium' },
   { label: '슈나우저', match: /슈나우/, group: 'smallShort', size: 'small' },
 ]
@@ -88,4 +88,54 @@ export function sizeOfWeight(weight?: string): Size | undefined {
   const kg = parseFloat(weight ?? '')
   if (!Number.isFinite(kg) || kg <= 0) return undefined
   return kg < 8 ? 'small' : kg < 20 ? 'medium' : 'large'
+}
+
+/**
+ * 사진 생김새로 품종 짐작 (2026-10-06): 기기 안 이미지 분류 모델(MediaPipe EfficientNet-Lite0, ImageNet 1000종)의
+ * 영어 이름 → 품종표 이름. ImageNet에는 강아지 품종이 많고 고양이는 페르시안·샴 정도뿐이라, 나머지 고양이는 코숏으로 본다.
+ * 진돗개는 ImageNet에 없어 비슷하게 나오는 딩고·바센지·차우차우 등을 진도·스피츠형으로 묶는다.
+ */
+const LABEL_TO_BREED: [RegExp, string][] = [
+  [/^maltese/, '말티즈'],
+  [/poodle/, '푸들'],
+  [/^pomeranian/, '포메라니안'],
+  [/^shih-tzu|^lhasa/, '시츄'],
+  [/yorkshire|silky terrier/, '요크셔 테리어'],
+  [/^pekinese|japanese spaniel/, '페키니즈'],
+  [/^papillon/, '빠삐용'],
+  [/siberian husky|eskimo dog|malamute/, '시베리안 허스키'],
+  [/^dingo|^basenji|^chow|^samoyed|^keeshond|ibizan hound|^kelpie/, '진돗개'],
+  [/labrador retriever/, '래브라도 리트리버'],
+  [/golden retriever|flat-coated retriever/, '골든 리트리버'],
+  [/border collie/, '보더 콜리'],
+  [/^pembroke|^cardigan/, '웰시 코기'],
+  [/german shepherd|^malinois|^collie|shetland sheepdog/, '셰퍼드'],
+  [/^chihuahua/, '치와와'],
+  [/french bulldog|^pug|boston bull/, '프렌치 불독'],
+  [/miniature pinscher/, '미니어처 핀셔'],
+  [/schnauzer/, '슈나우저'],
+  [/^beagle/, '비글'],
+  [/^whippet|italian greyhound/, '그레이하운드'],
+  [/cocker spaniel|english springer|blenheim spaniel/, '코카 스파니엘'],
+  [/persian cat/, '페르시안'],
+  [/siamese cat/, '샴'],
+]
+const CAT_LABELS = /tabby|tiger cat|persian cat|siamese cat|egyptian cat/
+
+/** 분류 결과(영어 이름·점수) → 종류와 품종. 품종 점수 합이 0.2보다 작으면 믹스·코숏으로 본다 */
+export function guessFromLabels(labels: { name: string; score: number }[]): { sp?: 'dog' | 'cat'; breed?: Breed } {
+  let cat = 0
+  const sum = new Map<string, number>()
+  for (const { name, score } of labels) {
+    const n = name.toLowerCase()
+    if (CAT_LABELS.test(n)) cat += score
+    const hit = LABEL_TO_BREED.find(([re]) => re.test(n))
+    if (hit) sum.set(hit[1], (sum.get(hit[1]) ?? 0) + score)
+  }
+  const dogScore = [...sum.entries()].filter(([k]) => DOG_BREEDS.some((b) => b.label === k)).reduce((s, [, v]) => s + v, 0)
+  const sp = cat > 0.15 && cat >= dogScore ? 'cat' : dogScore > 0.15 ? 'dog' : undefined
+  const list = sp === 'cat' ? CAT_BREEDS : DOG_BREEDS
+  const best = [...sum.entries()].filter(([k]) => list.some((b) => b.label === k)).sort((a, b) => b[1] - a[1])[0]
+  const breed = best && best[1] >= 0.2 ? list.find((b) => b.label === best[0]) : undefined
+  return { sp, breed }
 }
