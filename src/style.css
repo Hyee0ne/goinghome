@@ -2556,3 +2556,72 @@ body.event-open {
 .mk-page > .site-footer {
   flex: none;
 }
+
+/* ── 휴대폰 하단 탭바 (앱처럼 아이콘 + 글자, 화면 맨 아래 고정) ── */
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.96);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .tabbar a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 0;
+    color: var(--ink-soft);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tabbar a:active {
+    opacity: 0.6;
+  }
+
+  .tabbar .ico {
+    width: 24px;
+    height: 24px;
+  }
+
+  .tabbar a.on {
+    color: var(--accent);
+  }
+
+  .tabbar a.on .ico {
+    stroke-width: 2.2;
+  }
+
+  /* 상단은 로고만, 글자 메뉴·풋터는 탭바로 대신한다 */
+  .site-menu,
+  .foot-menu,
+  .site-footer {
+    display: none;
+  }
+
+  /* 탭바에 가리지 않게 아래 여백 */
+  #app {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+
+  .ad-page,
+  .mk-page {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+}
