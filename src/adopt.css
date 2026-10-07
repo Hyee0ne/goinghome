@@ -239,10 +239,6 @@
   }
 }
 
-.ad-grid > li:nth-child(even) {
-  margin-top: 22px;
-}
-
 .ad-card {
   display: block;
   padding: 0;
@@ -299,10 +295,6 @@
   color: var(--ink-soft);
 }
 
-/* 제목 줄도 본문(980px)과 같은 폭 안에 */
-.ad-page .reg-top {
-  padding-inline: max(16px, calc((100% - 980px) / 2 + 16px));
-}
 
 /* PC: 메인처럼 넓게 (5칸) */
 @media (min-width: 1100px) {
