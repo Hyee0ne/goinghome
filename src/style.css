@@ -2247,6 +2247,11 @@ body.event-open {
     margin-top: 14px;
   }
 
+  /* 왼쪽 정렬이라 성별·몸무게 글자가 구분선에 붙어 보였다 */
+  .layout .poster-facts div + div {
+    padding-left: 12px;
+  }
+
   .layout .poster-cta {
     margin-top: 14px;
   }
