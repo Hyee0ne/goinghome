@@ -323,7 +323,9 @@ function showEventBanner() {
   document.body.classList.add('event-open')
   track('event_banner_view')
 }
-showEventBanner()
+// 메인 첫 화면에는 이벤트 배너를 띄우지 않는다 (2026-10-07 사용자 결정). 다시 쓰려면 아래 줄을 살린다
+// showEventBanner()
+void showEventBanner
 
 // ───────────────────────── 도움말 ─────────────────────────
 
