@@ -110,10 +110,15 @@ function resize() {
   stage.height = Math.round(H * dpr)
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   fur?.resize(W, H, glDpr)
-  // 펫은 로컬 좌표로 대략 폭 560, 높이 640을 차지한다
-  scale = Math.min(W / 560, H / 660)
+  // 펫은 로컬 좌표로 대략 폭 560, 위(귀 끝·정수리, -300)부터 바닥(FLOOR_Y)까지 높이 560을 차지한다.
+  // 위쪽은 지역 문구와 '살살 문질러 주세요' 띠(휴대폰은 가운데) 아래부터 쓴다. 고정 비율(H×0.56)로 두면 무대가 낮은
+  // 휴대폰에서 귀와 정수리가 띠 밑에 가려 머리가 납작하게 잘려 보였다
+  const top = W <= 720 ? 78 : 30
+  const avail = Math.max(1, H - top - 8)
+  scale = Math.min(W / 560, avail / 560)
   cx = W / 2
-  cy = H * 0.56
+  // 남는 높이는 아래쪽에 더 둔다 (아이가 위로 붙어 보이지 않게 조금만 내린다)
+  cy = top + 300 * scale + Math.max(0, avail - 560 * scale) * 0.35
   // 아치문: 아이 바닥선(FLOOR_Y)에 아래를 맞추고, 눈높이쯤까지 (귀·머리는 문 위로 넘친다)
   const arch = $('stage-arch')
   const aw = 400 * scale
@@ -550,8 +555,9 @@ function fillInfo(p: PetProfile) {
     adopt.href = `tel:${a.tel.replace(/[^\d+]/g, '')}`
     adopt.removeAttribute('target')
     adopt.querySelector('span')!.textContent = '보호소에 전화하기'
+    // AI 정면 안내 문구는 빼기로 했다 (2026-10-07 사용자 결정)
     $('info-adopt-note').textContent = a.aiFrontal
-      ? '쓰다듬는 화면은 AI로 정면을 다시 그린 모습이라 실제와 조금 다를 수 있어요. 위 사진이 실제 공고 사진이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
+      ? ''
       : a.fromShelterPhoto
         ? '보호소 공고 사진으로 만든 모습이에요. 출처: 농림축산식품부 국가동물보호정보시스템'
         : ''

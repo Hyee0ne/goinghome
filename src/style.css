@@ -2339,3 +2339,14 @@ body.event-open {
     transform: scale(0.6);
   }
 }
+
+/* 안내 문구가 없으면 빈 줄을 남기지 않는다 (PC 패널은 버튼도 숨겨 바닥 띠 전체를 뺀다) */
+#info-adopt-note:empty {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  #info:not(:modal) .sheet-foot:has(#info-adopt-note:empty) {
+    display: none;
+  }
+}
