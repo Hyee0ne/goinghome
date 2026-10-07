@@ -184,10 +184,6 @@
   content: none;
 }
 
-#ad-d-call::before {
-  content: '☎︎ ';
-}
-
 .ad-pettable {
   position: absolute;
   top: 8px;
@@ -201,12 +197,9 @@
 }
 
 .ad-pet {
-  display: block;
-  margin-bottom: 8px;
   border-color: var(--accent);
   color: var(--accent);
   text-decoration: none;
-  text-align: center;
 }
 
 .ad-pet[hidden] {
@@ -302,4 +295,26 @@
     grid-template-columns: repeat(5, 1fr);
     gap: 14px;
   }
+}
+
+/* 자세히 시트: 버튼 두 개를 한 줄에 같은 높이로, 태그는 다른 정보와 같은 왼쪽 선에 */
+#ad-detail .sheet-foot {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+#ad-detail .sheet-foot .pill {
+  flex: 1;
+  height: 52px;
+  margin: 0;
+}
+
+#ad-detail .traits {
+  margin: 12px 0 4px;
+}
+
+#ad-detail .traits li {
+  background: var(--bg-2);
+  color: var(--ink-soft);
 }

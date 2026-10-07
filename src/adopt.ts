@@ -143,7 +143,7 @@ function openDetail(a: Animal) {
   const call = $<HTMLAnchorElement>('ad-d-call')
   call.hidden = !a.care.tel
   call.href = `tel:${a.care.tel.replace(/[^\d+]/g, '')}`
-  call.querySelector('span')!.textContent = `${a.care.name}에 전화로 입양 문의`
+  call.setAttribute('aria-label', `${a.care.name}에 전화로 입양 문의`)
   detail.showModal()
   detail.querySelector('.sheet-body')!.scrollTop = 0
 }
