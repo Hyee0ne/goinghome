@@ -2533,3 +2533,8 @@ body.event-open {
     font-size: 32px;
   }
 }
+
+/* 아이 순번(1 / 7)은 보이지 않게: 아래 썸네일 줄에 지금 아이가 표시된다 */
+.pet-count {
+  display: none;
+}
