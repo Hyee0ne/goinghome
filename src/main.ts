@@ -24,6 +24,8 @@ const overlay = $<HTMLCanvasElement>('video-overlay')
 const octx = overlay.getContext('2d')!
 const camStatus = $('cam-status')
 const intro = $('intro')
+/** 터치 화면 기기 (마우스 없음): 손가락으로 만지기만 하고 카메라는 묻지 않는다 */
+const touchOnly = window.matchMedia('(hover: none) and (pointer: coarse)').matches
 const introError = $('intro-error')
 const tabs = $('pet-tabs')
 const hud = $('debug-hud')
@@ -346,7 +348,9 @@ function renderHelp() {
   $('help-title').textContent = `${josa(p.name, '과', '와')} 교감하는 법`
   const steps: [string, string][] = [
     mouseSim
-      ? ['👆', '손가락이나 마우스로 아이를 살살 문질러 쓰다듬어 주세요. 손짓으로 쓰다듬으면 더 생생해요.']
+      ? touchOnly
+        ? ['👆', '손가락으로 아이를 살살 문질러 쓰다듬어 주세요.']
+        : ['👆', '손가락이나 마우스로 아이를 살살 문질러 쓰다듬어 주세요. 손짓으로 쓰다듬으면 더 생생해요.']
       : ['✋', '카메라에 손바닥을 활짝 펴서 보여 주세요. 화면에 손끝 점 다섯 개가 나타나요.'],
     ...(p.shy
       ? ([
@@ -795,6 +799,8 @@ function startTouch() {
   renderHelp()
 }
 if (demo || new URLSearchParams(location.search).get('debug') === 'mouse') startTouch()
+// 휴대폰·태블릿(터치 화면)은 손가락으로 만지기만: 카메라를 묻지 않고 바로 시작한다 (2026-10-07 사용자 결정)
+else if (touchOnly) startTouch()
 else resumeStart()
 
 // ───────────────────────── 루프 ─────────────────────────
