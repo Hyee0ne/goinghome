@@ -614,6 +614,32 @@ function selectPet(p: PetProfile) {
 
 const startBtn = $<HTMLButtonElement>('start-camera')
 
+/**
+ * 고른 쓰다듬는 법(손짓 카메라 / 화면 문지르기)을 이 기기에 기억해, 다음에 메인에 오면 묻지 않고 바로 시작한다.
+ * 카메라는 브라우저가 이미 허용해 둔 경우에만 자동으로 켠다 (아니면 처음처럼 고르는 카드가 뜬다)
+ */
+const START_KEY = 'goinghome.startMode'
+function rememberStart(mode: 'camera' | 'touch') {
+  try {
+    localStorage.setItem(START_KEY, mode)
+  } catch {
+    /* 기억하지 못해도 이번에는 시작한다 */
+  }
+}
+async function resumeStart() {
+  let mode: string | null = null
+  try {
+    mode = localStorage.getItem(START_KEY)
+  } catch {
+    return
+  }
+  if (mode === 'touch') startTouch()
+  else if (mode === 'camera') {
+    const state = await navigator.permissions?.query({ name: 'camera' as PermissionName }).then((r) => r.state).catch(() => 'prompt')
+    if (state === 'granted') startCamera()
+  }
+}
+
 async function startCamera() {
   // 사용자가 누른 순간에만 마이크를 켤 수 있어서 카메라를 기다리기 전에 켠다
   if (VOICE_ENABLED) voice.start()
@@ -625,6 +651,7 @@ async function startCamera() {
     overlay.width = video.videoWidth
     overlay.height = video.videoHeight
     intro.hidden = true
+    rememberStart('camera')
     inviteToMake()
   } catch (err) {
     const msg =
@@ -738,6 +765,7 @@ function startTouch() {
   if (mouseSim) return
   mouseSim = true
   intro.hidden = true
+  if (!demo) rememberStart('touch')
   document.body.classList.add('touch')
   inviteToMake()
   // 접시 위에서 누르기 시작하면, 뗄 때까지 간식을 집은 손 (따로 '간식 집기'를 켜지 않아도 끌어다 먹일 수 있다)
@@ -767,6 +795,7 @@ function startTouch() {
   renderHelp()
 }
 if (demo || new URLSearchParams(location.search).get('debug') === 'mouse') startTouch()
+else resumeStart()
 
 // ───────────────────────── 루프 ─────────────────────────
 
