@@ -633,6 +633,7 @@ uniform float uBreathFur;  // 숨 쉴 때 가슴 털이 결 따라 오르내리�
 uniform float uShadowAmt;  // 바닥 그림자 세기 (클로즈업 사진은 0)
 uniform float uFadeFrom;   // 이 높이(픽셀)부터 아래로 서서히 투명해진다
 uniform vec2 uFadeSides;   // 잘린 옆면 경계 (왼쪽 x, 오른쪽 x). 잘리지 않았으면 사진 밖
+#define SIDE_FADE 0.12         // 잘린 옆면을 흐리는 폭 (사진 너비 비율)
 
 varying vec2 vUv;
 
@@ -1010,6 +1011,22 @@ void main() {
   // ── 합성 (premultiplied alpha) ──
   col *= 1.0 - smoothstep(uFadeFrom, uSize.y, P.y);
   col *= smoothstep(uFadeSides.x, uFadeSides.x + uSize.x * 0.08, P.x) * smoothstep(uFadeSides.y, uFadeSides.y - uSize.x * 0.08, P.x);
+  // 잘린 옆면 자동 감지: 사진 양 끝 열에 털이 닿아 있는 줄은 몸이 잘린 것이라 안쪽으로 서서히 투명하게.
+  // (AI 정면은 몸을 화면 끝까지 그려, 리그에 표시가 없으면 몸통 옆이 세로로 칼같이 잘려 아이가 상자에 끼인 듯 좁아 보였다)
+  // 끝 열 투명도를 위쪽 몇 곳과 평균 내 잘리기 시작하는 어깨 줄에서 계단이 지지 않게 한다
+  if (P.x < SIDE_FADE * uSize.x || P.x > (1.0 - SIDE_FADE) * uSize.x) {
+    float fw = SIDE_FADE * uSize.x;
+    float eL = 0.0;
+    float eR = 0.0;
+    for (int k = 0; k < 3; k++) {
+      float y = P.y - fw * 0.5 * float(k);
+      eL += img(vec2(1.5, y)).a;
+      eR += img(vec2(uSize.x - 1.5, y)).a;
+    }
+    eL = smoothstep(0.3, 0.9, eL / 3.0);
+    eR = smoothstep(0.3, 0.9, eR / 3.0);
+    col *= mix(1.0, smoothstep(0.0, fw, P.x), eL) * mix(1.0, smoothstep(uSize.x, uSize.x - fw, P.x), eR);
+  }
   vec3 shadowCol = vec3(0.35, 0.22, 0.1);
   gl_FragColor = vec4(col.rgb + shadowCol * shadow * (1.0 - col.a), col.a + shadow * (1.0 - col.a));
 }
