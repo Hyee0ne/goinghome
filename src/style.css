@@ -2361,3 +2361,69 @@ body.event-open {
     display: none;
   }
 }
+
+/* 교감하는 법 버튼: 무대 왼쪽 아래, 간식 접시 바로 밑 (상단 바의 ? 버튼을 옮겼다) */
+.stage-help {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(20, 30, 80, 0.08);
+}
+
+.stage-help .ico {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+
+.stage-help[aria-expanded='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 간식 접시는 버튼 위로 올린다 */
+.treat-tray {
+  bottom: 56px;
+}
+
+/* 도움말 상자는 버튼 위에서 열린다 */
+.help-box {
+  top: auto;
+  right: auto;
+  left: 16px;
+  bottom: 56px;
+}
+
+@media (max-width: 959px) {
+  .stage-help {
+    left: 10px;
+    bottom: 8px;
+    height: 30px;
+    font-size: 12px;
+  }
+
+  .treat-tray {
+    bottom: 42px;
+  }
+}
+
+@media (max-width: 720px) {
+  .help-box {
+    left: 10px;
+    right: 10px;
+    bottom: 46px;
+    max-height: calc(100% - 60px);
+  }
+}
