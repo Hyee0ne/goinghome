@@ -2427,3 +2427,39 @@ body.event-open {
     max-height: calc(100% - 60px);
   }
 }
+
+/* 교감하는 법: 글자 없이 ? 아이콘만 (동그란 버튼) */
+.stage-help {
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  gap: 0;
+}
+
+.stage-help .ico {
+  width: 20px;
+  height: 20px;
+}
+
+/* 간식 접시: 더 크게, '간식' 글자는 빼고 */
+.treat-tray {
+  bottom: 60px;
+  transform: none;
+}
+
+.treat-tray .tray-label {
+  display: none;
+}
+
+@media (max-width: 959px) {
+  .stage-help {
+    width: 34px;
+    height: 34px;
+  }
+
+  .treat-tray {
+    bottom: 46px;
+    transform: scale(0.85);
+  }
+}

@@ -32,11 +32,19 @@ interface LivePet {
 
 export const isShelter = (p: PetProfile) => p.id.startsWith('shelter-')
 
+/**
+ * 아이 사진이 차지하는 최대 폭 (펫 로컬 단위) = 무대 아치문 폭 (main.ts resize의 aw).
+ * AI 정면은 몸을 사진 끝까지 그려서, 사진이 넓은 아이(페르시안·래그돌)는 아치문 밖으로 크게 넘쳤다.
+ * 사진 폭이 이보다 넓으면 크기(scale)를 줄인다. 발바닥 선 기준이라 아이는 아치 바닥에 그대로 선다
+ */
+const ARCH_W = 400
+
 /** 사진 경로에 BASE_URL을 붙인다 */
 function withBase(rig: PhotoRig): PhotoRig {
   const ex = rig.expressions
   return {
     ...rig,
+    scale: Math.min(rig.scale, ARCH_W / rig.width),
     src: assetUrl(rig.src),
     flow: assetUrl(rig.flow),
     catchlight: rig.catchlight && assetUrl(rig.catchlight),
