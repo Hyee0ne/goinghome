@@ -2222,6 +2222,11 @@ body.event-open {
     grid-row: 1 / span 2;
   }
 
+  /* 썸네일 줄은 무대와 오른쪽 상세 아래를 가로질러 전체 폭으로 (최대 20마리까지 한 줄에, 넘치면 옆으로 스크롤) */
+  .layout .pet-list {
+    grid-column: 1 / -1;
+  }
+
   .layout .poster-foot {
     grid-column: 2;
     grid-row: 1;
@@ -2247,7 +2252,7 @@ body.event-open {
 
   #info[open]:not(:modal) {
     grid-column: 2;
-    grid-row: 2 / span 2;
+    grid-row: 2;
     height: auto;
     min-height: 0;
   }
@@ -2289,15 +2294,15 @@ body.event-open {
 
 @media (min-width: 960px) {
   .layout .pet-list {
-    grid-column: 1;
     grid-row: 3;
-    gap: 14px;
+    gap: 10px;
     padding: 12px 20px 14px;
   }
 
+  /* 20마리 × (50 + 10) ≈ 1230px: 1280px 화면에서 한 줄에 다 들어온다 */
   .layout .pet-list .face {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
   }
 }
 
