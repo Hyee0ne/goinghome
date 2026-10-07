@@ -350,7 +350,7 @@
 
 /*
  * PC (960px 이상): 메인처럼 넓게 2단.
- * 사진 고르기: 왼쪽에 큰 제목·입력·버튼, 오른쪽에 큰 아치문 사진 칸.
+ * 사진 고르기: 위에 제목, 아래 왼쪽 큰 아치문 사진 칸 → 오른쪽 이름·종류·찾기 버튼 (고르는 순서대로).
  * 결과: 왼쪽에 두 아치문(우리 아이 · 닮은 친구), 오른쪽에 설명·다른 친구·버튼
  */
 @media (min-width: 960px) {
@@ -359,33 +359,34 @@
     padding: 48px 32px 56px;
   }
 
+  /* 순서대로: 위에 제목, 아래 왼쪽 ① 사진 → 오른쪽 ② 이름·종류 → ③ 찾기 */
   .fd-ask {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
-    grid-template-rows: auto auto auto auto auto 1fr;
-    column-gap: 72px;
-    align-items: start;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 420px);
+    grid-template-rows: auto auto 1fr auto auto auto 1fr;
+    justify-content: center;
+    column-gap: 64px;
     text-align: left;
   }
 
-  .fd-ask > :not(.fd-photo) {
-    grid-column: 1;
-    max-width: 440px;
-  }
-
   .fd-ask .fd-h {
-    margin: 40px 0 10px;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin: 8px 0 8px;
     font-size: 40px;
     line-height: 1.25;
   }
 
   .fd-ask .fd-sub {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-bottom: 32px;
     font-size: 16px;
   }
 
   .fd-ask .fd-photo {
-    grid-column: 2;
-    grid-row: 1 / -1;
+    grid-column: 1;
+    grid-row: 3 / -1;
     width: 100%;
     margin: 0;
   }
@@ -395,7 +396,25 @@
   }
 
   .fd-ask .fd-status {
-    margin: 24px 0 8px;
+    grid-column: 2;
+    grid-row: 4;
+    margin: 0 0 10px;
+  }
+
+  .fd-ask .fd-form {
+    grid-column: 2;
+    grid-row: 5;
+  }
+
+  .fd-ask .fd-go {
+    grid-column: 2;
+    grid-row: 6;
+  }
+
+  .fd-ask .fd-privacy {
+    grid-column: 2;
+    grid-row: 7;
+    align-self: start;
   }
 
   .fd-name {
