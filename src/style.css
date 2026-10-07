@@ -2184,3 +2184,12 @@ body.event-open {
 .event-tag {
   background: var(--accent);
 }
+
+/* 쓰다듬기 시작 화면이 떠 있는 동안은 PC 오른쪽 상세도 가린다 (고르는 데만 집중) */
+#app:has(#intro:not([hidden])) #info {
+  filter: blur(8px);
+  opacity: 0.3;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.25s, opacity 0.25s;
+}
