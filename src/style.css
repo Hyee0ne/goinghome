@@ -2538,3 +2538,21 @@ body.event-open {
 .pet-count {
   display: none;
 }
+
+/* 전체 공고·닮은 친구: 내용이 짧아도 풋터는 화면 맨 아래에 */
+.ad-page,
+.mk-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.ad-page > main,
+.mk-page > main {
+  flex: 1 0 auto;
+}
+
+.ad-page > .site-footer,
+.mk-page > .site-footer {
+  flex: none;
+}
