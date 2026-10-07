@@ -312,12 +312,15 @@ function showEventBanner() {
         /* 기억하지 못해도 닫는다 */
       }
     el.remove()
+    document.body.classList.remove('event-open')
   }
   el.querySelector<HTMLButtonElement>('.event-close')!.onclick = () => close(false)
   el.querySelector<HTMLButtonElement>('.event-later')!.onclick = () => close(true)
   el.addEventListener('click', (e) => e.target === el && close(false))
   el.querySelector('a')!.addEventListener('click', () => track('invite_click', { from: 'banner' }))
   document.body.append(el)
+  // 배너가 떠 있는 동안 뒤 화면이 스크롤되지 않게 (딤 뒤로 내용이 밀려 올라와 보이지 않게)
+  document.body.classList.add('event-open')
   track('event_banner_view')
 }
 showEventBanner()
