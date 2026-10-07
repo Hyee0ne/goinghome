@@ -1365,13 +1365,6 @@ button {
   font-size: 17px !important;
 }
 
-/* 휴대폰에서는 접시가 카드 위로 */
-@media (max-width: 959px) {
-  .treat-tray {
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 132px) !important;
-  }
-}
-
 /* 상세 시트의 아이 공유 버튼 */
 .share-pet {
   display: block;
@@ -2217,7 +2210,7 @@ body.event-open {
 @media (min-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) clamp(380px, 32vw, 480px);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .layout .poster {
@@ -2254,7 +2247,7 @@ body.event-open {
 
   #info[open]:not(:modal) {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 2 / span 2;
     height: auto;
     min-height: 0;
   }
@@ -2271,5 +2264,78 @@ body.event-open {
     opacity: 0.3;
     pointer-events: none;
     user-select: none;
+  }
+}
+
+/* 아이들 썸네일: 무대 아래 가로 줄 (PC는 왼쪽 무대 밑, 휴대폰은 맨 아래). 넘치면 옆으로 스크롤 */
+.layout .pet-list {
+  display: flex;
+  order: 2;
+  justify-content: safe center;
+  gap: 10px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+  border-right: 0;
+  background: var(--bg);
+}
+
+.layout .pet-list .face {
+  width: 46px;
+  height: 46px;
+}
+
+@media (min-width: 960px) {
+  .layout .pet-list {
+    grid-column: 1;
+    grid-row: 3;
+    gap: 14px;
+    padding: 12px 20px 14px;
+  }
+
+  .layout .pet-list .face {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* 이전·다음 화살표: 흰 바탕에 묻혀 안 보였다 → 진한 원 + 흰 화살표, 조금 크게 */
+.pet-nav {
+  width: 48px;
+  height: 48px;
+  background: rgba(22, 26, 60, 0.78);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(20, 30, 80, 0.25);
+  transition: background-color 0.15s, transform 0.12s;
+}
+
+.pet-nav:hover {
+  background: var(--accent);
+}
+
+.pet-nav:active {
+  transform: scale(0.94);
+}
+
+.pet-nav .ico {
+  width: 22px;
+  height: 22px;
+}
+
+/* 간식 접시: 오른쪽(상세·다음 화살표 옆)에서 무대 왼쪽 아래로 */
+.treat-tray {
+  right: auto;
+  left: 18px;
+  bottom: 14px;
+  transform-origin: left bottom;
+}
+
+@media (max-width: 959px) {
+  .treat-tray {
+    left: 6px;
+    bottom: 6px;
+    transform: scale(0.6);
   }
 }
