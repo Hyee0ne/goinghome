@@ -2208,3 +2208,68 @@ body.event-open {
     display: inline;
   }
 }
+
+/*
+ * PC (960px 이상): 휴대폰 화면을 키운 모양이 아니라, 왼쪽은 쓰다듬는 무대를 크게,
+ * 오른쪽 기둥은 위에 이름·정보·입양 문의, 아래로 사진·이야기·보호 정보가 이어지는 상세 페이지 배치.
+ * (포스터 묶음을 풀어 무대와 아래쪽 정보를 각각 격자 칸에 놓는다. 휴대폰은 그대로)
+ */
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) clamp(380px, 32vw, 480px);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .layout .poster {
+    display: contents;
+  }
+
+  .layout .stage-wrap {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .layout .poster-foot {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    margin: 0;
+    padding: 22px 22px 18px;
+    border-left: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+
+  .layout .poster-name {
+    font-size: 32px;
+  }
+
+  .layout .poster-facts {
+    margin-top: 14px;
+  }
+
+  .layout .poster-cta {
+    margin-top: 14px;
+  }
+
+  #info[open]:not(:modal) {
+    grid-column: 2;
+    grid-row: 2;
+    height: auto;
+    min-height: 0;
+  }
+
+  /* 이름은 위 칸에 크게 있으니 상세에서는 공고번호·마감만 */
+  #info:not(:modal) #info-name,
+  #info:not(:modal) .sheet-emoji {
+    display: none;
+  }
+
+  /* 쓰다듬기 시작 화면이 떠 있는 동안은 오른쪽 기둥 전체를 가린다 */
+  #app:has(#intro:not([hidden])) .layout .poster-foot {
+    filter: blur(8px);
+    opacity: 0.3;
+    pointer-events: none;
+    user-select: none;
+  }
+}
