@@ -176,7 +176,8 @@ async function loadAnimals() {
 $('fd-go').onclick = async () => {
   const sp = species()
   const mine = guessed && breeds().includes(guessed) ? guessed : breeds()[0]
-  picks = findSimilar(await loadAnimals(), sp, mine, mine.size, state.color, 3)
+  // 가장 닮은 친구 + 다른 닮은 친구 4마리 (PC 카드 한 줄, 휴대폰 2×2)
+  picks = findSimilar(await loadAnimals(), sp, mine, mine.size, state.color, 5)
   const name = $<HTMLInputElement>('fd-name').value.trim()
   const top = picks[0]
   // 두 문: 우리 아이(사용자 원본 사진) · 가장 닮은 친구(공고 원본 사진)

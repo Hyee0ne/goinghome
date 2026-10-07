@@ -430,42 +430,6 @@
     justify-content: flex-start;
   }
 
-  .fd-result {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
-    column-gap: 64px;
-    align-items: start;
-    text-align: left;
-  }
-
-  .fd-result > :not(.fd-doors) {
-    grid-column: 2;
-  }
-
-  .fd-result .fd-doors {
-    grid-column: 1;
-    grid-row: 1 / span 20;
-    gap: 20px;
-    margin-top: 0;
-  }
-
-  .fd-doors figcaption {
-    margin-top: 10px;
-    font-size: 14px;
-  }
-
-  .fd-doors figcaption b {
-    font-size: 18px;
-  }
-
-  .fd-result .fd-title {
-    margin-top: 0;
-    font-size: 28px;
-  }
-
-  .fd-again {
-    justify-self: start;
-  }
 }
 
 /* 결과: 닮은 친구 정보 줄, 다른 친구 카드, 버튼 */
@@ -539,5 +503,115 @@
 @media (min-width: 960px) {
   .fd-more-label {
     margin-top: 24px;
+  }
+}
+
+/* 아치문 사진은 칸을 꽉 채운다 (사진 비율이 달라도 아래에 빈 띠가 생기지 않게) */
+.fd-door img {
+  position: absolute;
+  inset: 0;
+}
+
+/* 버튼: 휴대폰은 공고·쓰다듬기 한 줄 + 알리기 한 줄 */
+.fd-cta {
+  flex-wrap: wrap;
+}
+
+.fd-cta .fd-share {
+  flex: 1 1 100%;
+  width: auto;
+  margin-top: 0;
+}
+
+/*
+ * PC 결과: 가운데 정렬 한 기둥 (포스터처럼).
+ * 제목 → 두 아치문(우리 아이 · 닮은 친구) → 닮은 이유 태그 → 버튼 한 줄 → 다른 닮은 친구 카드 줄 → 다시 찾기
+ */
+@media (min-width: 960px) {
+  .fd-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .fd-result .fd-title {
+    order: 0;
+    margin: 0 0 28px;
+    font-size: 34px;
+    line-height: 1.3;
+  }
+
+  .fd-result .fd-doors {
+    order: 1;
+    width: min(720px, 100%);
+    gap: 40px;
+    margin: 0;
+  }
+
+  .fd-doors figcaption {
+    margin-top: 12px;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .fd-doors figcaption b {
+    font-size: 20px;
+  }
+
+  .fd-result .fd-why {
+    order: 2;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 24px 0 0;
+    border: 0;
+  }
+
+  .fd-result .fd-why li {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--bg-2);
+    font-size: 15px;
+  }
+
+  .fd-result .fd-cta {
+    order: 3;
+    flex-wrap: nowrap;
+    width: min(720px, 100%);
+    margin-top: 28px;
+  }
+
+  .fd-cta .pill {
+    height: 52px;
+  }
+
+  .fd-cta .fd-share {
+    flex: 1.3 1 0;
+  }
+
+  .fd-result .fd-more-label {
+    order: 4;
+    align-self: stretch;
+    margin: 56px 0 14px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .fd-result .fd-more {
+    order: 5;
+    align-self: stretch;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px 14px;
+  }
+
+  .fd-result .fd-again {
+    order: 6;
+    margin-top: 32px;
   }
 }
