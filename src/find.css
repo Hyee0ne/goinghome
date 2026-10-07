@@ -347,3 +347,104 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
 }
+
+/*
+ * PC (960px 이상): 메인처럼 넓게 2단.
+ * 사진 고르기: 왼쪽에 큰 제목·입력·버튼, 오른쪽에 큰 아치문 사진 칸.
+ * 결과: 왼쪽에 두 아치문(우리 아이 · 닮은 친구), 오른쪽에 설명·다른 친구·버튼
+ */
+@media (min-width: 960px) {
+  .fd-page .mk-wrap {
+    width: min(1100px, 100%);
+    padding: 48px 32px 56px;
+  }
+
+  .fd-ask {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-rows: auto auto auto auto auto 1fr;
+    column-gap: 72px;
+    align-items: start;
+    text-align: left;
+  }
+
+  .fd-ask > :not(.fd-photo) {
+    grid-column: 1;
+    max-width: 440px;
+  }
+
+  .fd-ask .fd-h {
+    margin: 40px 0 10px;
+    font-size: 40px;
+    line-height: 1.25;
+  }
+
+  .fd-ask .fd-sub {
+    font-size: 16px;
+  }
+
+  .fd-ask .fd-photo {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    width: 100%;
+    margin: 0;
+  }
+
+  .fd-photo-empty {
+    font-size: 17px;
+  }
+
+  .fd-ask .fd-status {
+    margin: 24px 0 8px;
+  }
+
+  .fd-name {
+    text-align: left;
+    padding-inline: 18px;
+  }
+
+  .fd-species {
+    justify-content: flex-start;
+  }
+
+  .fd-privacy {
+    justify-content: flex-start;
+  }
+
+  .fd-result {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+    column-gap: 64px;
+    align-items: start;
+    text-align: left;
+  }
+
+  .fd-result > :not(.fd-doors) {
+    grid-column: 2;
+  }
+
+  .fd-result .fd-doors {
+    grid-column: 1;
+    grid-row: 1 / span 20;
+    gap: 20px;
+    margin-top: 0;
+  }
+
+  .fd-doors figcaption {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+
+  .fd-doors figcaption b {
+    font-size: 18px;
+  }
+
+  .fd-result .fd-title {
+    margin-top: 0;
+    font-size: 28px;
+  }
+
+  .fd-again {
+    justify-self: start;
+  }
+}
