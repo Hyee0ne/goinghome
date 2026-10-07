@@ -30,6 +30,7 @@ interface Animal {
   end: string
   care?: { name?: string }
   weight?: string
+  sex?: 'M' | 'F' | 'Q'
   photos: string[]
 }
 
@@ -184,8 +185,16 @@ $('fd-go').onclick = async () => {
   const where = top ? shortRegion(top.a.org) : ''
   if (top) {
     $<HTMLImageElement>('fd-top-img').src = top.a.photos[0]
-    $('fd-top-name').textContent = top.a.kind
+    $('fd-top-name').textContent = kindName(top.a.kind)
+    $('fd-top-meta').textContent = facts(top.a)
     $('fd-top-where').textContent = `${where} 보호소`
+    // 실사화해서 쓰다듬을 수 있는 아이면 바로 만나러 가기
+    const pet = $<HTMLAnchorElement>('fd-pet')
+    pet.hidden = true
+    pettable.then((ids) => {
+      pet.hidden = !ids.has(top.a.id)
+      pet.href = `./?pet=shelter-${top.a.id}`
+    })
     for (const id of ['fd-top-link', 'fd-notice']) {
       const el = $<HTMLAnchorElement>(id)
       el.href = `adopt?id=${top.a.id}`
@@ -208,10 +217,11 @@ $('fd-go').onclick = async () => {
   // 다른 닮은 친구
   const rest = picks.slice(1)
   $('fd-more-label').hidden = !rest.length
-  $('fd-list').replaceChildren(...rest.map((p) => moreRow(p.a, p.why)))
+  $('fd-list').replaceChildren(...rest.map((p) => moreCard(p.a, p.why)))
   $('fd-ask').hidden = true
   $('fd-result').hidden = false
   for (const id of ['fd-share', 'fd-notice']) $(id).hidden = !top
+  if (!top) $('fd-pet').hidden = true
   window.scrollTo(0, 0)
   track('find_result', { species: sp, breed: mine.label, found: picks.length, gen: landedGen() || undefined })
 }
@@ -223,20 +233,37 @@ function shortRegion(org: string) {
   return [SIDO[sido] ?? sido, gu.replace(/(시|군|구)$/, '')].filter(Boolean).join(' ')
 }
 
-/** 다른 닮은 친구 한 줄: 작은 문(공고 원본 사진) · 품종 · 지역과 닮은 이유 → 입양 공고 화면 */
-function moreRow(a: Animal, why: string) {
-  const link = Object.assign(document.createElement('a'), { className: 'fd-more-row', href: `adopt?id=${a.id}` })
+/** 품종 이름: 공고의 '페르시안-페르시안 친칠라'처럼 겹친 이름은 뒤쪽(자세한 이름)만 */
+function kindName(kind: string) {
+  return kind.includes('-') ? kind.split('-').pop()!.trim() : kind
+}
+
+/** 성별 · 나이 (있는 것만) */
+function facts(a: Animal) {
+  const sex = a.sex === 'M' ? '남아' : a.sex === 'F' ? '여아' : ''
+  return [sex, a.age].filter(Boolean).join(' · ')
+}
+
+/** 실사화해서 쓰다듬을 수 있는 아이 id (public/data/shelter-live.json) */
+const pettable: Promise<Set<string>> = fetch(`${import.meta.env.BASE_URL}data/shelter-live.json`)
+  .then((r) => (r.ok ? r.json() : { pets: [] }))
+  .catch(() => ({ pets: [] }))
+  .then((d: { pets: { id: string }[] }) => new Set(d.pets.map((p) => p.id)))
+
+/** 다른 닮은 친구 카드: 아치문 사진(공고 원본) · 품종 · 지역과 닮은 이유 → 입양 공고 화면 */
+function moreCard(a: Animal, why: string) {
+  const link = Object.assign(document.createElement('a'), { className: 'fd-more-card', href: `adopt?id=${a.id}` })
   link.addEventListener('click', () => track('adopt_action', { how: 'notice', where: 'find' }))
-  const door = Object.assign(document.createElement('span'), { className: 'fd-door small' })
+  const door = Object.assign(document.createElement('span'), { className: 'fd-door' })
   const img = Object.assign(new Image(), { src: a.photos[0], alt: '', loading: 'lazy', decoding: 'async' })
   img.referrerPolicy = 'no-referrer'
   door.append(img)
-  const text = document.createElement('span')
-  text.append(
-    Object.assign(document.createElement('b'), { textContent: a.kind }),
-    Object.assign(document.createElement('small'), { textContent: `${shortRegion(a.org)} · ${why.split(' · ')[0]}` }),
+  link.append(
+    door,
+    Object.assign(document.createElement('b'), { textContent: kindName(a.kind) }),
+    Object.assign(document.createElement('small'), { textContent: [facts(a), shortRegion(a.org)].filter(Boolean).join(' · ') }),
+    Object.assign(document.createElement('small'), { className: 'fd-more-why', textContent: why.split(' · ')[0] }),
   )
-  link.append(door, text)
   return link
 }
 

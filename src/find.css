@@ -467,3 +467,77 @@
     justify-self: start;
   }
 }
+
+/* 결과: 닮은 친구 정보 줄, 다른 친구 카드, 버튼 */
+.fd-doors figcaption span {
+  display: block;
+}
+
+#fd-top-meta:empty {
+  display: none;
+}
+
+.fd-more {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fd-more-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink);
+  text-align: left;
+  text-decoration: none;
+}
+
+.fd-more-card .fd-door {
+  margin-bottom: 6px;
+  background: var(--bg-2);
+}
+
+.fd-more-card b {
+  font-size: 14px;
+}
+
+.fd-more-card small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.fd-more-card .fd-more-why {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.fd-cta {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.fd-cta .pill {
+  flex: 1;
+  height: 48px;
+  text-decoration: none;
+}
+
+.fd-cta .pill[hidden] {
+  display: none;
+}
+
+.fd-share {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.fd-share[hidden] {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .fd-more-label {
+    margin-top: 24px;
+  }
+}
