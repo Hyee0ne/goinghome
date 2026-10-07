@@ -2210,7 +2210,8 @@ body.event-open {
 @media (min-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) clamp(380px, 32vw, 480px);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    /* 오른쪽 기둥: 위는 사진·상세(스크롤), 아래는 이름·정보·입양 문의 */
+    grid-template-rows: minmax(0, 1fr) auto auto;
   }
 
   .layout .poster {
@@ -2229,12 +2230,12 @@ body.event-open {
 
   .layout .poster-foot {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     width: auto;
     margin: 0;
-    padding: 22px 22px 18px;
+    padding: 18px 22px 18px;
     border-left: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
+    border-top: 1px solid var(--line);
     text-align: left;
   }
 
@@ -2252,7 +2253,7 @@ body.event-open {
 
   #info[open]:not(:modal) {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     height: auto;
     min-height: 0;
   }
