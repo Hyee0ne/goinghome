@@ -2478,3 +2478,11 @@ body.event-open {
   inset: 0;
   z-index: 40;
 }
+
+/* 공고 마감일: 상세 위쪽 공고번호 아래에 (빨간 경고색이 아니라 차분하게) */
+#info .sheet-due {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}

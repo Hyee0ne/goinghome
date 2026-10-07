@@ -524,9 +524,10 @@ function fillInfo(p: PetProfile) {
   $('info-emoji').textContent = p.species === 'dog' ? '🐶' : '🐱'
   $('info-name').textContent = p.name
   // 공고 아이는 이름이 곧 품종이라 겹치지 않게
-  // 포스터 뒷면: 이름 아래에 공고번호(진짜 공고라는 표시), 마감일은 아래 표에만 담담하게
+  // 포스터 뒷면: 이름 아래에 공고번호(진짜 공고라는 표시)와 공고 마감일 (마감일은 표 아래에 묻혀 있던 것을 위로, 2026-10-07)
   $('info-meta').textContent = p.adoption?.noticeNo ?? [p.breed !== p.name ? p.breed : '', p.sex, p.age].filter(Boolean).join(' · ')
-  $('info-due').textContent = ''
+  const end = p.adoption?.noticeEnd
+  $('info-due').textContent = end ? `공고 마감 ${Number(end.slice(4, 6))}월 ${Number(end.slice(6, 8))}일` : ''
 
   const traits = [...(p.traits ?? []), `${FAVORITE_LABEL[p.favorite]} 좋아해요`]
   if (canGivePaw(p)) traits.push("'손' 할 줄 알아요 🐾")
@@ -543,7 +544,7 @@ function fillInfo(p: PetProfile) {
   $('info-sample').hidden = !a?.sample
   $('info-shelter').replaceChildren(
     ...(a
-      ? ([['보호소', a.shelter], ['지역', a.region], ['전화', a.tel], ['공고 마감', a.noticeEnd && `${a.noticeEnd.slice(4, 6)}월 ${a.noticeEnd.slice(6, 8)}일`], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
+      ? ([['보호소', a.shelter], ['지역', a.region], ['전화', a.tel], ['공고번호', a.noticeNo]] as const).flatMap(([k, v]) =>
           v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
         )
       : []),
