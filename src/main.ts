@@ -121,8 +121,9 @@ function resize() {
   cy = top + 300 * scale + Math.max(0, avail - 560 * scale) * 0.35
   // 아치문: 아이 바닥선(FLOOR_Y)에 아래를 맞추고, 눈높이쯤까지 (귀·머리는 문 위로 넘친다)
   const arch = $('stage-arch')
-  const aw = 400 * scale
-  const ah = 440 * scale
+  // (아이 폭 상한 400보다 넉넉하게: 아이가 문 안에 서 있는 느낌)
+  const aw = 480 * scale
+  const ah = 520 * scale
   Object.assign(arch.style, { width: `${aw}px`, height: `${ah}px`, left: `${cx - aw / 2}px`, top: `${cy + (FLOOR_Y - 20) * scale - ah}px` })
 }
 window.addEventListener('resize', resize)

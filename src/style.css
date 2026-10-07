@@ -2463,3 +2463,11 @@ body.event-open {
     transform: scale(0.85);
   }
 }
+
+/* 쓰다듬기 시작 화면이 떠 있는 동안은 아래 썸네일 줄도 가린다 */
+#app:has(#intro:not([hidden])) .layout .pet-list {
+  filter: blur(6px);
+  opacity: 0.3;
+  pointer-events: none;
+  user-select: none;
+}
