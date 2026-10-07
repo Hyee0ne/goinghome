@@ -2486,3 +2486,52 @@ body.event-open {
   font-size: 14px;
   font-weight: 700;
 }
+
+/* 전체 공고·닮은 친구: 메인과 같은 상단 바. 긴 페이지라 위에 붙어 있고, 글자 메뉴는 휴대폰에서도 보인다 */
+.site-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.site-menu {
+  display: flex;
+}
+
+@media (max-width: 380px) {
+  .site-menu {
+    gap: 12px;
+    font-size: 13px;
+  }
+}
+
+/* 페이지 제목: 메인 아이 이름과 같은 굵은 제목 */
+.page-head {
+  margin: 8px 0 16px;
+}
+
+.page-kicker {
+  margin: 0 0 2px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.page-head h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 960px) {
+  .page-head {
+    margin: 16px 0 20px;
+  }
+
+  .page-head h1 {
+    font-size: 32px;
+  }
+}

@@ -29,14 +29,15 @@
       <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
       <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
     </svg>
-    <header class="mk-top">
-      <a class="reg-back home-btn" href="./" aria-label="고잉홈 첫 화면으로"><svg class="ico" aria-hidden="true"><use href="#i-home" /></svg></a>
-      <div class="mk-title">
-        <h1>우리 아이 닮은 친구 찾기</h1>
-      </div>
+    <!-- 상단 바: 메인과 같은 로고·글자 메뉴 (페이지마다 따로 놀지 않게) -->
+    <header class="topbar site-top">
+      <a class="brand" href="./" aria-label="고잉홈 첫 화면"><img class="brand-logo" src="/logo-goinghome.png" alt="고잉홈" width="88" height="32" /></a>
+      <span class="topbar-sp"></span>
+      <nav class="text-menu site-menu" aria-label="메뉴"><a href="./">만나기</a><a href="adopt">전체 공고</a><a class="on" aria-current="page" href="find">닮은 친구</a></nav>
     </header>
 
     <main class="mk-wrap">
+      <h1 class="sr-only">우리 아이 닮은 친구 찾기</h1>
       <!-- 1. 우리 아이 사진 한 장 (기기 안에서 털색과 생김새만 본다) -->
       <section id="fd-ask" class="fd-ask">
         <h2 class="fd-h">우리 아이랑 닮은 친구,<br />보호소에 있을까요?</h2>

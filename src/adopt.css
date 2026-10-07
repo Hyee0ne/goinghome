@@ -7,7 +7,7 @@
 }
 
 .ad-wrap {
-  width: min(980px, 100%);
+  width: min(1200px, 100%);
   margin: 0 auto;
   padding: 14px 16px max(28px, env(safe-area-inset-bottom));
 }
@@ -302,4 +302,12 @@
 /* 제목 줄도 본문(980px)과 같은 폭 안에 */
 .ad-page .reg-top {
   padding-inline: max(16px, calc((100% - 980px) / 2 + 16px));
+}
+
+/* PC: 메인처럼 넓게 (5칸) */
+@media (min-width: 1100px) {
+  .ad-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
 }
