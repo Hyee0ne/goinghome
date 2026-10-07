@@ -2193,3 +2193,18 @@ body.event-open {
   user-select: none;
   transition: filter 0.25s, opacity 0.25s;
 }
+
+/* 화면 쓰다듬기 버튼 이름: PC는 '마우스로', 터치 기기는 '손가락으로' */
+.on-coarse {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .on-fine {
+    display: none;
+  }
+
+  .on-coarse {
+    display: inline;
+  }
+}

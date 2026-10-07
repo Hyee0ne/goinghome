@@ -625,7 +625,7 @@ async function startCamera() {
             : '카메라를 시작하지 못했어요.'
     introError.textContent = msg
     introError.hidden = false
-    startBtn.innerHTML = '<b>✋ 다시 시도하기</b><small>또는 아래 화면으로 쓰다듬기</small>'
+    startBtn.innerHTML = '<b>✋ 다시 시도하기</b><small>또는 아래 버튼으로 문질러 쓰다듬기</small>'
   } finally {
     startBtn.disabled = false
   }
