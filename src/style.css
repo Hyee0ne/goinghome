@@ -2471,3 +2471,10 @@ body.event-open {
   pointer-events: none;
   user-select: none;
 }
+
+/* 쓰다듬기 시작(권한) 카드: 무대 안이 아니라 화면 전체의 가운데에 */
+#intro {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
