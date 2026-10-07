@@ -113,7 +113,7 @@ function resize() {
   // 펫은 로컬 좌표로 대략 폭 560, 위(귀 끝·정수리, -300)부터 바닥(FLOOR_Y)까지 높이 560을 차지한다.
   // 위쪽은 지역 문구와 '살살 문질러 주세요' 띠(휴대폰은 가운데) 아래부터 쓴다. 고정 비율(H×0.56)로 두면 무대가 낮은
   // 휴대폰에서 귀와 정수리가 띠 밑에 가려 머리가 납작하게 잘려 보였다
-  const top = W <= 720 ? 78 : 30
+  const top = demo && W <= 720 ? 78 : 30
   const avail = Math.max(1, H - top - 8)
   scale = Math.min(W / 560, avail / 560)
   cx = W / 2
@@ -757,11 +757,13 @@ function startTouch() {
   stage.addEventListener('pointermove', (e) => e.buttons && at(e))
   stage.addEventListener('pointerup', release)
   stage.addEventListener('pointerleave', release)
-  const bar = Object.assign(document.createElement('div'), { className: 'demo-bar' })
-  bar.innerHTML = demo
-    ? '<span class="demo-long">체험판 · 손가락이나 마우스로 문질러 쓰다듬어 보세요 (실제 앱은 카메라로 손을 인식해요)</span><span class="demo-short">체험판 · 손가락으로 문질러요</span>'
-    : '<span class="demo-long">살살 문질러 쓰다듬고, 간식은 접시에서 입으로 끌어다 줘요</span><span class="demo-short">문질러 쓰다듬고, 간식은 끌어다 줘요</span>'
-  document.querySelector('.stage-wrap')!.append(bar)
+  // 위쪽 안내 띠는 체험판에서만 (일반 접속은 안내 문구 없이, 2026-10-07 사용자 결정)
+  if (demo) {
+    const bar = Object.assign(document.createElement('div'), { className: 'demo-bar' })
+    bar.innerHTML =
+      '<span class="demo-long">체험판 · 손가락이나 마우스로 문질러 쓰다듬어 보세요 (실제 앱은 카메라로 손을 인식해요)</span><span class="demo-short">체험판 · 손가락으로 문질러요</span>'
+    document.querySelector('.stage-wrap')!.append(bar)
+  }
   renderHelp()
 }
 if (demo || new URLSearchParams(location.search).get('debug') === 'mouse') startTouch()
