@@ -379,7 +379,9 @@ function renderHelp() {
   const specials: [string, string][] = [
     [
       cat ? '🐟 츄르 주기' : '🍗 간식 주기',
-      cat
+      mouseSim
+        ? `왼쪽 접시를 누른 채 ${p.name} 입 앞으로 끌어다 가만히 대 보세요. ${cat ? '혀로 날름날름 핥아 먹어요.' : '냄새를 맡고 세 입에 나눠 받아먹어요.'}`
+        : cat
         ? `왼쪽 접시 위에서 엄지와 검지 끝을 모아 츄르를 집고, ${p.name} 입 앞에 가만히 대 보세요. 혀로 날름날름 핥아 먹어요.`
         : `왼쪽 간식 접시 위에서 엄지와 검지 끝을 모아 간식을 집고, ${p.name} 입 앞에 가만히 대 보세요. 냄새를 맡고 세 입에 나눠 받아먹어요.`,
     ],
@@ -698,10 +700,9 @@ function currentInputs(now: number, dt: number): PetInput[] {
  */
 /**
  * 체험판(VITE_DEMO=1 빌드, 아티팩트 공유용): 카메라를 쓸 수 없는 곳이라 손가락·마우스로 문질러 쓰다듬는다.
- * '간식 집기'를 켜면 손끝 모은 손(집은 손)이 된다
+ * 간식 접시를 누르고 끌면 그 동안은 손끝 모은 손(집은 손)이 된다
  */
 const demo = import.meta.env.VITE_DEMO === '1'
-let demoPinch = false
 /** 화면 문지르기(손가락·마우스)로 쓰다듬는 중. 진입 화면에서 고르거나, 체험판·?debug=mouse면 처음부터 */
 let mouseSim = false
 let simPointer: { x: number; y: number; both: boolean; offer: boolean; pinch: boolean } | null = null
@@ -732,35 +733,34 @@ function simulatedHands() {
   if (simPointer.both) hands.push(hand('Left', -c.x, -1))
   return hands
 }
-/** 화면 문지르기로 시작: 손가락·마우스가 손 하나가 되고, 위에 '간식 집기' 버튼을 띄운다 */
+/** 화면 문지르기로 시작: 손가락·마우스가 손 하나가 된다. 간식 접시를 누르고 끌면 그 동안은 간식을 집은 손이다 */
 function startTouch() {
   if (mouseSim) return
   mouseSim = true
   intro.hidden = true
   document.body.classList.add('touch')
   inviteToMake()
+  // 접시 위에서 누르기 시작하면, 뗄 때까지 간식을 집은 손 (따로 '간식 집기'를 켜지 않아도 끌어다 먹일 수 있다)
+  let dragTreat = false
   const at = (e: PointerEvent) => {
     const r = stage.getBoundingClientRect()
-    simPointer = { x: e.clientX - r.left, y: e.clientY - r.top, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey || demoPinch }
+    const x = e.clientX - r.left
+    const y = e.clientY - r.top
+    if (e.type === 'pointerdown') dragTreat = treatTray.hit(x, y)
+    simPointer = { x, y, both: e.shiftKey, offer: e.altKey, pinch: e.ctrlKey || e.metaKey || dragTreat }
+  }
+  const release = () => {
+    simPointer = null
+    dragTreat = false
   }
   stage.addEventListener('pointerdown', at)
   stage.addEventListener('pointermove', (e) => e.buttons && at(e))
-  stage.addEventListener('pointerup', () => (simPointer = null))
-  stage.addEventListener('pointerleave', () => (simPointer = null))
+  stage.addEventListener('pointerup', release)
+  stage.addEventListener('pointerleave', release)
   const bar = Object.assign(document.createElement('div'), { className: 'demo-bar' })
   bar.innerHTML = demo
     ? '<span class="demo-long">체험판 · 손가락이나 마우스로 문질러 쓰다듬어 보세요 (실제 앱은 카메라로 손을 인식해요)</span><span class="demo-short">체험판 · 손가락으로 문질러요</span>'
-    : '<span class="demo-long">손가락이나 마우스로 살살 문질러 주세요</span><span class="demo-short">살살 문질러 주세요</span>'
-  const pinchBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'demo-pinch' })
-  const label = () => (demoPinch ? '✋ 쓰다듬기로' : pet.p.species === 'cat' ? '🐟 츄르 집기' : '🍗 간식 집기')
-  pinchBtn.textContent = label()
-  pinchBtn.setAttribute('aria-pressed', 'false')
-  pinchBtn.onclick = () => {
-    demoPinch = !demoPinch
-    pinchBtn.setAttribute('aria-pressed', String(demoPinch))
-    pinchBtn.textContent = label()
-  }
-  bar.append(pinchBtn)
+    : '<span class="demo-long">살살 문질러 쓰다듬고, 간식은 접시에서 입으로 끌어다 줘요</span><span class="demo-short">문질러 쓰다듬고, 간식은 끌어다 줘요</span>'
   document.querySelector('.stage-wrap')!.append(bar)
   renderHelp()
 }
