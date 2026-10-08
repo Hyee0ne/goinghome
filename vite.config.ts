@@ -45,7 +45,7 @@ function siteMeta(): Plugin {
     // 배포(Vercel cleanUrls)처럼 개발 서버에서도 /make, /adopt, /find 로 열리게
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
-        const m = req.url?.match(/^\/(make|adopt|find)(\?.*)?$/)
+        const m = req.url?.match(/^\/(make|adopt|find|match)(\?.*)?$/)
         if (m) req.url = `/${m[1]}.html${m[2] ?? ''}`
         next()
       })

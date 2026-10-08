@@ -1,0 +1,294 @@
+/* 나랑 맞는 아이 (/match): 질문 한 화면에 하나씩 → 잘 맞는 아이 카드 (카드 모양은 전체 공고와 같다) */
+
+.mt-wrap {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+}
+
+.mt-quiz[hidden],
+.mt-result[hidden] {
+  display: none;
+}
+
+/* ── 질문 ── */
+.mt-quiz {
+  width: min(560px, 100%);
+  margin: 0 auto;
+}
+
+.mt-progress {
+  height: 4px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-2);
+}
+
+.mt-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.mt-q {
+  margin: 4px 0 6px;
+  color: var(--ink);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.mt-hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.mt-hint[hidden] {
+  display: none;
+}
+
+.mt-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* 지역처럼 고를 게 많으면 작은 칸 여러 줄 */
+.mt-options.many {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mt-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mt-option:hover {
+  border-color: var(--accent);
+}
+
+.mt-option:active {
+  transform: scale(0.98);
+}
+
+.mt-option[aria-checked='true'] {
+  border-color: var(--accent);
+  background: #eef1ff;
+}
+
+.mt-options.many .mt-option {
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.mt-icon {
+  flex: none;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.mt-options.many .mt-icon {
+  display: none;
+}
+
+.mt-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mt-label b {
+  font-size: 16px;
+}
+
+.mt-options.many .mt-label b {
+  font-size: 15px;
+}
+
+.mt-label small {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.mt-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 18px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.mt-back[hidden] {
+  display: none;
+}
+
+/* ── 결과 ── */
+.mt-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.mt-answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.mt-answers li {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mt-grid > li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mt-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mt-pct {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mt-why {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mt-why li {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.mt-why .ico {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.mt-pet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mt-pet .ico {
+  width: 16px;
+  height: 16px;
+}
+
+.mt-note {
+  margin: 28px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-align: center;
+}
+
+.mt-again {
+  display: flex;
+  width: min(320px, 100%);
+  height: 48px;
+  margin: 14px auto 0;
+}
+
+@media (min-width: 960px) {
+  .mt-wrap {
+    padding-top: 48px;
+  }
+
+  .mt-q {
+    font-size: 34px;
+  }
+
+  .mt-options.many {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .mt-quiz:has(.mt-options.many) {
+    width: min(860px, 100%);
+  }
+
+  .mt-title {
+    font-size: 34px;
+  }
+
+  .mt-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px 20px;
+  }
+}

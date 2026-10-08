@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff4e6" />
+    <!-- 앱웹(PWA): 홈 화면에 설치 -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="고잉홈" />
+    <!-- 공유 미리보기 (카톡·X 등). 주소와 이미지 버전은 src/site.ts에서 바꾼다. 카톡은 JPG/PNG와 절대 주소만 읽는다 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="고잉홈" />
+    <meta property="og:title" content="나랑 맞는 아이 · 고잉홈" />
+    <meta property="og:description" content="내 생활에 맞는 보호소 아이를 찾아 드려요" />
+    <meta property="og:url" content="%SITE_URL%match" />
+    <meta property="og:image" content="%SITE_URL%og/og-800x400.jpg?v=%OG_IMAGE_VERSION%" />
+    <meta property="og:image:width" content="800" />
+    <meta property="og:image:height" content="400" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="description" content="내 생활에 맞는 보호소 아이를 찾아 드려요" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <title>나랑 맞는 아이 · 고잉홈</title>
+  </head>
+  <body class="ad-page mt-page">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-5.5v-1a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v5m0-3a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L4 14.5a1.6 1.6 0 0 1 2.4-2.1L8 14"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    </svg>
+    <!-- 상단 바: 메인과 같은 로고·글자 메뉴 -->
+    <header class="topbar site-top">
+      <a class="brand" href="./" aria-label="고잉홈 첫 화면"><img class="brand-logo" src="/logo-goinghome.svg" alt="고잉홈" width="81" height="30" /></a>
+      <span class="topbar-sp"></span>
+      <nav class="text-menu site-menu" aria-label="메뉴"><a href="./">만나기</a><a href="adopt">전체 공고</a><a class="on" aria-current="page" href="match">나랑 맞는 아이</a></nav>
+    </header>
+
+    <main class="mt-wrap">
+      <!-- 1. 질문: 한 화면에 하나씩 -->
+      <section id="mt-quiz" class="mt-quiz">
+        <div class="mt-progress" aria-hidden="true"><span id="mt-bar"></span></div>
+        <p id="mt-step" class="page-kicker"></p>
+        <h1 id="mt-q" class="mt-q"></h1>
+        <p id="mt-hint" class="mt-hint"></p>
+        <div id="mt-options" class="mt-options" role="radiogroup"></div>
+        <button id="mt-back" class="mt-back" type="button" hidden><svg class="ico" aria-hidden="true"><use href="#i-left" /></svg>이전 질문</button>
+      </section>
+
+      <!-- 2. 결과: 잘 맞는 아이들 -->
+      <section id="mt-result" class="mt-result" hidden>
+        <p class="page-kicker">공고 내용과 내 생활을 견줘 봤어요</p>
+        <h1 class="mt-title">나랑 잘 맞는 아이들이에요</h1>
+        <ul id="mt-answers" class="mt-answers"></ul>
+        <ul id="mt-grid" class="mt-grid"></ul>
+        <p id="mt-empty" class="ad-empty" hidden></p>
+        <p class="mt-note">성격은 보호소가 적은 특징 메모를 바탕으로 짐작했어요. 입양 전에 보호소와 꼭 이야기해 보세요.</p>
+        <button id="mt-again" class="pill pill-line mt-again" type="button">처음부터 다시 하기</button>
+      </section>
+    </main>
+    <!-- 휴대폰 하단 탭바 (앱처럼). PC는 상단 글자 메뉴 -->
+    <nav class="tabbar" aria-label="메뉴"><a href="./"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-5.5v-1a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v5m0-3a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L4 14.5a1.6 1.6 0 0 1 2.4-2.1L8 14"/></svg><span>만나기</span></a><a href="adopt"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg><span>전체 공고</span></a><a href="match" class="on" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>나랑 맞는 아이</span></a></nav>
+    <footer class="site-footer">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</footer>
+    <script type="module" src="/src/match.ts"></script>
+  </body>
+</html>
