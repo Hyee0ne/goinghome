@@ -2772,3 +2772,14 @@ body.event-open {
   color: var(--ink);
   font-size: 15px;
 }
+
+/* 자세히 시트의 특징: 문장 사이를 띄워 읽기 쉽게 */
+#ad-detail .note-list {
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#ad-detail .note-list li {
+  padding-left: 14px;
+  line-height: 1.6;
+}

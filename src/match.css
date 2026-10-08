@@ -338,3 +338,37 @@
 .mt-more[hidden] {
   display: none;
 }
+
+/* 카드 글자: 이름은 크게, 나이·몸무게는 진하게, 지역·마감은 작게 한 줄 */
+.mt-card .ad-card-text {
+  gap: 3px;
+  padding-top: 10px;
+}
+
+.mt-card .ad-card-text b {
+  font-size: 17px;
+}
+
+.mt-card .ad-card-text span {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.mt-card .ad-card-text small {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.mt-why {
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.mt-why li {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mt-why .ico {
+  margin-top: 3px;
+}

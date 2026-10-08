@@ -4,7 +4,7 @@ import { registerPwa } from './pwa'
 import './form.css'
 import './adopt.css'
 import './match.css'
-import { noteItems, noteList, openAdoptDetail, type AdoptAnimal } from './adoptDetail'
+import { noteItems, openAdoptDetail, type AdoptAnimal } from './adoptDetail'
 
 /**
  * 나랑 맞는 아이: 내 생활(사는 곳·집에 있는 시간·생활 리듬·반려 경험·지역)을 묻고,
@@ -322,8 +322,8 @@ function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
       return l
     }),
   )
-  // 보호소가 적은 특징이 있으면 그것만 한 문장씩('- ', 네 줄까지), 공통 문구(맞는 이유)는 특징이 없는 아이에게만
-  if (noteItems(a.note).length) link.append(door, text, noteList(a.note, 4))
+  // 특징은 카드 밖에 쓰지 않고 자세히(팝업)에서만. 공통 문구(맞는 이유)는 특징이 없는 아이에게만
+  if (noteItems(a.note).length) link.append(door, text)
   else link.append(door, text, ul)
   li.append(link)
   if (pet) {
