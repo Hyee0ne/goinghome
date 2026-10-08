@@ -308,9 +308,9 @@ function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
       return l
     }),
   )
-  // 보호소가 적은 특징이 있으면 그대로 (두 줄까지)
+  // 보호소가 적은 특징이 있으면 그것만 보여 주고, 공통 문구(맞는 이유)는 특징이 없는 아이에게만
   const note = a.note?.trim()
-  if (note) link.append(door, text, Object.assign(document.createElement('p'), { className: 'mt-note-line', textContent: `특징 · ${note}` }), ul)
+  if (note) link.append(door, text, Object.assign(document.createElement('p'), { className: 'mt-note-line', textContent: `특징 · ${note}` }))
   else link.append(door, text, ul)
   li.append(link)
   if (pet) {
