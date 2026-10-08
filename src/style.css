@@ -2562,7 +2562,7 @@ body.event-open {
   display: none;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 959px) {
   .tabbar {
     position: fixed;
     left: 0;
@@ -2697,5 +2697,13 @@ body.event-open {
 @media (max-width: 959px) {
   .tabs-handle {
     display: none;
+  }
+}
+
+/* 태블릿·좁은 창(720~959px): 휴대폰 배치를 넓게 늘리지 않고 이름·정보·버튼 묶음은 휴대폰 폭으로 가운데에 */
+@media (min-width: 721px) and (max-width: 959px) {
+  .poster-foot {
+    width: min(560px, 100%);
+    margin: 0 auto;
   }
 }
