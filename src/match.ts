@@ -132,7 +132,7 @@ const kindName = (k: string) => (k.includes('-') ? k.split('-').pop()!.trim() : 
  * 궁합 점수와 맞는 이유. 맞는 점을 더하고 안 맞는 점을 뺀 합(대략 -60 ~ +60)을 50~98%로 옮긴다
  * (그냥 더하면 웬만한 아이가 다 99%가 되어 차이가 보이지 않았다). 이유는 더한 것 중 큰 순서로 세 개까지
  */
-function score(a: Animal, ans: Answers) {
+function score(a: Animal, ans: Answers, pet = false) {
   let s = 0
   const why: [number, string][] = []
   const plus = (v: number, r: string) => {
@@ -189,6 +189,8 @@ function score(a: Animal, ans: Answers) {
   }
 
   if (ans.sido && a.sido === ans.sido) plus(15, `가까운 ${SHORT[ans.sido] ?? ans.sido} 보호소`)
+  // 고잉홈에서 바로 쓰다듬어 볼 수 있는 아이는 앞쪽에 (직접 만나 보면 마음이 더 간다)
+  if (pet) plus(12, '고잉홈에서 바로 쓰다듬어 볼 수 있어요')
 
   why.sort((x, y) => y[0] - x[0])
   return { score: Math.max(50, Math.min(98, Math.round(55 + s * 0.6))), why: why.slice(0, 3).map((w) => w[1]) }
@@ -262,7 +264,7 @@ async function showResult() {
   const ids = await pettable
   const pool = animals.filter((a) => (ans.sp === 'any' || a.sp === ans.sp) && a.sp !== 'etc' && (dday(a.end) ?? 0) >= 0)
   const ranked = pool
-    .map((a) => ({ a, ...score(a, ans) }))
+    .map((a) => ({ a, ...score(a, ans, ids.has(a.id)) }))
     .sort((x, y) => y.score - x.score || (dday(x.a.end) ?? 99) - (dday(y.a.end) ?? 99))
 
   $('mt-answers').replaceChildren(
@@ -305,6 +307,7 @@ function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
   const img = Object.assign(new Image(), { src: a.photos[0], alt: `${kindName(a.kind)} 사진`, loading: 'lazy', decoding: 'async' })
   img.referrerPolicy = 'no-referrer'
   door.append(img, Object.assign(document.createElement('span'), { className: 'mt-pct', textContent: `${pct}% 맞아요` }))
+  if (pet) door.append(Object.assign(document.createElement('span'), { className: 'ad-pettable mt-pettable', textContent: '쓰다듬기' }))
   const d = dday(a.end)
   const text = document.createElement('span')
   text.className = 'ad-card-text'

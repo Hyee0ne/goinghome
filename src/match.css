@@ -372,3 +372,20 @@
 .mt-why .ico {
   margin-top: 3px;
 }
+
+/* 쓰다듬을 수 있는 아이: 사진 오른쪽 아래 표시 (왼쪽 아래는 궁합 점수) */
+.ad-door .mt-pettable {
+  left: auto;
+  right: 8px;
+  bottom: 8px;
+}
+
+/* 카드 아래 '쓰다듬어 보기' 버튼 */
+.mt-pet {
+  margin-top: 4px;
+  background: #fff;
+}
+
+.mt-pet:hover {
+  background: #eef1ff;
+}
