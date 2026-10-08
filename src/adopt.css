@@ -322,7 +322,7 @@
 /* ── 필터 줄: 종류 칩(전체·강아지·고양이) + 지역 칩, 정렬 안내는 오른쪽 끝. 목록을 내려도 상단 바 아래에 붙어 있다 ── */
 .ad-filters {
   position: sticky;
-  top: 52px;
+  top: var(--top-h, 52px);
   z-index: 10;
   flex-wrap: wrap;
   align-items: center;

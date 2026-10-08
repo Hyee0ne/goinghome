@@ -2713,3 +2713,33 @@ body.event-open {
 #info .slides:focus:not(:focus-visible) {
   outline: none;
 }
+
+/* 상단 바(GNB)를 조금 넓게: 위아래 여백과 로고·메뉴 글자를 키운다. 높이는 --top-h (전체 공고 필터 줄이 그 아래에 붙는다) */
+:root {
+  --top-h: 58px;
+}
+
+.topbar {
+  min-height: var(--top-h);
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-bottom: 14px;
+}
+
+@media (min-width: 960px) {
+  :root {
+    --top-h: 66px;
+  }
+
+  .topbar {
+    padding-inline: 28px;
+  }
+
+  .brand-logo {
+    height: 34px;
+  }
+
+  .text-menu {
+    gap: 26px;
+    font-size: 15px;
+  }
+}
