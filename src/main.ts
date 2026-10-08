@@ -28,6 +28,43 @@ const intro = $('intro')
 const touchOnly = window.matchMedia('(hover: none) and (pointer: coarse)').matches
 const introError = $('intro-error')
 const tabs = $('pet-tabs')
+
+/**
+ * PC: 썸네일 줄은 평소에 숨겨 두고, 무대 아래쪽에 마우스를 가져가거나(손잡이 포함) 휠을 아래로 내리면 올린다.
+ * 줄 위에 마우스가 있는 동안은 그대로, 벗어나거나 휠을 위로 올리면 내린다. 휴대폰은 늘 보인다 (CSS)
+ */
+const layoutEl = document.querySelector<HTMLElement>('.layout')!
+const tabsHandle = Object.assign(document.createElement('button'), { type: 'button', className: 'tabs-handle' })
+tabsHandle.innerHTML = '<span>다른 아이들</span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>'
+document.querySelector('.stage-wrap')!.append(tabsHandle)
+let tabsHide = 0
+const showTabs = (on: boolean) => {
+  clearTimeout(tabsHide)
+  if (on) layoutEl.classList.add('show-tabs')
+  else tabsHide = window.setTimeout(() => layoutEl.classList.remove('show-tabs'), 350)
+}
+const wideTabs = window.matchMedia('(min-width: 960px)')
+tabsHandle.addEventListener('mouseenter', () => showTabs(true))
+tabsHandle.addEventListener('click', () => showTabs(!layoutEl.classList.contains('show-tabs')))
+tabs.addEventListener('mouseenter', () => showTabs(true))
+tabs.addEventListener('mouseleave', () => showTabs(false))
+tabs.addEventListener('focusin', () => showTabs(true))
+document.querySelector('.stage-wrap')!.addEventListener('mousemove', (e) => {
+  if (!wideTabs.matches) return
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  if ((e as MouseEvent).clientY > r.bottom - 90) showTabs(true)
+  else if (layoutEl.classList.contains('show-tabs') && (e as MouseEvent).clientY < r.bottom - 150) showTabs(false)
+})
+window.addEventListener(
+  'wheel',
+  (e) => {
+    if (!wideTabs.matches || Math.abs(e.deltaY) < 4) return
+    // 오른쪽 상세를 스크롤하는 중이면 건드리지 않는다
+    if ((e.target as Element).closest?.('#info')) return
+    showTabs(e.deltaY > 0)
+  },
+  { passive: true },
+)
 const hud = $('debug-hud')
 
 const tracker = new HandTracker(video)
