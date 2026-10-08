@@ -45,17 +45,16 @@
         <h1>가족을 기다리는 아이들</h1>
       </div>
       <div class="ad-filters">
-        <div class="seg" role="radiogroup" aria-label="종류">
-          <label><input type="radio" name="ad-sp" value="all" checked /><span>전체</span></label>
-          <label><input type="radio" name="ad-sp" value="dog" /><span>강아지</span></label>
-          <label><input type="radio" name="ad-sp" value="cat" /><span>고양이</span></label>
-        </div>
+        <label class="ad-region ad-kind">
+          <span class="sr-only">종류</span>
+          <select id="ad-sp"><option value="all">강아지·고양이</option><option value="dog">강아지</option><option value="cat">고양이</option></select>
+        </label>
         <label class="ad-region">
           <span class="sr-only">지역</span>
           <select id="ad-sido"><option value="">전국</option></select>
         </label>
+        <p class="ad-sort muted">공고가 곧 끝나는 아이부터</p>
       </div>
-      <p class="ad-sort muted">공고가 곧 끝나는 아이부터 보여 드려요</p>
 
       <ul id="ad-grid" class="ad-grid"></ul>
       <p id="ad-empty" class="ad-empty" hidden></p>

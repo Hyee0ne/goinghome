@@ -97,13 +97,13 @@ function render(reset: boolean) {
 }
 
 function applyFilter() {
-  const sp = (document.querySelector('input[name=ad-sp]:checked') as HTMLInputElement).value
+  const sp = $<HTMLSelectElement>('ad-sp').value
   const sido = sidoSel.value
   list = all.filter((a) => (sp === 'all' || a.sp === sp) && (!sido || a.sido === sido))
   $('ad-count').textContent = `공고 중 ${list.length.toLocaleString()}마리`
   render(true)
 }
-document.querySelectorAll('input[name=ad-sp]').forEach((r) => r.addEventListener('change', applyFilter))
+$('ad-sp').addEventListener('change', applyFilter)
 sidoSel.addEventListener('change', applyFilter)
 more.onclick = () => render(false)
 

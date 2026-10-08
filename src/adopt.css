@@ -318,3 +318,103 @@
   background: var(--bg-2);
   color: var(--ink-soft);
 }
+
+/* ── 필터 줄: 종류 칩(전체·강아지·고양이) + 지역 칩, 정렬 안내는 오른쪽 끝. 목록을 내려도 상단 바 아래에 붙어 있다 ── */
+.ad-filters {
+  position: sticky;
+  top: 52px;
+  z-index: 10;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -16px 14px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.96);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.ad-filters .seg {
+  flex: none;
+  gap: 6px;
+}
+
+.ad-filters .seg label {
+  flex: none;
+}
+
+.ad-page .ad-filters .seg span {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ad-page .ad-filters .seg input:checked + span {
+  background: var(--ink);
+  color: #fff;
+}
+
+.ad-filters .ad-region {
+  flex: none;
+}
+
+.ad-filters .ad-region select {
+  width: auto;
+  min-width: 128px;
+  height: 38px;
+  min-height: 0;
+  padding: 0 34px 0 34px;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--bg-2);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z'/%3E%3Ccircle cx='12' cy='10' r='2.5'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center, right 12px center;
+  background-size: 16px, 14px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.ad-filters .ad-sort {
+  flex: 1 1 auto;
+  margin: 0;
+  text-align: right;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* 휴대폰: 칩 한 줄, 지역은 남는 폭, 정렬 안내는 다음 줄 왼쪽 */
+@media (max-width: 959px) {
+  .ad-filters .ad-region {
+    flex: 1 1 120px;
+  }
+
+  .ad-filters .ad-region select {
+    width: 100%;
+  }
+
+  .ad-filters .ad-sort {
+    flex-basis: 100%;
+    text-align: left;
+  }
+}
+
+/* 종류 드롭다운: 지역과 같은 모양, 앞 아이콘은 발자국 */
+.ad-filters .ad-kind select {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b6080'%3E%3Cellipse cx='7' cy='9' rx='2' ry='2.6'/%3E%3Cellipse cx='12' cy='6.5' rx='2' ry='2.6'/%3E%3Cellipse cx='17' cy='9' rx='2' ry='2.6'/%3E%3Cpath d='M12 12c-3 0-5.5 3.2-5.5 5.4 0 1.6 1.3 2.3 2.8 2 1-.2 1.8-.6 2.7-.6s1.7.4 2.7.6c1.5.3 2.8-.4 2.8-2C17.5 15.2 15 12 12 12z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
