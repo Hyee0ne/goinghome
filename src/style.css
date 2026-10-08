@@ -2634,7 +2634,8 @@ body.event-open {
   .layout {
     position: relative;
     grid-template-rows: minmax(0, 1fr) auto;
-    overflow: hidden;
+    /* clip: 잘라 내기만 하고 스크롤 상자가 되지 않는다 (hidden이면 썸네일 맞춤이 레이아웃 전체를 위로 밀었다) */
+    overflow: clip;
   }
 
   .layout .pet-list {
@@ -2706,4 +2707,9 @@ body.event-open {
     width: min(560px, 100%);
     margin: 0 auto;
   }
+}
+
+/* 사진 슬라이드 포커스 테두리는 키보드로 왔을 때만 */
+#info .slides:focus:not(:focus-visible) {
+  outline: none;
 }

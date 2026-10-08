@@ -201,7 +201,13 @@ function renderTabs() {
     }),
   )
   // 고른 아이가 보이게 (목록이 넘치면 스크롤)
-  tabs.querySelector('.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+  // (가로로만 맞춘다: scrollIntoView는 숨겨 둔 줄을 보이려고 바깥 레이아웃까지 세로로 밀었다)
+  const act = tabs.querySelector<HTMLElement>('.active')
+  if (act) {
+    const l = act.getBoundingClientRect().left - tabs.getBoundingClientRect().left + tabs.scrollLeft
+    if (l < tabs.scrollLeft) tabs.scrollLeft = l - 12
+    else if (l + act.offsetWidth > tabs.scrollLeft + tabs.clientWidth) tabs.scrollLeft = l + act.offsetWidth - tabs.clientWidth + 12
+  }
   renderBanner()
   renderHelp()
   syncInfoPanel()
