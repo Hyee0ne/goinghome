@@ -54,14 +54,18 @@
 
       <!-- 2. 결과: 잘 맞는 아이들 -->
       <section id="mt-result" class="mt-result" hidden>
-        <p class="page-kicker">공고 내용과 내 생활을 견줘 봤어요</p>
-        <h1 class="mt-title">나랑 잘 맞는 아이들이에요</h1>
+        <div class="mt-head">
+          <div>
+            <p class="page-kicker">공고 내용과 내 생활을 견줘 봤어요</p>
+            <h1 class="mt-title">나랑 잘 맞는 아이들이에요</h1>
+          </div>
+          <button id="mt-again" class="pill pill-line mt-again" type="button">처음부터 다시 하기</button>
+        </div>
         <ul id="mt-answers" class="mt-answers"></ul>
         <ul id="mt-grid" class="mt-grid"></ul>
         <button id="mt-more" class="btn ad-more mt-more" type="button" hidden>더 보기</button>
         <p id="mt-empty" class="ad-empty" hidden></p>
         <p class="mt-note">성격은 보호소가 적은 특징 메모를 바탕으로 짐작했어요. 입양 전에 보호소와 꼭 이야기해 보세요.</p>
-        <button id="mt-again" class="pill pill-line mt-again" type="button">처음부터 다시 하기</button>
       </section>
     </main>
     <!-- 휴대폰 하단 탭바 (앱처럼). PC는 상단 글자 메뉴 -->
