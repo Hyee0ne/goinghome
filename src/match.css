@@ -386,3 +386,36 @@
 .mt-pet:hover {
   background: #eef1ff;
 }
+
+/* 전체 공고와 같은 틀: 카드 칸 수·간격(휴대폰 2 → 태블릿 4 → 넓은 PC 5), 제목 위치·크기 */
+.mt-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 12px;
+}
+
+@media (min-width: 720px) {
+  .mt-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .mt-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px 14px;
+  }
+}
+
+.mt-wrap {
+  padding-top: 14px;
+}
+
+@media (min-width: 960px) {
+  .mt-wrap {
+    padding-top: 30px;
+  }
+
+  .mt-title {
+    font-size: 32px;
+  }
+}

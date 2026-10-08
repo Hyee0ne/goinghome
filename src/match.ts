@@ -275,7 +275,7 @@ async function showResult() {
   )
   $('mt-empty').hidden = ranked.length > 0
   $('mt-empty').textContent = animals.length ? '조건에 맞는 아이가 아직 없어요.' : '공고 정보를 아직 받지 못했어요. 잠시 뒤 다시 와 주세요.'
-  // 잘 맞는 순서로 6마리씩 ('더 보기'로 이어서)
+  // 잘 맞는 순서로 10마리씩 (PC 5칸 두 줄) ('더 보기'로 이어서)
   const grid = $('mt-grid')
   grid.replaceChildren()
   let shown = 0
@@ -294,7 +294,7 @@ async function showResult() {
 
 const SEX = { M: '남아', F: '여아', Q: '' } as const
 /** 한 번에 보여 주는 아이 수 */
-const MATCH_STEP = 6
+const MATCH_STEP = 10
 function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
   const pet = ids.has(a.id)
   const li = document.createElement('li')
