@@ -31,6 +31,8 @@
       <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
       <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
       <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
     </svg>
     <!-- 상단 바: 메인과 같은 로고·글자 메뉴 -->
     <header class="topbar site-top">
@@ -64,6 +66,34 @@
     <!-- 휴대폰 하단 탭바 (앱처럼). PC는 상단 글자 메뉴 -->
     <nav class="tabbar" aria-label="메뉴"><a href="./"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11m0-5.5v-1a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v5m0-3a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L4 14.5a1.6 1.6 0 0 1 2.4-2.1L8 14"/></svg><span>만나기</span></a><a href="adopt"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg><span>전체 공고</span></a><a href="match" class="on" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>나랑 맞는 아이</span></a></nav>
     <footer class="site-footer">© 2026 <a href="https://www.ricecookey.com" target="_blank" rel="noopener">RICECookey</a>.</footer>
+    <!-- 아이 자세히 -->
+    <dialog id="ad-detail" class="info-sheet" aria-labelledby="ad-d-name">
+      <div class="sheet-body">
+        <div class="gallery">
+          <div id="ad-d-slides" class="slides" tabindex="0" aria-label="사진, 옆으로 넘겨 보기"></div>
+        </div>
+        <button id="ad-d-close" class="icon-btn sheet-close" type="button" aria-label="닫기"><svg class="ico" aria-hidden="true"><use href="#i-x" /></svg></button>
+        <header class="sheet-head">
+          <div>
+            <h2 id="ad-d-name"></h2>
+            <p id="ad-d-meta" class="sheet-meta"></p>
+          </div>
+        </header>
+        <ul id="ad-d-tags" class="traits"></ul>
+        <section id="ad-d-note-wrap">
+          <h3>특징</h3>
+          <p id="ad-d-note"></p>
+        </section>
+        <section>
+          <h3>보호 정보</h3>
+          <dl id="ad-d-care" class="shelter"></dl>
+        </section>
+      </div>
+      <footer class="sheet-foot">
+        <a id="ad-d-pet" class="pill pill-line ad-pet" hidden><svg class="ico" aria-hidden="true"><use href="#i-hand" /></svg><span>쓰다듬어 보기</span></a>
+        <a id="ad-d-call" class="pill pill-primary adopt"><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg><span>입양 문의</span></a>
+      </footer>
+    </dialog>
     <script type="module" src="/src/match.ts"></script>
   </body>
 </html>

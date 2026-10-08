@@ -4,6 +4,7 @@ import { registerPwa } from './pwa'
 import './form.css'
 import './adopt.css'
 import './match.css'
+import { openAdoptDetail, type AdoptAnimal } from './adoptDetail'
 
 /**
  * 나랑 맞는 아이: 내 생활(사는 곳·집에 있는 시간·생활 리듬·반려 경험·지역)을 묻고,
@@ -12,18 +13,9 @@ import './match.css'
  * 모든 계산은 기기 안에서, 답은 저장하지 않는다.
  */
 
-interface Animal {
-  id: string
+interface Animal extends AdoptAnimal {
   sp: 'dog' | 'cat' | 'etc'
-  kind: string
-  age: string
-  sex: 'M' | 'F' | 'Q'
-  weight?: string
-  note?: string
-  org: string
   sido?: string
-  end: string
-  photos: string[]
 }
 
 type Answers = {
@@ -281,15 +273,20 @@ async function showResult() {
   )
   $('mt-empty').hidden = ranked.length > 0
   $('mt-empty').textContent = animals.length ? '조건에 맞는 아이가 아직 없어요.' : '공고 정보를 아직 받지 못했어요. 잠시 뒤 다시 와 주세요.'
-  $('mt-grid').replaceChildren(...ranked.map((r) => card(r.a, r.score, r.why, ids.has(r.a.id))))
+  $('mt-grid').replaceChildren(...ranked.map((r) => card(r.a, r.score, r.why, ids)))
   track('match_result', { sp: ans.sp, home: ans.home, time: ans.time, pace: ans.pace, exp: ans.exp, found: ranked.length, gen: landedGen() || undefined })
 }
 
 const SEX = { M: '남아', F: '여아', Q: '' } as const
-function card(a: Animal, pct: number, why: string[], pet: boolean) {
+function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
+  const pet = ids.has(a.id)
   const li = document.createElement('li')
-  const link = Object.assign(document.createElement('a'), { className: 'mt-card', href: `adopt?id=${a.id}` })
-  link.addEventListener('click', () => track('adopt_action', { how: 'notice', where: 'match' }))
+  // 누르면 이 화면에서 바로 자세히 (전체 공고로 넘어가지 않는다)
+  const link = Object.assign(document.createElement('button'), { type: 'button', className: 'mt-card' })
+  link.addEventListener('click', () => {
+    track('adopt_action', { how: 'detail', where: 'match' })
+    openAdoptDetail(a, ids, 'match')
+  })
   const door = Object.assign(document.createElement('span'), { className: 'ad-door' })
   const img = Object.assign(new Image(), { src: a.photos[0], alt: `${kindName(a.kind)} 사진`, loading: 'lazy', decoding: 'async' })
   img.referrerPolicy = 'no-referrer'
@@ -311,7 +308,10 @@ function card(a: Animal, pct: number, why: string[], pet: boolean) {
       return l
     }),
   )
-  link.append(door, text, ul)
+  // 보호소가 적은 특징이 있으면 그대로 (두 줄까지)
+  const note = a.note?.trim()
+  if (note) link.append(door, text, Object.assign(document.createElement('p'), { className: 'mt-note-line', textContent: `특징 · ${note}` }), ul)
+  else link.append(door, text, ul)
   li.append(link)
   if (pet) {
     const p = Object.assign(document.createElement('a'), { className: 'mt-pet', href: `./?pet=shelter-${a.id}` })

@@ -1,6 +1,6 @@
 import './style.css'
-import { landedGen, track } from './analytics'
 import { registerPwa } from './pwa'
+import { openAdoptDetail } from './adoptDetail'
 import './form.css'
 import './adopt.css'
 
@@ -44,7 +44,6 @@ let list: Animal[] = []
 let shown = 0
 
 const SEX = { M: '남아', F: '여아', Q: '성별 모름' } as const
-const NEUTER = { Y: '중성화 완료', N: '', U: '' } as const
 /** 문 색: 사진이 뜨기 전에 보이는 파스텔 (연분홍 · 하늘 · 민트 · 모래) */
 const DOOR_COLORS = ['#ffd3dc', '#dde4ff', '#d8f1e6', '#f6ead6']
 
@@ -109,49 +108,9 @@ more.onclick = () => render(false)
 
 // ───────────────────────── 자세히 ─────────────────────────
 
-const detail = $<HTMLDialogElement>('ad-detail')
 function openDetail(a: Animal) {
-  $('ad-d-slides').replaceChildren(
-    ...a.photos.map((src, i) => {
-      const img = Object.assign(new Image(), { src, alt: `${a.kind} 사진 ${i + 1}`, decoding: 'async' })
-      img.referrerPolicy = 'no-referrer'
-      if (i > 0) img.loading = 'lazy'
-      return img
-    }),
-  )
-  $('ad-d-name').textContent = a.kind
-  $('ad-d-meta').textContent = [SEX[a.sex], a.age, a.weight, a.color].filter(Boolean).join(' · ')
-  const d = dday(a.end)
-  const tags = [NEUTER[a.neuter], d === null ? '' : d <= 0 ? '오늘 공고 마감' : `공고 마감 D-${d}`].filter(Boolean)
-  $('ad-d-tags').replaceChildren(...tags.map((t) => Object.assign(document.createElement('li'), { textContent: t })))
-  $('ad-d-note-wrap').hidden = !a.note
-  $('ad-d-note').textContent = a.note
-  $('ad-d-care').replaceChildren(
-    ...([
-      ['보호소', a.care.name],
-      ['전화', a.care.tel],
-      ['주소', a.care.addr],
-      ['관할', a.org],
-      ['공고번호', a.noticeNo],
-    ] as const).flatMap(([k, v]) =>
-      v ? [Object.assign(document.createElement('dt'), { textContent: k }), Object.assign(document.createElement('dd'), { textContent: v })] : [],
-    ),
-  )
-  const petLink = $<HTMLAnchorElement>('ad-d-pet')
-  petLink.hidden = !pettable.has(a.id)
-  petLink.href = `./?pet=shelter-${a.id}`
-  const call = $<HTMLAnchorElement>('ad-d-call')
-  call.hidden = !a.care.tel
-  call.href = `tel:${a.care.tel.replace(/[^\d+]/g, '')}`
-  call.setAttribute('aria-label', `${a.care.name}에 전화로 입양 문의`)
-  detail.showModal()
-  detail.querySelector('.sheet-body')!.scrollTop = 0
+  openAdoptDetail(a, pettable, 'adopt')
 }
-$('ad-d-close').onclick = () => detail.close()
-$('ad-d-call').addEventListener('click', () => track('adopt_action', { how: 'call', where: 'adopt', gen: landedGen() || undefined }))
-detail.addEventListener('click', (e) => {
-  if (e.target === detail) detail.close()
-})
 
 // ───────────────────────── 시작 ─────────────────────────
 

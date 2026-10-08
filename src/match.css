@@ -191,8 +191,27 @@
 
 .mt-card {
   display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
   color: inherit;
+  font: inherit;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
+}
+
+/* 보호소가 적은 특징 (두 줄까지) */
+.mt-note-line {
+  display: -webkit-box;
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .mt-pct {
