@@ -30,7 +30,7 @@ const introError = $('intro-error')
 const tabs = $('pet-tabs')
 
 /**
- * PC: 썸네일 줄은 평소에 숨겨 두고, 무대 아래쪽에 마우스를 가져가거나(손잡이 포함) 휠을 아래로 내리면 올린다.
+ * PC: 썸네일 줄은 평소에 숨겨 두고, '다른 아이들' 버튼에 마우스를 올리거나 누르거나 휠을 아래로 내리면 올린다.
  * 줄 위에 마우스가 있는 동안은 그대로, 벗어나거나 휠을 위로 올리면 내린다. 휴대폰은 늘 보인다 (CSS)
  */
 const layoutEl = document.querySelector<HTMLElement>('.layout')!
@@ -52,8 +52,8 @@ tabs.addEventListener('focusin', () => showTabs(true))
 document.querySelector('.stage-wrap')!.addEventListener('mousemove', (e) => {
   if (!wideTabs.matches) return
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  if ((e as MouseEvent).clientY > r.bottom - 90) showTabs(true)
-  else if (layoutEl.classList.contains('show-tabs') && (e as MouseEvent).clientY < r.bottom - 150) showTabs(false)
+  // 올리는 건 '다른 아이들' 버튼(또는 휠)으로만. 무대 위쪽으로 마우스가 올라가면 내린다
+  if (layoutEl.classList.contains('show-tabs') && (e as MouseEvent).clientY < r.bottom - 150) showTabs(false)
 })
 window.addEventListener(
   'wheel',
