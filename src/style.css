@@ -2783,3 +2783,23 @@ body.event-open {
   padding-left: 14px;
   line-height: 1.6;
 }
+
+/* 풋터는 조용하게: 구분선 없이 작고 연한 글씨 */
+.site-footer {
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  border-top: 0;
+  background: transparent;
+  color: #a3a8bf;
+  font-size: 11px;
+}
+
+/* 메인(쓰다듬기)은 한 화면짜리라 풋터를 두지 않는다 */
+#app > .site-footer {
+  display: none;
+}
+
+/* 전체 공고·나랑 맞는 아이·닮은 친구: 본문이 첫 화면을 채워 풋터는 스크롤해야 보인다 */
+.ad-page > main,
+.mk-page > main {
+  min-height: calc(100dvh - var(--top-h, 58px));
+}
