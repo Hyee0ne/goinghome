@@ -33,6 +33,24 @@ export function dday(end: string) {
   return Math.round((d.getTime() - today.getTime()) / 86400000)
 }
 
+/**
+ * 보호소 특징 메모를 한 문장씩 나눈다: '피모상태양호,온순함/전반적인건강은양호함' → ['피모상태양호', '온순함', '전반적인건강은양호함'].
+ * 쉼표(숫자 사이 제외)·슬래시·줄바꿈·가운뎃점·문장 끝 마침표로 끊는다
+ */
+export function noteItems(note?: string) {
+  return (note ?? '')
+    .split(/[\/\n·]|,(?!\d)|\.(?=\s|$)/)
+    .map((t) => t.trim().replace(/^[-–•]+\s*/, ''))
+    .filter((t) => t.length >= 2)
+}
+
+/** 특징 목록 (줄마다 '- ') */
+export function noteList(note?: string, max = Infinity) {
+  const ul = Object.assign(document.createElement('ul'), { className: 'note-list' })
+  ul.append(...noteItems(note).slice(0, max).map((t) => Object.assign(document.createElement('li'), { textContent: t })))
+  return ul
+}
+
 let ready = false
 let where = 'adopt'
 function setup() {
@@ -64,8 +82,8 @@ export function openAdoptDetail(a: AdoptAnimal, pettable: Set<string>, from = 'a
   const d = dday(a.end)
   const tags = [a.neuter ? NEUTER[a.neuter] : '', d === null ? '' : d <= 0 ? '오늘 공고 마감' : `공고 마감 D-${d}`].filter(Boolean)
   $('ad-d-tags').replaceChildren(...tags.map((t) => Object.assign(document.createElement('li'), { textContent: t })))
-  $('ad-d-note-wrap').hidden = !a.note
-  $('ad-d-note').textContent = a.note ?? ''
+  $('ad-d-note-wrap').hidden = !noteItems(a.note).length
+  $('ad-d-note').replaceChildren(noteList(a.note))
   const care = a.care ?? {}
   $('ad-d-care').replaceChildren(
     ...([

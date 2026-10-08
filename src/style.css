@@ -2743,3 +2743,32 @@ body.event-open {
     font-size: 15px;
   }
 }
+
+/* 보호소 특징: 한 문장씩 '- ' 목록 (카드·자세히 시트 공통) */
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-list li {
+  position: relative;
+  padding-left: 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.note-list li::before {
+  content: '-';
+  position: absolute;
+  left: 0;
+}
+
+#ad-detail .note-list li {
+  color: var(--ink);
+  font-size: 15px;
+}

@@ -4,7 +4,7 @@ import { registerPwa } from './pwa'
 import './form.css'
 import './adopt.css'
 import './match.css'
-import { openAdoptDetail, type AdoptAnimal } from './adoptDetail'
+import { noteItems, noteList, openAdoptDetail, type AdoptAnimal } from './adoptDetail'
 
 /**
  * 나랑 맞는 아이: 내 생활(사는 곳·집에 있는 시간·생활 리듬·반려 경험·지역)을 묻고,
@@ -264,7 +264,6 @@ async function showResult() {
   const ranked = pool
     .map((a) => ({ a, ...score(a, ans) }))
     .sort((x, y) => y.score - x.score || (dday(x.a.end) ?? 99) - (dday(y.a.end) ?? 99))
-    .slice(0, 6)
 
   $('mt-answers').replaceChildren(
     ...[...Object.entries(LABEL).map(([k, m]) => m[(ans as Record<string, string>)[k]]), ans.sido ? `${SHORT[ans.sido]} 근처` : '지역 상관없음']
@@ -273,11 +272,26 @@ async function showResult() {
   )
   $('mt-empty').hidden = ranked.length > 0
   $('mt-empty').textContent = animals.length ? '조건에 맞는 아이가 아직 없어요.' : '공고 정보를 아직 받지 못했어요. 잠시 뒤 다시 와 주세요.'
-  $('mt-grid').replaceChildren(...ranked.map((r) => card(r.a, r.score, r.why, ids)))
+  // 잘 맞는 순서로 6마리씩 ('더 보기'로 이어서)
+  const grid = $('mt-grid')
+  grid.replaceChildren()
+  let shown = 0
+  const more = $<HTMLButtonElement>('mt-more')
+  const showMore = () => {
+    const next = ranked.slice(shown, shown + MATCH_STEP)
+    grid.append(...next.map((r) => card(r.a, r.score, r.why, ids)))
+    shown += next.length
+    more.hidden = shown >= ranked.length
+    more.textContent = `더 보기 (${(ranked.length - shown).toLocaleString()}마리 더)`
+  }
+  more.onclick = showMore
+  showMore()
   track('match_result', { sp: ans.sp, home: ans.home, time: ans.time, pace: ans.pace, exp: ans.exp, found: ranked.length, gen: landedGen() || undefined })
 }
 
 const SEX = { M: '남아', F: '여아', Q: '' } as const
+/** 한 번에 보여 주는 아이 수 */
+const MATCH_STEP = 6
 function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
   const pet = ids.has(a.id)
   const li = document.createElement('li')
@@ -308,9 +322,8 @@ function card(a: Animal, pct: number, why: string[], ids: Set<string>) {
       return l
     }),
   )
-  // 보호소가 적은 특징이 있으면 그것만 보여 주고, 공통 문구(맞는 이유)는 특징이 없는 아이에게만
-  const note = a.note?.trim()
-  if (note) link.append(door, text, Object.assign(document.createElement('p'), { className: 'mt-note-line', textContent: `특징 · ${note}` }))
+  // 보호소가 적은 특징이 있으면 그것만 한 문장씩('- ', 네 줄까지), 공통 문구(맞는 이유)는 특징이 없는 아이에게만
+  if (noteItems(a.note).length) link.append(door, text, noteList(a.note, 4))
   else link.append(door, text, ul)
   li.append(link)
   if (pet) {
