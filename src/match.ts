@@ -265,7 +265,8 @@ async function showResult() {
   const pool = animals.filter((a) => (ans.sp === 'any' || a.sp === ans.sp) && a.sp !== 'etc' && (dday(a.end) ?? 0) >= 0)
   const ranked = pool
     .map((a) => ({ a, ...score(a, ans, ids.has(a.id)) }))
-    .sort((x, y) => y.score - x.score || (dday(x.a.end) ?? 99) - (dday(y.a.end) ?? 99))
+    // 궁합이 잘 맞는 무리(10% 단위)부터, 같은 무리 안에서는 공고가 얼마 안 남은 아이 먼저 (그다음 점수 순)
+    .sort((x, y) => Math.floor(y.score / 10) - Math.floor(x.score / 10) || (dday(x.a.end) ?? 99) - (dday(y.a.end) ?? 99) || y.score - x.score)
 
   $('mt-answers').replaceChildren(
     ...[...Object.entries(LABEL).map(([k, m]) => m[(ans as Record<string, string>)[k]]), ans.sido ? `${SHORT[ans.sido]} 근처` : '지역 상관없음']
